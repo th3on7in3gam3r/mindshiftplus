@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="description" content="MindShift+ — AI-powered wellness platform offered by MindShift Wellness Clinic. Journal, breathe, and connect with Mia between your appointments."/>
+<title>MindShift+ — Patient Wellness Platform | MindShift Wellness Clinic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#06080f;--ink2:#0d1020;--ink3:#141830;
+  --pearl:#f5f0ee;--cream:#ede8e3;
+  --violet:#6b5fcf;--lilac:#9d8ff0;--teal:#2a9d8f;--sage:#52b788;--gold:#c9a84c;
+  --txt:#1a1c2e;--muted:#6b6d80;--muted2:#9b9dae;
+  --serif:'Cormorant Garamond',Georgia,serif;
+  --sans:'DM Sans',sans-serif;
+  --ease:cubic-bezier(.22,.68,0,1.2);
+  --easesmooth:cubic-bezier(.4,0,.2,1);
+}
+html{scroll-behavior:smooth;overflow-x:hidden}
+body{background:var(--ink);color:var(--pearl);font-family:var(--sans);line-height:1.6;overflow-x:hidden}
+
+/* Nav */
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;padding:1.2rem 5%;display:flex;align-items:center;justify-content:space-between;background:rgba(6,8,15,.9);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.07)}
+.nav-logo{font-family:var(--serif);font-size:1.3rem;font-weight:600;color:var(--pearl);text-decoration:none;letter-spacing:-.02em}
+.nav-logo span{color:var(--lilac)}
+.nav-back{font-size:.85rem;color:rgba(245,240,238,.5);text-decoration:none;display:flex;align-items:center;gap:.4rem;transition:color .2s}
+.nav-back:hover{color:var(--pearl)}
+.nav-cta{background:var(--violet);color:var(--pearl);padding:.55rem 1.3rem;border-radius:2rem;font-weight:600;font-size:.875rem;text-decoration:none;transition:background .2s}
+.nav-cta:hover{background:#8474e8}
+
+/* Buttons */
+.btn-primary{display:inline-flex;align-items:center;gap:.5rem;background:var(--violet);color:var(--pearl);padding:.85rem 2rem;border-radius:3rem;font-weight:600;font-size:.9rem;text-decoration:none;border:none;cursor:pointer;transition:all .25s var(--ease)}
+.btn-primary:hover{background:#8474e8;transform:translateY(-2px);box-shadow:0 12px 30px rgba(107,95,207,.4)}
+.btn-ghost-light{display:inline-flex;align-items:center;gap:.5rem;background:transparent;color:rgba(245,240,238,.8);padding:.85rem 2rem;border-radius:3rem;font-weight:500;font-size:.9rem;text-decoration:none;border:1.5px solid rgba(245,240,238,.25);cursor:pointer;transition:all .25s}
+.btn-ghost-light:hover{border-color:rgba(245,240,238,.6);color:var(--pearl)}
+
+/* Reveal */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .7s var(--easesmooth),transform .7s var(--easesmooth)}
+.reveal.visible{opacity:1;transform:none}
+.reveal-left{opacity:0;transform:translateX(-30px);transition:opacity .7s var(--easesmooth),transform .7s var(--easesmooth)}
+.reveal-left.visible{opacity:1;transform:none}
+.reveal-right{opacity:0;transform:translateX(30px);transition:opacity .7s var(--easesmooth),transform .7s var(--easesmooth)}
+.reveal-right.visible{opacity:1;transform:none}
+[data-delay="1"]{transition-delay:.1s}[data-delay="2"]{transition-delay:.2s}[data-delay="3"]{transition-delay:.3s}
+
+/* Section */
+section{padding:7rem 5%}
+.section-label{font-size:.72rem;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--lilac);margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.section-label::before{content:'';display:inline-block;width:20px;height:1.5px;background:var(--lilac)}
+.section-h{font-family:var(--serif);font-size:clamp(2.2rem,4vw,3.5rem);font-weight:300;line-height:1.1;letter-spacing:-.03em;color:var(--pearl);margin-bottom:1.2rem}
+.section-h em{font-style:italic;color:var(--lilac)}
+.section-sub{font-size:1rem;color:rgba(245,240,238,.55);line-height:1.75;max-width:540px}
+
+/* Phone mockup */
+.phone-wrap{position:relative;perspective:1000px}
+.phone{width:260px;background:var(--ink2);border-radius:36px;padding:3px;box-shadow:0 40px 80px rgba(6,8,15,.5),0 0 0 1px rgba(255,255,255,.05);transform:rotateY(-8deg) rotateX(4deg);transition:transform .6s var(--easesmooth);margin:0 auto}
+.phone:hover{transform:rotateY(-2deg) rotateX(1deg)}
+.phone-inner{background:var(--ink3);border-radius:34px;overflow:hidden;aspect-ratio:9/19;position:relative;display:flex;flex-direction:column}
+.phone-status{height:40px;background:var(--ink3);display:flex;align-items:center;justify-content:space-between;padding:0 20px;flex-shrink:0}
+.phone-notch{width:90px;height:20px;background:var(--ink2);border-radius:0 0 14px 14px;position:absolute;top:0;left:50%;transform:translateX(-50%)}
+.phone-time{font-size:11px;color:rgba(255,255,255,.7);font-weight:600;margin-top:4px;z-index:1}
+.phone-icons{font-size:10px;color:rgba(255,255,255,.6);margin-top:4px;z-index:1}
+.phone-screen{flex:1;padding:16px;overflow:hidden;background:linear-gradient(160deg,#0d1228,#141830)}
+.app-header{margin-bottom:14px}
+.app-greeting{font-size:10px;color:rgba(200,200,230,.5);margin-bottom:2px}
+.app-name{font-size:16px;color:#f0f0ff;font-weight:700}
+.mood-card{background:rgba(107,95,207,.2);border:1px solid rgba(107,95,207,.3);border-radius:14px;padding:10px 12px;margin-bottom:10px}
+.mood-label{font-size:9px;color:rgba(200,200,230,.6);margin-bottom:6px}
+.mood-emojis{display:flex;gap:6px}
+.mood-emoji{font-size:14px;background:rgba(255,255,255,.08);border-radius:8px;width:26px;height:26px;display:flex;align-items:center;justify-content:center}
+.mood-emoji.active{background:rgba(107,95,207,.4);border:1px solid rgba(107,95,207,.6)}
+.quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.quick-btn{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:8px;text-align:center}
+.quick-icon{font-size:14px;margin-bottom:2px}
+.quick-lbl{font-size:8px;color:rgba(200,200,230,.6)}
+.chat-preview{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:10px}
+.chat-bubble{background:rgba(107,95,207,.3);border-radius:8px 8px 8px 2px;padding:6px 10px;margin-bottom:6px;max-width:85%}
+.chat-bubble p{font-size:8px;color:rgba(240,240,255,.85);line-height:1.5}
+.chat-bubble.user{background:rgba(42,157,143,.25);border-radius:8px 8px 2px 8px;margin-left:auto}
+.typing{display:flex;align-items:center;gap:4px;padding:.6rem 1rem;background:rgba(107,95,207,.15);border-radius:1rem 1rem 1rem .2rem;width:fit-content}
+.typing-dot{width:5px;height:5px;border-radius:50%;background:var(--lilac);animation:typing-anim 1.2s ease-in-out infinite}
+.typing-dot:nth-child(2){animation-delay:.2s}.typing-dot:nth-child(3){animation-delay:.4s}
+@keyframes typing-anim{0%,80%,100%{transform:scale(1);opacity:.5}40%{transform:scale(1.2);opacity:1}}
+.float-badge{position:absolute;background:white;border-radius:16px;padding:.6rem 1rem;box-shadow:0 8px 24px rgba(0,0,0,.2);font-size:.78rem;font-weight:600;white-space:nowrap;color:var(--ink);border:1px solid rgba(0,0,0,.06)}
+.badge-streak{top:10%;right:-10%;animation:float1 4s ease-in-out infinite}
+.badge-calm{bottom:18%;left:-12%;animation:float2 5s ease-in-out infinite}
+.badge-journal{bottom:40%;right:-14%;animation:float3 4.5s ease-in-out infinite}
+@keyframes float1{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes float2{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
+@keyframes float3{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-6px) rotate(2deg)}}
+
+/* Features grid */
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5px;background:rgba(107,95,207,.15);border-radius:24px;overflow:hidden;margin-top:3.5rem}
+.feat-cell{background:var(--ink2);padding:2.5rem;transition:background .3s}
+.feat-cell:hover{background:var(--ink3)}
+.feat-num{font-size:.72rem;color:rgba(245,240,238,.2);margin-bottom:1.2rem;letter-spacing:.05em;font-family:'DM Mono',monospace}
+.feat-icon{font-size:1.8rem;margin-bottom:1rem;display:block}
+.feat-title{font-family:var(--serif);font-size:1.4rem;font-weight:600;margin-bottom:.6rem;color:var(--pearl)}
+.feat-desc{font-size:.875rem;color:rgba(245,240,238,.5);line-height:1.75}
+.feat-tag{display:inline-block;margin-top:1rem;font-size:.7rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--lilac);background:rgba(107,95,207,.15);padding:.3rem .8rem;border-radius:2rem}
+
+/* Steps */
+.steps-wrap{max-width:900px;margin:4rem auto 0;display:flex;flex-direction:column}
+.step{display:grid;grid-template-columns:80px 1fr;gap:2rem;padding:2.5rem 0;border-bottom:1px solid rgba(107,95,207,.15);align-items:start}
+.step:last-child{border-bottom:none}
+.step-num{font-family:var(--serif);font-size:3.5rem;font-weight:300;color:rgba(107,95,207,.25);line-height:1;letter-spacing:-.04em}
+.step-tag{font-size:.7rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--lilac);margin-bottom:.5rem}
+.step-h{font-family:var(--serif);font-size:1.6rem;font-weight:600;margin-bottom:.5rem;color:var(--pearl)}
+.step-p{font-size:.9rem;color:rgba(245,240,238,.5);line-height:1.75}
+
+/* Pricing */
+.price-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1.5rem;max-width:700px;margin:3.5rem auto 0}
+.price-card{border-radius:24px;padding:2rem;border:1.5px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);transition:all .3s}
+.price-card.featured{background:var(--violet);border-color:var(--violet);position:relative}
+.price-card.featured::before{content:'Most popular';position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--lilac);color:var(--ink);font-size:.72rem;font-weight:700;padding:.3rem 1rem;border-radius:2rem;white-space:nowrap}
+.price-card:hover:not(.featured){border-color:rgba(107,95,207,.4);transform:translateY(-3px)}
+.price-tier{font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(245,240,238,.4);margin-bottom:.75rem}
+.price-card.featured .price-tier{color:rgba(245,240,238,.7)}
+.price-amount{font-family:var(--serif);font-size:3rem;font-weight:300;color:var(--pearl);letter-spacing:-.04em;line-height:1;margin-bottom:.25rem}
+.price-period{font-size:.8rem;color:rgba(245,240,238,.4);margin-bottom:1.5rem}
+.price-feats{list-style:none;display:flex;flex-direction:column;gap:.6rem;margin-bottom:2rem}
+.price-feat{font-size:.85rem;color:rgba(245,240,238,.6);display:flex;align-items:flex-start;gap:.6rem}
+.price-check{color:var(--sage);font-size:.85rem;flex-shrink:0}
+.price-check.no{color:rgba(245,240,238,.2)}
+.price-btn{display:block;text-align:center;padding:.85rem;border-radius:3rem;font-weight:600;font-size:.875rem;text-decoration:none;transition:all .25s;border:1.5px solid rgba(255,255,255,.2);background:transparent;color:var(--pearl);cursor:pointer;font-family:var(--sans)}
+.price-btn:hover{background:rgba(255,255,255,.1)}
+.price-card.featured .price-btn{background:var(--pearl);color:var(--violet);border-color:var(--pearl)}
+.price-card.featured .price-btn:hover{background:#fff}
+
+/* Mia chat demo */
+.chat-demo{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:1.5rem;backdrop-filter:blur(10px)}
+.demo-header{display:flex;align-items:center;gap:.75rem;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,255,255,.07)}
+.mia-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#9d8ff0,#6b5fcf);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.mia-name{font-weight:600;font-size:.9rem;color:var(--pearl)}
+.mia-status{font-size:.75rem;color:var(--sage)}
+.demo-messages{display:flex;flex-direction:column;gap:.75rem}
+.dmsg{max-width:82%;padding:.75rem 1rem;border-radius:1rem;font-size:.82rem;line-height:1.65}
+.dmsg.mia-msg{background:rgba(107,95,207,.25);border-radius:1rem 1rem 1rem .2rem;color:rgba(245,240,238,.9)}
+.dmsg.user-msg{background:rgba(42,157,143,.2);border-radius:1rem 1rem .2rem 1rem;color:rgba(245,240,238,.85);align-self:flex-end}
+
+/* Two-col layout */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:5rem;align-items:center;max-width:1100px;margin:0 auto}
+
+/* Footer */
+footer{background:rgba(0,0,0,.3);border-top:1px solid rgba(255,255,255,.07);padding:2.5rem 5%;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+.footer-note{font-size:.82rem;color:rgba(245,240,238,.3)}
+.footer-links-row{display:flex;gap:1.5rem}
+.footer-links-row a{font-size:.82rem;color:rgba(245,240,238,.3);text-decoration:none;transition:color .2s}
+.footer-links-row a:hover{color:rgba(245,240,238,.7)}
+
+/* Mobile */
+@media(max-width:900px){
+  .two-col{grid-template-columns:1fr;gap:3rem}
+  .feat-grid{grid-template-columns:1fr}
+  .price-grid{grid-template-columns:1fr;max-width:420px}
+}
+@media(max-width:600px){
+  section{padding:5rem 5%}
+  .step{grid-template-columns:50px 1fr;gap:1rem}
+}
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <a href="site-main.html" class="nav-back">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M11 7H3M7 3l-4 4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Back to Clinic
+  </a>
+  <a href="site-main.html" class="nav-logo">MindShift <span>Wellness Clinic</span></a>
+  <a href="#" class="nav-cta" onclick="return openApp('onboarding')">Get Started Free</a>
+</nav>
+
+<!-- Hero -->
+<section style="min-height:100vh;display:grid;place-items:center;padding-top:8rem;padding-bottom:6rem;position:relative;overflow:hidden">
+  <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 30% 40%,rgba(107,95,207,.2),transparent 55%),radial-gradient(ellipse at 80% 70%,rgba(42,157,143,.12),transparent 50%)"></div>
+  <div class="two-col" style="position:relative;z-index:1">
+    <div>
+      <div style="display:inline-flex;align-items:center;gap:.5rem;background:rgba(107,95,207,.15);border:1px solid rgba(107,95,207,.25);border-radius:2rem;padding:.4rem 1rem;font-size:.75rem;font-weight:600;color:var(--lilac);letter-spacing:.1em;text-transform:uppercase;margin-bottom:1.5rem">
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--lilac);animation:pulse-dot 2s ease-in-out infinite"></span>
+        Patient Wellness Platform
+      </div>
+      <h1 style="font-family:var(--serif);font-size:clamp(3rem,6vw,5rem);line-height:1.05;font-weight:300;letter-spacing:-.03em;margin-bottom:1.5rem;color:var(--pearl)">
+        Your wellness,<br><em style="font-style:italic;color:var(--lilac)">between visits.</em>
+      </h1>
+      <p style="font-size:1.05rem;color:rgba(245,240,238,.55);line-height:1.75;max-width:480px;margin-bottom:2rem">MindShift+ is a secure AI-powered wellness platform offered by MindShift Wellness Clinic — designed to keep you supported, grounded, and growing between your appointments.</p>
+      <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem">
+        <a href="#" class="btn-primary" onclick="return openApp('onboarding')">
+          Start for Free
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#" class="btn-ghost-light" onclick="return openApp('dashboard')">Patient Login</a>
+      </div>
+      <p style="font-size:.8rem;color:rgba(245,240,238,.25)">A tool offered by MindShift Wellness Clinic · Not a replacement for clinical care</p>
+    </div>
+    <div>
+      <div class="phone-wrap">
+        <div class="phone">
+          <div class="phone-inner">
+            <div class="phone-status">
+              <div class="phone-notch"></div>
+              <span class="phone-time">9:41</span>
+              <span class="phone-icons">●●●</span>
+            </div>
+            <div class="phone-screen">
+              <div class="app-header">
+                <div class="app-greeting">Good morning ✦</div>
+                <div class="app-name">Hello, Sarah</div>
+              </div>
+              <div class="mood-card">
+                <div class="mood-label">How are you feeling today?</div>
+                <div class="mood-emojis">
+                  <div class="mood-emoji">😔</div><div class="mood-emoji">😐</div>
+                  <div class="mood-emoji active">🙂</div><div class="mood-emoji">😊</div>
+                  <div class="mood-emoji">🌟</div>
+                </div>
+              </div>
+              <div class="quick-grid">
+                <div class="quick-btn"><div class="quick-icon">◎</div><div class="quick-lbl">Talk to Mia</div></div>
+                <div class="quick-btn"><div class="quick-icon">◈</div><div class="quick-lbl">Journal</div></div>
+                <div class="quick-btn"><div class="quick-icon">◉</div><div class="quick-lbl">Breathe</div></div>
+                <div class="quick-btn"><div class="quick-icon">◧</div><div class="quick-lbl">Programs</div></div>
+              </div>
+              <div class="chat-preview">
+                <div class="chat-bubble"><p>Good morning 🌿 You showed up again today — that matters more than you know.</p></div>
+                <div class="chat-bubble user"><p>I've been feeling anxious about work…</p></div>
+                <div class="typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="float-badge badge-streak">🔥 7-day streak</div>
+        <div class="float-badge badge-calm">✦ Calm restored</div>
+        <div class="float-badge badge-journal">◈ 14 journal entries</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section style="background:var(--ink2)">
+  <div style="max-width:1100px;margin:0 auto">
+    <div class="section-label reveal">What's inside</div>
+    <h2 class="section-h reveal" data-delay="1">Everything you need<br><em>in one calm place</em></h2>
+    <p class="section-sub reveal" data-delay="2">Built to complement your clinical care — not replace it.</p>
+    <div class="feat-grid reveal" data-delay="3">
+      <div class="feat-cell">
+        <div class="feat-num">01</div>
+        <span class="feat-icon">◎</span>
+        <div class="feat-title">AI Coach Mia</div>
+        <div class="feat-desc">A warm, emotionally intelligent companion available any time. Mia listens without judgment and gently guides you toward clarity and calm between your appointments.</div>
+        <span class="feat-tag">Always available</span>
+      </div>
+      <div class="feat-cell">
+        <div class="feat-num">02</div>
+        <span class="feat-icon">◈</span>
+        <div class="feat-title">Guided Journaling</div>
+        <div class="feat-desc">Beautiful journaling with mood tracking, reflection prompts, and AI-powered pattern detection. Understand your emotional landscape and share insights with your clinician.</div>
+        <span class="feat-tag">AI Pattern Detection</span>
+      </div>
+      <div class="feat-cell">
+        <div class="feat-num">03</div>
+        <span class="feat-icon">◉</span>
+        <div class="feat-title">Breathing Sessions</div>
+        <div class="feat-desc">Immersive, animated breathing exercises — Box, 4-7-8, Calm Reset, Sleep Wind-Down. Immediate relief for anxiety and stress, available whenever you need it.</div>
+        <span class="feat-tag">Instant calm</span>
+      </div>
+      <div class="feat-cell">
+        <div class="feat-num">04</div>
+        <span class="feat-icon">◧</span>
+        <div class="feat-title">Wellness Programs</div>
+        <div class="feat-desc">Structured multi-day journeys for anxiety, confidence, healing, and mind renewal. Daily lessons, exercises, and reflections that build real momentum.</div>
+        <span class="feat-tag">Science-backed</span>
+      </div>
+      <div class="feat-cell">
+        <div class="feat-num">05</div>
+        <span class="feat-icon">◐</span>
+        <div class="feat-title">Emotional Insights</div>
+        <div class="feat-desc">See your mood trends, identify patterns, and celebrate progress. Visual data that empowers — and helps you have more informed conversations with your provider.</div>
+        <span class="feat-tag">Weekly summaries</span>
+      </div>
+      <div class="feat-cell">
+        <div class="feat-num">06</div>
+        <span class="feat-icon">◆</span>
+        <div class="feat-title">Daily Check-In</div>
+        <div class="feat-desc">A gentle 30-second daily ritual. Track your mood, build streak momentum, and create a long-term picture of your emotional health to share with your care team.</div>
+        <span class="feat-tag">Streak tracking</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Meet Mia -->
+<section>
+  <div class="two-col">
+    <div class="reveal-left">
+      <div class="section-label">Meet your AI coach</div>
+      <h2 class="section-h">She listens.<br>She <em>understands.</em></h2>
+      <p style="font-size:.95rem;color:rgba(245,240,238,.55);line-height:1.75;margin-bottom:2rem">Mia is your AI wellness coach — warm, patient, and always present. Whether you're processing a hard day or need a breathing reset at 2am, she's there. She's designed to complement your clinical care, not replace it.</p>
+      <div style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:2rem">
+        <div style="display:flex;align-items:center;gap:.75rem;font-size:.875rem;color:rgba(245,240,238,.7)"><span style="width:6px;height:6px;border-radius:50%;background:var(--lilac);flex-shrink:0"></span>Emotionally intelligent — reads between the lines</div>
+        <div style="display:flex;align-items:center;gap:.75rem;font-size:.875rem;color:rgba(245,240,238,.7)"><span style="width:6px;height:6px;border-radius:50%;background:var(--lilac);flex-shrink:0"></span>Never clinical, never cold, never rushed</div>
+        <div style="display:flex;align-items:center;gap:.75rem;font-size:.875rem;color:rgba(245,240,238,.7)"><span style="width:6px;height:6px;border-radius:50%;background:var(--lilac);flex-shrink:0"></span>Guides breathing, reflection, and reframing</div>
+        <div style="display:flex;align-items:center;gap:.75rem;font-size:.875rem;color:rgba(245,240,238,.7)"><span style="width:6px;height:6px;border-radius:50%;background:var(--lilac);flex-shrink:0"></span>Available every day — no appointment needed</div>
+      </div>
+      <a href="#" class="btn-primary" onclick="return openApp('mia')">Start talking to Mia →</a>
+    </div>
+    <div class="reveal-right">
+      <div class="chat-demo">
+        <div class="demo-header">
+          <div class="mia-avatar">◎</div>
+          <div>
+            <div class="mia-name">Mia</div>
+            <div class="mia-status">● Online now</div>
+          </div>
+        </div>
+        <div class="demo-messages">
+          <div class="dmsg mia-msg">Hi there 🌿 I'm Mia. This is your safe space — share anything. What's on your mind today?</div>
+          <div class="dmsg user-msg">I've been really anxious about work. I can't stop overthinking everything.</div>
+          <div class="dmsg mia-msg">That sounds exhausting. Let's slow down for a second. When you notice the overthinking starting, what does it feel like in your body?</div>
+          <div class="dmsg user-msg">Like a knot in my chest, honestly.</div>
+          <div class="dmsg mia-msg">That knot is your nervous system asking to be heard. Would you like to try a quick breathing reset together? 💙</div>
+          <div class="typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section style="background:var(--ink2)">
+  <div style="max-width:1100px;margin:0 auto">
+    <div class="section-label reveal">Getting started</div>
+    <h2 class="section-h reveal" data-delay="1">Up and running<br><em>in minutes</em></h2>
+    <div class="steps-wrap">
+      <div class="step reveal">
+        <div class="step-num">01</div>
+        <div>
+          <div class="step-tag">Create Account</div>
+          <div class="step-h">Sign up for free</div>
+          <p class="step-p">Create your free account in under a minute. No credit card required. Available to all MindShift Wellness Clinic patients and the general public.</p>
+        </div>
+      </div>
+      <div class="step reveal" data-delay="1">
+        <div class="step-num">02</div>
+        <div>
+          <div class="step-tag">Personalize</div>
+          <div class="step-h">Tell us what you're working on</div>
+          <p class="step-p">A gentle 3-minute setup personalizes your experience. Share your challenges, goals, and preferred support style. Mia adapts to you.</p>
+        </div>
+      </div>
+      <div class="step reveal" data-delay="2">
+        <div class="step-num">03</div>
+        <div>
+          <div class="step-tag">Daily Practice</div>
+          <div class="step-h">Check in, journal, breathe</div>
+          <p class="step-p">Use the tools that fit the moment — a 30-second mood check-in, a journal entry, a breathing session, or a conversation with Mia. Everything works together.</p>
+        </div>
+      </div>
+      <div class="step reveal" data-delay="3">
+        <div class="step-num">04</div>
+        <div>
+          <div class="step-tag">Track Progress</div>
+          <div class="step-h">See your growth over time</div>
+          <p class="step-p">Your mood trends, journal patterns, and streak momentum build a picture of real progress — insights you can share with your clinician at your next appointment.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Pricing -->
+<section>
+  <div style="max-width:1100px;margin:0 auto;text-align:center">
+    <div class="section-label reveal" style="justify-content:center">Pricing</div>
+    <h2 class="section-h reveal" data-delay="1" style="margin:0 auto 1rem">Simple, transparent<br><em>pricing</em></h2>
+    <p class="section-sub reveal" data-delay="2" style="margin:0 auto 0">Free to start. Upgrade when you're ready.</p>
+    <div class="price-grid">
+      <div class="price-card reveal" data-delay="1">
+        <div class="price-tier">Free</div>
+        <div class="price-amount">$0</div>
+        <div class="price-period">Forever free · No card needed</div>
+        <ul class="price-feats">
+          <li class="price-feat"><span class="price-check">✓</span>Daily mood check-in</li>
+          <li class="price-feat"><span class="price-check">✓</span>5 journal entries/month</li>
+          <li class="price-feat"><span class="price-check">✓</span>2 breathing modes</li>
+          <li class="price-feat"><span class="price-check">✓</span>10 Mia messages/day</li>
+          <li class="price-feat"><span class="price-check">✓</span>1 wellness program</li>
+          <li class="price-feat"><span class="price-check no">–</span><span style="opacity:.4">Advanced insights</span></li>
+        </ul>
+        <button class="price-btn" onclick="openApp('onboarding')">Get started free</button>
+      </div>
+      <div class="price-card featured reveal" data-delay="2">
+        <div class="price-tier">Premium</div>
+        <div class="price-amount">$7<span style="font-size:1.2rem">.99</span></div>
+        <div class="price-period">per month, billed yearly · Save $62</div>
+        <ul class="price-feats">
+          <li class="price-feat"><span class="price-check">✓</span>Everything in Free</li>
+          <li class="price-feat"><span class="price-check">✓</span>Unlimited Mia AI coaching</li>
+          <li class="price-feat"><span class="price-check">✓</span>Advanced journal insights</li>
+          <li class="price-feat"><span class="price-check">✓</span>Full emotional trend analytics</li>
+          <li class="price-feat"><span class="price-check">✓</span>All breathing modes</li>
+          <li class="price-feat"><span class="price-check">✓</span>All wellness programs</li>
+        </ul>
+        <button class="price-btn" onclick="openApp('premium')">Start 7-day free trial</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section style="background:var(--ink2);text-align:center;padding:6rem 5%">
+  <div style="max-width:600px;margin:0 auto" class="reveal">
+    <h2 style="font-family:var(--serif);font-size:clamp(2.2rem,4vw,3.2rem);font-weight:300;color:var(--pearl);line-height:1.1;letter-spacing:-.03em;margin-bottom:1rem">Start your wellness<br><em style="color:var(--lilac)">journey today.</em></h2>
+    <p style="font-size:.95rem;color:rgba(245,240,238,.45);line-height:1.75;margin-bottom:2rem">Free to start. Available to all MindShift Wellness Clinic patients and anyone seeking daily mental wellness support.</p>
+    <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
+      <a href="#" class="btn-primary" onclick="return openApp('onboarding')">
+        Get Started Free
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+      <a href="site-main.html" class="btn-ghost-light">Back to Clinic Site</a>
+    </div>
+    <p style="font-size:.78rem;color:rgba(245,240,238,.2);margin-top:1.5rem">MindShift+ is a wellness support tool offered by MindShift Wellness Clinic. It is not a replacement for clinical psychiatric care.</p>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <span class="footer-note">© 2026 MindShift Wellness Clinic · MindShift+ Patient Platform</span>
+  <div class="footer-links-row">
+    <a href="site-main.html">Clinic Home</a>
+    <a href="privacy.html">Privacy</a>
+    <a href="terms.html">Terms</a>
+    <a href="cookies.html">Cookies</a>
+  </div>
+</footer>
+
+<style>
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+</style>
+
+<script>
+// Reveal on scroll
+const observer = new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');observer.unobserve(e.target)}});
+},{threshold:.12});
+document.querySelectorAll('.reveal,.reveal-left,.reveal-right').forEach(el=>observer.observe(el));
+
+// Open app
+function openApp(page){
+  window.location.href = '/';
+  return false;
+}
+</script>
+</body>
+</html>
