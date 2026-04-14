@@ -147,8 +147,8 @@ function Sidebar({page,setPage,user,onSignOut,open,onClose}){
       }}>
         <div style={{padding:"0 1.2rem 1.5rem",borderBottom:"1px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div>
-            <div style={{fontSize:22,fontWeight:700,background:"var(--grad1)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>MindShift<span>+</span></div>
-            <div style={{fontSize:12,color:"var(--muted)",marginTop:2}}>Your wellness companion</div>
+            <div style={{fontSize:16,fontWeight:700,background:"var(--grad1)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>MindShift Wellness Clinic</div>
+            <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>Where Minds Shift and Healing Begins.</div>
           </div>
           {/* Close button only visible on mobile */}
           <button onClick={onClose} className="mobile-only" style={{background:"transparent",border:"none",color:"var(--muted)",fontSize:18,cursor:"pointer",padding:4}}>✕</button>
@@ -1548,7 +1548,7 @@ export default function App(){
   if(loading) return(
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"var(--navy)"}}>
       <div style={{textAlign:"center"}}>
-        <div style={{fontSize:24,fontWeight:700,background:"linear-gradient(135deg,#7c6ff7,#4ecdc4)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",marginBottom:12}}>MindShift+</div>
+        <div style={{fontSize:20,fontWeight:700,background:"linear-gradient(135deg,#7c6ff7,#4ecdc4)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",marginBottom:12}}>MindShift Wellness Clinic</div>
         <div style={{color:"rgba(240,240,255,0.3)",fontSize:13}}>Loading…</div>
       </div>
     </div>
@@ -1580,7 +1580,7 @@ export default function App(){
               borderBottom:"1px solid var(--border)",
             }}>
               <button onClick={()=>setSidebarOpen(true)} style={{background:"transparent",border:"none",color:"var(--white)",fontSize:20,cursor:"pointer",padding:4}}>☰</button>
-              <div style={{fontSize:17,fontWeight:700,background:"var(--grad1)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>MindShift+</div>
+              <div style={{fontSize:14,fontWeight:700,background:"var(--grad1)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>MindShift Wellness Clinic</div>
               <Avatar name={appUser?.name||"U"} size={30}/>
             </div>
           )}
