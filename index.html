@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- ── PRIMARY SEO ── -->
+    <meta name="google-site-verification" content="aNuAyJ9mqbMg4l4u1JWE0zQ52Nb83Aqp7aOae-OJFqo" />
+    <title>MindShift+ | AI Wellness App — Calm Your Mind, Shift Your Life</title>
+    <meta name="description" content="MindShift+ is your personal AI wellness companion. Reduce anxiety, track your mood, journal daily, breathe deeply, and grow with Mia — your AI coach. Free wellness app for mental health and mindfulness." />
+    <meta name="keywords" content="wellness app, mental health app, mindfulness app, anxiety relief, mood tracker, AI wellness coach, breathing exercises, guided journal, mental wellness, mind shift, mindshift, stress relief, emotional health, self care app, meditation app, mental health tools" />
+    <meta name="author" content="MindShift+" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://www.mindshiftwellnessclinic.org" />
+
+    <!-- ── OPEN GRAPH (Facebook, LinkedIn) ── -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://www.mindshiftwellnessclinic.org" />
+    <meta property="og:title" content="MindShift+ | AI Wellness App — Find Your Calm. Shift Your Mind." />
+    <meta property="og:description" content="Your personal AI wellness companion. Reduce anxiety, track mood, journal, breathe, and grow with Mia your AI coach. Free to start." />
+    <meta property="og:image" content="https://www.mindshiftwellnessclinic.org/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="MindShift+ Wellness Clinic" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- ── TWITTER CARD ── -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://www.mindshiftwellnessclinic.org" />
+    <meta name="twitter:title" content="MindShift+ | AI Wellness App" />
+    <meta name="twitter:description" content="Your personal AI wellness companion. Reduce anxiety, track mood, journal, breathe, and grow with Mia your AI coach." />
+    <meta name="twitter:image" content="https://www.mindshiftwellnessclinic.org/og-image.png" />
+
+    <!-- ── PWA ── -->
+    <meta name="theme-color" content="#7c6ff7" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MindShift+" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- ── STRUCTURED DATA (Google Rich Results) ── -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "MindShift+",
+      "url": "https://www.mindshiftwellnessclinic.org",
+      "description": "AI-powered wellness app for anxiety relief, mood tracking, journaling, breathing exercises, and personal growth coaching.",
+      "applicationCategory": "HealthApplication",
+      "operatingSystem": "Web, iOS, Android",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "featureList": [
+        "AI wellness coaching with Mia",
+        "Daily mood tracking",
+        "Guided breathing exercises",
+        "Personal journal with prompts",
+        "Emotional weather reports",
+        "Daily affirmation cards",
+        "Wellness programs",
+        "Mood constellation visualization"
+      ],
+      "screenshot": "https://www.mindshiftwellnessclinic.org/og-image.png",
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.9",
+        "ratingCount": "50000"
+      }
+    }
+    </script>
+
+    <title>MindShift+</title>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('SW registered:', reg.scope))
+            .catch(err => console.log('SW registration failed:', err));
+        });
+      }
+    </script>
+  </body>
+</html>

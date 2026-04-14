@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>MindShift+ · Your Daily Light</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --serif:'Cormorant Garamond',Georgia,serif;
+  --sans:'DM Sans',sans-serif;
+  --mono:'DM Mono',monospace;
+  --bg:#04060f;--card:#0d1228;--card2:#111830;
+  --purple:#7c6ff7;--lavender:#a89cf5;--teal:#4ecdc4;
+  --rose:#f093a0;--gold:#f5c842;--mist:#c5bff8;
+  --white:#f0f0ff;--muted:rgba(240,240,255,0.5);--muted2:rgba(240,240,255,0.3);
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);
+}
+html,body{min-height:100vh;background:var(--bg);color:var(--white);font-family:var(--sans);overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 20% 0%,rgba(124,111,247,.12) 0%,transparent 50%),radial-gradient(ellipse at 80% 100%,rgba(78,205,196,.08) 0%,transparent 50%);pointer-events:none;z-index:0}
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.025'/%3E%3C/svg%3E");pointer-events:none;z-index:0}
+
+/* Nav */
+nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:1.2rem 2rem;background:rgba(4,6,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+.logo{font-family:var(--serif);font-size:1.3rem;color:var(--white);letter-spacing:-.02em}
+.logo span{color:var(--lavender)}
+.nav-tabs{display:flex;gap:.4rem;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:2rem;padding:.3rem}
+.nav-tab{padding:.4rem 1.1rem;border-radius:1.5rem;font-size:.8rem;cursor:pointer;border:none;background:transparent;color:var(--muted);font-family:var(--sans);transition:all .2s}
+.nav-tab.active{background:rgba(124,111,247,.25);color:var(--mist);border:1px solid rgba(124,111,247,.3)}
+
+/* Layout */
+.page{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:2.5rem 1.5rem 100px}
+.section-hidden{display:none}
+
+/* ── AFFIRMATION CARD ── */
+.aff-layout{display:grid;grid-template-columns:1fr 1fr;gap:2.5rem;align-items:start}
+@media(max-width:768px){.aff-layout{grid-template-columns:1fr}}
+.ctrl-eyebrow{font-size:.7rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--lavender);margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem}
+.ctrl-eyebrow::before{content:'';width:16px;height:1px;background:var(--lavender)}
+.ctrl-h{font-family:var(--serif);font-size:2rem;font-weight:300;line-height:1.15;margin-bottom:.5rem;letter-spacing:-.02em}
+.ctrl-h em{font-style:italic;color:var(--lavender)}
+.ctrl-sub{font-size:.875rem;color:var(--muted);line-height:1.7;margin-bottom:1.8rem}
+.ctrl-label{font-size:.75rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2);margin-bottom:.6rem;display:block}
+.mood-row{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.4rem}
+.mood-pill{padding:.45rem .9rem;border-radius:2rem;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.8rem;cursor:pointer;font-family:var(--sans);transition:all .2s;display:flex;align-items:center;gap:.35rem}
+.mood-pill:hover{border-color:rgba(168,156,245,.4);color:var(--lavender)}
+.mood-pill.sel{background:rgba(124,111,247,.2);border-color:rgba(168,156,245,.5);color:var(--mist)}
+.theme-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:1.4rem}
+.theme-opt{padding:.55rem .5rem;border-radius:12px;border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--muted);font-size:.75rem;cursor:pointer;text-align:center;transition:all .2s;font-family:var(--sans)}
+.theme-opt:hover{border-color:rgba(255,255,255,.2);color:var(--white)}
+.theme-opt.sel{background:rgba(78,205,196,.12);border-color:rgba(78,205,196,.4);color:var(--teal)}
+.name-input{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:12px;padding:.75rem 1rem;color:var(--white);font-size:1rem;font-family:var(--sans);outline:none;margin-bottom:1.4rem;transition:border-color .2s}
+.name-input:focus{border-color:rgba(124,111,247,.5)}
+.name-input::placeholder{color:var(--muted2)}
+.gen-btn{width:100%;padding:.9rem;background:linear-gradient(135deg,var(--purple),var(--lavender));border:none;border-radius:2rem;color:#fff;font-size:.9rem;font-weight:600;cursor:pointer;font-family:var(--sans);transition:all .25s;box-shadow:0 6px 24px rgba(124,111,247,.35);display:flex;align-items:center;justify-content:center;gap:.5rem}
+.gen-btn:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(124,111,247,.5)}
+.gen-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+/* Card Preview */
+.card-preview-wrap{position:sticky;top:5rem}
+.card-frame{border-radius:24px;overflow:hidden;position:relative;aspect-ratio:4/5;max-width:380px;margin:0 auto;cursor:pointer;transition:transform .3s;box-shadow:0 24px 64px rgba(0,0,0,.6)}
+.card-frame:hover{transform:scale(1.02)}
+.card-bg{position:absolute;inset:0;transition:background 1s}
+.card-noise{position:absolute;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.08'/%3E%3C/svg%3E");opacity:.5}
+.card-orb{position:absolute;border-radius:50%;filter:blur(60px);transition:all 1s}
+.card-content{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between;padding:2rem;z-index:1}
+.card-top{display:flex;justify-content:space-between;align-items:flex-start}
+.card-logo{font-family:var(--serif);font-size:1rem;color:rgba(255,255,255,.4);letter-spacing:.05em}
+.card-date{font-size:.72rem;font-family:var(--mono);color:rgba(255,255,255,.3)}
+.card-middle{flex:1;display:flex;align-items:center;padding:1rem 0}
+.card-quote{font-family:var(--serif);font-size:1.4rem;font-weight:300;line-height:1.45;color:rgba(255,255,255,.92);letter-spacing:-.01em;font-style:italic;text-shadow:0 2px 20px rgba(0,0,0,.4)}
+.card-name{font-size:.8rem;color:rgba(255,255,255,.5);margin-bottom:.3rem;font-family:var(--sans);letter-spacing:.04em}
+.card-mood-tag{display:inline-flex;align-items:center;gap:.4rem;font-size:.7rem;background:rgba(255,255,255,.1);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.15);border-radius:2rem;padding:.3rem .75rem;color:rgba(255,255,255,.7)}
+.card-shimmer{position:absolute;inset:0;background:linear-gradient(135deg,transparent 40%,rgba(255,255,255,.04) 50%,transparent 60%);animation:cardShimmer 4s ease-in-out infinite}
+@keyframes cardShimmer{0%{transform:translateX(-100%) rotate(20deg)}100%{transform:translateX(200%) rotate(20deg)}}
+
+/* Card actions */
+.card-actions{display:flex;gap:.6rem;margin-top:1rem;justify-content:center;flex-wrap:wrap}
+.ca-btn{padding:.55rem 1.2rem;border-radius:2rem;font-size:.78rem;cursor:pointer;font-family:var(--sans);transition:all .2s;display:flex;align-items:center;gap:.35rem}
+.ca-primary{background:rgba(124,111,247,.2);border:1px solid rgba(124,111,247,.4);color:var(--lavender)}
+.ca-primary:hover{background:rgba(124,111,247,.3)}
+.ca-ghost{background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--muted)}
+.ca-ghost:hover{background:rgba(255,255,255,.09);color:var(--white)}
+
+/* Loading state */
+.card-loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;background:rgba(4,6,15,.7);backdrop-filter:blur(10px);opacity:0;pointer-events:none;transition:opacity .3s}
+.card-loading.show{opacity:1;pointer-events:auto}
+.spin{width:36px;height:36px;border:2px solid rgba(255,255,255,.1);border-top-color:var(--lavender);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:.75rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin-text{font-family:var(--serif);font-size:.9rem;font-style:italic;color:var(--muted)}
+
+/* ── WEATHER REPORT ── */
+.wx-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2rem;flex-wrap:wrap;gap:1rem}
+.wx-generate-btn{padding:.7rem 1.5rem;background:rgba(78,205,196,.15);border:1px solid rgba(78,205,196,.4);border-radius:2rem;color:var(--teal);font-size:.82rem;font-weight:600;cursor:pointer;font-family:var(--sans);transition:all .2s;display:flex;align-items:center;gap:.4rem}
+.wx-generate-btn:hover{background:rgba(78,205,196,.25);transform:translateY(-1px)}
+.wx-generate-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+/* Main weather card */
+.wx-card{background:linear-gradient(160deg,rgba(78,205,196,.08),rgba(124,111,247,.06));border:1px solid rgba(78,205,196,.2);border-radius:24px;padding:2rem;margin-bottom:1.5rem;position:relative;overflow:hidden}
+.wx-card-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 80% 20%,rgba(78,205,196,.08),transparent 55%);pointer-events:none}
+.wx-card-inner{position:relative;z-index:1}
+.wx-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem}
+.wx-current{display:flex;align-items:center;gap:1.2rem}
+.wx-icon{font-size:3.5rem;filter:drop-shadow(0 0 20px rgba(78,205,196,.4));transition:all .5s}
+.wx-temp{font-family:var(--serif);font-size:3.5rem;font-weight:300;letter-spacing:-.04em;line-height:1;color:var(--white)}
+.wx-unit{font-size:1.2rem;color:var(--muted)}
+.wx-label{font-size:.85rem;color:var(--muted);margin-top:.2rem}
+.wx-location{text-align:right}
+.wx-loc-name{font-family:var(--serif);font-size:1.2rem;font-style:italic;color:var(--muted)}
+.wx-loc-date{font-size:.72rem;color:var(--muted2);font-family:var(--mono);margin-top:.2rem}
+.wx-desc{font-family:var(--serif);font-size:1rem;font-style:italic;color:rgba(240,240,255,.6);line-height:1.7;border-top:1px solid rgba(255,255,255,.06);padding-top:1rem;margin-top:0}
+
+/* Forecast strip */
+.wx-forecast{display:grid;grid-template-columns:repeat(7,1fr);gap:.5rem;margin-bottom:1.5rem}
+@media(max-width:600px){.wx-forecast{grid-template-columns:repeat(4,1fr)}}
+.wx-day{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:14px;padding:.75rem .4rem;text-align:center;transition:all .25s;cursor:pointer}
+.wx-day:hover{background:rgba(255,255,255,.07);border-color:var(--border2)}
+.wx-day.today{background:rgba(78,205,196,.1);border-color:rgba(78,205,196,.3)}
+.wx-day-name{font-size:.65rem;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem}
+.wx-day-icon{font-size:1.2rem;margin-bottom:.4rem}
+.wx-day-temp{font-family:var(--serif);font-size:.9rem;color:var(--white)}
+.wx-day-mood{font-size:.65rem;color:var(--muted2);margin-top:.2rem}
+
+/* Emotional metrics */
+.wx-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:1.5rem}
+@media(max-width:600px){.wx-metrics{grid-template-columns:repeat(2,1fr)}}
+.wx-metric{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:16px;padding:1rem .75rem;text-align:center}
+.wx-metric-icon{font-size:1.4rem;margin-bottom:.4rem}
+.wx-metric-val{font-family:var(--serif);font-size:1.3rem;font-weight:300;color:var(--white);line-height:1;margin-bottom:.25rem}
+.wx-metric-lbl{font-size:.65rem;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em}
+
+/* AI Summary */
+.wx-ai-card{background:rgba(124,111,247,.08);border:1px solid rgba(124,111,247,.2);border-radius:20px;padding:1.5rem}
+.wx-ai-header{display:flex;align-items:center;gap:.75rem;margin-bottom:1rem}
+.wx-ai-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--lavender));display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.wx-ai-name{font-weight:600;font-size:.875rem}
+.wx-ai-role{font-size:.72rem;color:var(--muted2)}
+.wx-ai-text{font-family:var(--serif);font-size:.95rem;font-style:italic;color:rgba(240,240,255,.65);line-height:1.75}
+.wx-ai-text span{color:var(--lavender);font-style:normal;font-weight:500}
+
+/* Spinner */
+.loading-state{text-align:center;padding:3rem;opacity:.5;font-family:var(--serif);font-size:1rem;font-style:italic;color:var(--muted);display:none}
+.loading-state.show{display:block}
+
+/* Saved cards grid */
+.saved-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;padding-top:1rem}
+.saved-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:1.25rem;position:relative;transition:transform .2s}
+.saved-card:hover{transform:translateY(-2px)}
+.saved-card-date{font-size:.68rem;color:var(--muted2);font-family:var(--mono);margin-bottom:.5rem}
+.saved-card-tags{display:flex;gap:.4rem;margin-bottom:.75rem;flex-wrap:wrap}
+.saved-card-tag{font-size:.68rem;padding:.15rem .6rem;border-radius:2rem;background:rgba(124,111,247,.12);border:1px solid rgba(124,111,247,.2);color:var(--lavender)}
+.saved-card-text{font-family:var(--serif);font-size:.9rem;font-style:italic;color:rgba(240,240,255,.65);line-height:1.6}
+.saved-card-del{position:absolute;top:.75rem;right:.75rem;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--muted2);width:22px;height:22px;border-radius:50%;font-size:.6rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;opacity:0}
+.saved-card:hover .saved-card-del{opacity:1}
+.saved-card-del:hover{background:rgba(220,50,50,.2);border-color:rgba(220,50,50,.4);color:#ff9090}
+.saved-empty{text-align:center;padding:4rem 2rem;font-family:var(--serif);font-style:italic;color:var(--muted2);font-size:1rem;line-height:1.75}
+
+/* History panel */
+.hist-overlay{position:fixed;inset:0;z-index:200;background:rgba(4,6,15,.92);backdrop-filter:blur(20px);display:flex;align-items:center;justify-content:center;padding:2rem;opacity:0;pointer-events:none;transition:opacity .3s}
+.hist-overlay.open{opacity:1;pointer-events:auto}
+.hist-panel{background:var(--card);border:1px solid var(--border2);border-radius:24px;padding:2rem;max-width:500px;width:100%;max-height:80vh;overflow-y:auto}
+.hist-panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem}
+.hist-panel-title{font-family:var(--serif);font-size:1.4rem;font-weight:300;letter-spacing:-.01em}
+.hist-close{background:rgba(255,255,255,.07);border:1px solid var(--border);color:var(--muted);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.75rem;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.hist-close:hover{background:rgba(255,255,255,.14);color:#fff}
+.hist-count{font-size:.78rem;color:var(--muted2);margin-bottom:1.25rem;letter-spacing:.03em}
+.hist-entry{padding:.9rem 0;border-bottom:1px solid var(--border)}
+.hist-entry:last-child{border-bottom:none}
+.hist-entry-meta{display:flex;gap:.5rem;margin-bottom:.4rem;flex-wrap:wrap}
+.hist-entry-tag{font-size:.68rem;padding:.12rem .55rem;border-radius:2rem;background:rgba(78,205,196,.1);border:1px solid rgba(78,205,196,.2);color:var(--teal)}
+.hist-entry-date{font-size:.68rem;color:var(--muted2);font-family:var(--mono);align-self:center}
+.hist-entry-text{font-family:var(--serif);font-size:.875rem;font-style:italic;color:rgba(240,240,255,.55);line-height:1.55}
+
+/* History button below gen-btn */
+.hist-link{display:block;text-align:center;margin-top:.75rem;font-size:.75rem;color:rgba(124,111,247,.5);cursor:pointer;letter-spacing:.04em;transition:color .2s;background:none;border:none;font-family:var(--sans);width:100%}
+.hist-link:hover{color:var(--lavender)}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">MindShift<span>+</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showTab('affirmation',this)">✦ Daily Card</button>
+    <button class="nav-tab" onclick="showTab('weather',this)">◎ Emotional Weather</button>
+    <button class="nav-tab" onclick="showTab('saved',this)">♥ Saved</button>
+  </div>
+</nav>
+
+<!-- ── AFFIRMATION SECTION ── -->
+<div id="affirmation-section" class="page">
+  <div class="aff-layout">
+    <div class="aff-controls">
+      <div class="ctrl-eyebrow">Personalized for you</div>
+      <h1 class="ctrl-h">Your daily<br><em>affirmation card</em></h1>
+      <p class="ctrl-sub">Tell Mia how you're feeling and what you need. She'll craft something personal, beautiful, and just for you — every single day.</p>
+
+      <label class="ctrl-label">How are you feeling?</label>
+      <div class="mood-row" id="moodRow">
+        <div class="mood-pill" data-m="Anxious" onclick="selMood(this)">😰 Anxious</div>
+        <div class="mood-pill" data-m="Tired" onclick="selMood(this)">😴 Tired</div>
+        <div class="mood-pill" data-m="Hopeful" onclick="selMood(this)">🌱 Hopeful</div>
+        <div class="mood-pill" data-m="Overwhelmed" onclick="selMood(this)">🌊 Overwhelmed</div>
+        <div class="mood-pill" data-m="Grateful" onclick="selMood(this)">✨ Grateful</div>
+        <div class="mood-pill" data-m="Sad" onclick="selMood(this)">💙 Sad</div>
+        <div class="mood-pill" data-m="Motivated" onclick="selMood(this)">⚡ Motivated</div>
+        <div class="mood-pill" data-m="Healing" onclick="selMood(this)">🍃 Healing</div>
+      </div>
+
+      <label class="ctrl-label">What do you need today?</label>
+      <div class="theme-grid" id="themeGrid">
+        <div class="theme-opt" data-t="Courage" onclick="selTheme(this)">Courage</div>
+        <div class="theme-opt" data-t="Peace" onclick="selTheme(this)">Peace</div>
+        <div class="theme-opt" data-t="Self-love" onclick="selTheme(this)">Self-love</div>
+        <div class="theme-opt" data-t="Strength" onclick="selTheme(this)">Strength</div>
+        <div class="theme-opt" data-t="Hope" onclick="selTheme(this)">Hope</div>
+        <div class="theme-opt" data-t="Letting go" onclick="selTheme(this)">Letting go</div>
+        <div class="theme-opt" data-t="Gratitude" onclick="selTheme(this)">Gratitude</div>
+        <div class="theme-opt" data-t="Identity" onclick="selTheme(this)">Identity</div>
+        <div class="theme-opt" data-t="New beginning" onclick="selTheme(this)">New beginning</div>
+      </div>
+
+      <label class="ctrl-label">Your name (optional)</label>
+      <input class="name-input" id="nameInput" placeholder="What should Mia call you?" maxlength="30"/>
+
+      <button class="gen-btn" id="genBtn" onclick="generateCard()">
+        <span id="genBtnTxt">✦ Generate My Affirmation</span>
+      </button>
+      <button class="hist-link" onclick="openHistory()">↗ Affirmation History</button>
+    </div>
+
+    <div class="card-preview-wrap">
+      <div class="card-frame" id="cardFrame">
+        <div class="card-bg" id="cardBg"></div>
+        <div class="card-noise"></div>
+        <div class="card-orb" id="cardOrb1" style="width:200px;height:200px;top:-60px;right:-60px;background:rgba(124,111,247,.35)"></div>
+        <div class="card-orb" id="cardOrb2" style="width:150px;height:150px;bottom:-40px;left:-40px;background:rgba(78,205,196,.25)"></div>
+        <div class="card-shimmer"></div>
+        <div class="card-content">
+          <div class="card-top">
+            <div class="card-logo">MindShift+</div>
+            <div class="card-date" id="cardDate"></div>
+          </div>
+          <div class="card-middle">
+            <div class="card-quote" id="cardQuote">"You are not behind. You are not broken. You are in the middle of your story — and the middle is where the courage lives."</div>
+          </div>
+          <div class="card-bottom">
+            <div class="card-name" id="cardName">For You ✦</div>
+            <div class="card-mood-tag" id="cardMoodTag">✦ Your Daily Affirmation</div>
+          </div>
+        </div>
+        <div class="card-loading" id="cardLoading">
+          <div class="spin"></div>
+          <div class="spin-text" id="spinText">Mia is writing for you…</div>
+        </div>
+      </div>
+
+      <div class="card-actions">
+        <button class="ca-btn ca-primary" onclick="generateCard()">↺ Regenerate</button>
+        <button class="ca-btn ca-ghost" onclick="copyCard()">⊞ Copy</button>
+        <button class="ca-btn ca-ghost" onclick="shareCard()">↗ Share</button>
+        <button class="ca-btn ca-ghost" onclick="saveAffirmation()">♥ Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── WEATHER SECTION ── -->
+<div id="weather-section" class="page section-hidden">
+  <div class="wx-layout">
+    <div class="wx-header">
+      <div class="wx-title-block">
+        <div class="ctrl-eyebrow" style="margin-bottom:.5rem">Emotional intelligence</div>
+        <h1 class="ctrl-h" style="font-size:2rem">Your <em>Emotional Weather</em></h1>
+        <p style="font-size:.875rem;color:var(--muted);margin-top:.3rem">A weekly AI-powered forecast of your inner world. Updated every Sunday.</p>
+      </div>
+      <button class="wx-generate-btn" id="wxGenBtn" onclick="generateWeather()">
+        <span id="wxBtnTxt">◎ Refresh Forecast</span>
+      </button>
+    </div>
+
+    <div id="wxLoading" class="loading-state">Mia is reading your emotional patterns…</div>
+
+    <div id="wxContent">
+      <div class="wx-card">
+        <div class="wx-card-bg"></div>
+        <div class="wx-card-inner">
+          <div class="wx-top">
+            <div class="wx-current">
+              <div class="wx-icon" id="wxIcon">🌤</div>
+              <div>
+                <div class="wx-temp"><span id="wxScore">74</span><span class="wx-unit">%</span></div>
+                <div class="wx-label" id="wxCondition">Mostly Calm with Scattered Thoughts</div>
+              </div>
+            </div>
+            <div class="wx-location">
+              <div class="wx-loc-name">Inner World</div>
+              <div class="wx-loc-date" id="wxDate"></div>
+            </div>
+          </div>
+          <div class="wx-desc" id="wxDesc">A week of meaningful movement — you processed something real and showed up consistently. Expect clearer emotional skies by mid-week with a chance of breakthrough moments.</div>
+        </div>
+      </div>
+
+      <div class="wx-forecast" id="wxForecast"></div>
+
+      <div class="wx-metrics" id="wxMetrics">
+        <div class="wx-metric"><div class="wx-metric-icon">💧</div><div class="wx-metric-val" id="wxHum">62%</div><div class="wx-metric-lbl">Emotional Depth</div></div>
+        <div class="wx-metric"><div class="wx-metric-icon">🌬</div><div class="wx-metric-val" id="wxWind">Gentle</div><div class="wx-metric-lbl">Mental Chatter</div></div>
+        <div class="wx-metric"><div class="wx-metric-icon">☀</div><div class="wx-metric-val" id="wxUv">Moderate</div><div class="wx-metric-lbl">Energy Level</div></div>
+        <div class="wx-metric"><div class="wx-metric-icon">🌡</div><div class="wx-metric-val" id="wxPres">Rising</div><div class="wx-metric-lbl">Mood Trend</div></div>
+      </div>
+
+      <div class="wx-ai-card">
+        <div class="wx-ai-header">
+          <div class="wx-ai-avatar">◎</div>
+          <div><div class="wx-ai-name">Mia's Weekly Read</div><div class="wx-ai-role">Your AI wellness coach</div></div>
+        </div>
+        <div class="wx-ai-text" id="wxAiText">
+          This week you showed up for yourself more than you realize. Your journal entries point to a pattern of <span>late-week resilience</span> — the hardest days came early, but you pushed through. The emotional barometric pressure is <span>rising steadily</span>, which in your world means increased capacity for connection and clarity. Watch for <span>Tuesday afternoon energy dips</span> — a short breathing session could be your anchor. Overall forecast: <span>meaningful growth ahead.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SAVED SECTION ── -->
+<div id="saved-section" class="page section-hidden">
+  <div class="ctrl-eyebrow">Your collection</div>
+  <h1 class="ctrl-h" style="margin-bottom:1rem">Saved <em>affirmations</em></h1>
+  <div id="savedGrid" class="saved-grid"></div>
+</div>
+
+<!-- ── HISTORY OVERLAY ── -->
+<div id="histOverlay" class="hist-overlay">
+  <div class="hist-panel">
+    <div class="hist-panel-header">
+      <div class="hist-panel-title">Affirmation History</div>
+      <button class="hist-close" onclick="closeHistory()">✕</button>
+    </div>
+    <div id="histCount" class="hist-count"></div>
+    <div id="histList"></div>
+  </div>
+</div>
+
+<script>
+const CARD_THEMES={
+  Anxious:{bg:'linear-gradient(160deg,#1a0f2e,#0d1228,#0a1a2e)',orb1:'rgba(78,205,196,.4)',orb2:'rgba(107,95,207,.3)'},
+  Tired:{bg:'linear-gradient(160deg,#0f1a2e,#081220,#0d1020)',orb1:'rgba(100,140,200,.3)',orb2:'rgba(80,100,160,.25)'},
+  Hopeful:{bg:'linear-gradient(160deg,#0d2218,#081520,#0a1228)',orb1:'rgba(82,183,136,.4)',orb2:'rgba(78,205,196,.3)'},
+  Overwhelmed:{bg:'linear-gradient(160deg,#1a1228,#0d0820,#0a1020)',orb1:'rgba(240,147,160,.35)',orb2:'rgba(107,95,207,.3)'},
+  Grateful:{bg:'linear-gradient(160deg,#1a1208,#0d1008,#081208)',orb1:'rgba(245,200,66,.35)',orb2:'rgba(82,183,136,.3)'},
+  Sad:{bg:'linear-gradient(160deg,#0a1428,#060e20,#040812)',orb1:'rgba(126,184,232,.35)',orb2:'rgba(78,120,200,.25)'},
+  Motivated:{bg:'linear-gradient(160deg,#120820,#0a0512,#100a08)',orb1:'rgba(245,200,66,.4)',orb2:'rgba(240,122,47,.3)'},
+  Healing:{bg:'linear-gradient(160deg,#081a14,#060e10,#0a1228)',orb1:'rgba(82,183,136,.4)',orb2:'rgba(157,143,240,.25)'},
+};
+
+let selMoodVal='',selThemeVal='';
+const today=new Date();
+document.getElementById('cardDate').textContent=today.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+document.getElementById('wxDate').textContent='Week of '+today.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+
+function selMood(el){
+  selMoodVal=el.dataset.m;
+  document.querySelectorAll('.mood-pill').forEach(p=>p.classList.remove('sel'));
+  el.classList.add('sel');
+  applyCardTheme(selMoodVal);
+}
+function selTheme(el){
+  selThemeVal=el.dataset.t;
+  document.querySelectorAll('.theme-opt').forEach(p=>p.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function applyCardTheme(mood){
+  const t=CARD_THEMES[mood]||CARD_THEMES.Hopeful;
+  document.getElementById('cardBg').style.background=t.bg;
+  document.getElementById('cardOrb1').style.background=t.orb1;
+  document.getElementById('cardOrb2').style.background=t.orb2;
+}
+
+async function generateCard(){
+  const btn=document.getElementById('genBtn');
+  const txt=document.getElementById('genBtnTxt');
+  const loading=document.getElementById('cardLoading');
+  btn.disabled=true;txt.textContent='Mia is writing…';
+  loading.classList.add('show');
+
+  const mood=selMoodVal||'reflective';
+  const theme=selThemeVal||'inner peace';
+  const name=document.getElementById('nameInput').value.trim()||null;
+
+  const spinMessages=['Mia is writing for you…','Finding just the right words…','Weaving something true…'];
+  let si=0;const spinInt=setInterval(()=>{document.getElementById('spinText').textContent=spinMessages[si++%spinMessages.length]},1200);
+
+  try{
+    const res=await fetch('https://dhuswldjuuhtxejnmfla.supabase.co/functions/v1/ai-proxy',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        max_tokens:300,
+        system:`You are Mia, a warm AI wellness coach for MindShift+. Write a single beautiful affirmation — one to three sentences max. It should feel deeply personal, poetic, and emotionally intelligent. Do NOT use clichés. Make it feel like it was written specifically for this person. Use the second person ("you"). No hashtags, no quotation marks in your response — just the affirmation itself. It should feel like something you'd want to read in a quiet moment. The tone is warm, poetic, and deeply human.`,
+        messages:[{role:'user',content:`The person is feeling: ${mood}. They need: ${theme}.${name?' Their name is '+name+'.':''} Write them a single personal affirmation for today.`}]
+      })
+    });
+    const data=await res.json();
+    const text=data.content?.find(c=>c.type==='text')?.text||'You are more than your hardest days. You are the one who keeps showing up, and that matters more than you know.';
+    document.getElementById('cardQuote').textContent='"'+text.replace(/^"|"$/g,'')+'"';
+    recordAffirmation(mood,theme,text);
+    haptic([80]);
+  }catch(e){
+    document.getElementById('cardQuote').textContent='"You are not behind. You are exactly where your growth needs you to be right now."';
+  }
+
+  clearInterval(spinInt);
+  if(name) document.getElementById('cardName').textContent='For '+name+' ✦';
+  document.getElementById('cardMoodTag').textContent=(selMoodVal||'✦')+' · '+today.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  if(selMoodVal) applyCardTheme(selMoodVal);
+  loading.classList.remove('show');
+  btn.disabled=false;txt.textContent='✦ Generate My Affirmation';
+}
+
+function copyCard(){
+  haptic([40]);
+  const q=document.getElementById('cardQuote').textContent;
+  navigator.clipboard?.writeText(q+'\\n\\n— MindShift+').then(()=>{
+    const btn=event.target;btn.textContent='✓ Copied!';setTimeout(()=>btn.textContent='⊞ Copy',2000);
+  });
+}
+function shareCard(){
+  const q=document.getElementById('cardQuote').textContent;
+  if(navigator.share){navigator.share({title:'My MindShift+ Affirmation',text:q})}
+  else{copyCard()}
+}
+
+const WX_ICONS=['⛈','🌧','🌦','🌤','☀','🌈','⭐'];
+const WX_MOODS=['Heavy','Cloudy','Mixed','Clearing','Bright','Radiant','Transcendent'];
+const WX_DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const WX_SCORES=[45,52,60,68,72,78,74];
+
+function buildForecast(scores){
+  const todayIdx=new Date().getDay();
+  const wrap=document.getElementById('wxForecast');
+  wrap.innerHTML='';
+  for(let i=0;i<7;i++){
+    const dayIdx=(todayIdx+i)%7;
+    const score=scores[i]||Math.floor(50+Math.random()*40);
+    const iconIdx=Math.floor((score/100)*6);
+    const d=document.createElement('div');
+    d.className='wx-day'+(i===0?' today':'');
+    d.innerHTML=`<div class="wx-day-name">${i===0?'Today':WX_DAYS[dayIdx]}</div><div class="wx-day-icon">${WX_ICONS[iconIdx]}</div><div class="wx-day-temp">${score}%</div><div class="wx-day-mood">${WX_MOODS[iconIdx]}</div>`;
+    wrap.appendChild(d);
+  }
+}
+buildForecast(WX_SCORES);
+
+async function generateWeather(){
+  const btn=document.getElementById('wxGenBtn');
+  const txt=document.getElementById('wxBtnTxt');
+  btn.disabled=true;txt.textContent='Reading patterns…';
+  document.getElementById('wxLoading').classList.add('show');
+  document.getElementById('wxContent').style.opacity='.3';
+
+  try{
+    const res=await fetch('https://dhuswldjuuhtxejnmfla.supabase.co/functions/v1/ai-proxy',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        max_tokens:600,
+        system:`You are Mia, the AI wellness coach for MindShift+. Generate a weekly emotional weather report in JSON format ONLY. No other text. The JSON must have these exact keys:
+- "score": integer 40-95 (overall emotional wellness score this week)
+- "condition": string (short weather metaphor like "Mostly Calm with Scattered Thoughts")
+- "icon": single weather emoji
+- "description": 1-2 sentence poetic weather description of emotional state
+- "humidity": string (emotional depth, e.g. "68%")
+- "wind": string (mental chatter level, e.g. "Light", "Gentle", "Moderate", "Restless")
+- "uv": string (energy level, e.g. "Low", "Moderate", "High")
+- "pressure": string (mood trend, e.g. "Rising", "Falling", "Stable", "Climbing")
+- "forecast": array of 7 integers 30-95 (daily scores Mon-Sun)
+- "mia_insight": 3-4 sentences personal weekly insight using weather metaphors, with key phrases surrounded by <em> tags`,
+        messages:[{role:'user',content:'Generate a fresh weekly emotional weather report for a MindShift+ user who has been journaling regularly and making progress. Today is '+today.toDateString()+'.'}]
+      })
+    });
+    const data=await res.json();
+    const raw=data.content?.find(c=>c.type==='text')?.text||'{}';
+    const clean=raw.replace(/```json|```/g,'').trim();
+    const wx=JSON.parse(clean);
+    applyWeather(wx);
+  }catch(e){
+    applyWeather({
+      score:74,condition:'Mostly Calm with Scattered Thoughts',icon:'🌤',
+      description:'A week of meaningful movement — you processed something real and showed up consistently. Expect clearer emotional skies by mid-week.',
+      humidity:'62%',wind:'Gentle',uv:'Moderate',pressure:'Rising',
+      forecast:[58,64,70,72,75,78,74],
+      mia_insight:'This week you showed up for yourself more than you realize. Your emotional barometric pressure is <em>rising steadily</em>, which in your world means increased capacity for connection. Watch for <em>late-week breakthroughs</em> — the clearing is already beginning. Overall forecast: <em>meaningful growth ahead.</em>'
+    });
+  }
+
+  document.getElementById('wxLoading').classList.remove('show');
+  document.getElementById('wxContent').style.opacity='1';
+  btn.disabled=false;txt.textContent='◎ Refresh Forecast';
+}
+
+function applyWeather(wx){
+  document.getElementById('wxIcon').textContent=wx.icon||'🌤';
+  document.getElementById('wxScore').textContent=wx.score||74;
+  document.getElementById('wxCondition').textContent=wx.condition||'Clearing';
+  document.getElementById('wxDesc').textContent=wx.description||'';
+  document.getElementById('wxHum').textContent=wx.humidity||'62%';
+  document.getElementById('wxWind').textContent=wx.wind||'Gentle';
+  document.getElementById('wxUv').textContent=wx.uv||'Moderate';
+  document.getElementById('wxPres').textContent=wx.pressure||'Rising';
+  if(wx.forecast) buildForecast(wx.forecast);
+  if(wx.mia_insight) document.getElementById('wxAiText').innerHTML=wx.mia_insight.replace(/<em>(.*?)<\/em>/g,'<span>$1<\/span>');
+}
+
+function showTab(id,btn){
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('affirmation-section').classList.toggle('section-hidden',id!=='affirmation');
+  document.getElementById('weather-section').classList.toggle('section-hidden',id!=='weather');
+  document.getElementById('saved-section').classList.toggle('section-hidden',id!=='saved');
+  if(id==='saved') renderSaved();
+}
+
+window.addEventListener('load',()=>{
+  applyCardTheme('Hopeful');
+});
+
+/* ── STORAGE ── */
+function loadSaved(){try{return JSON.parse(localStorage.getItem('ms_dl_saved')||'[]');}catch(e){return [];}}
+function saveSaved(arr){localStorage.setItem('ms_dl_saved',JSON.stringify(arr));}
+function loadHistory(){try{return JSON.parse(localStorage.getItem('ms_dl_history')||'[]');}catch(e){return [];}}
+function saveHistory(arr){localStorage.setItem('ms_dl_history',JSON.stringify(arr));}
+
+/* ── HAPTIC ── */
+function haptic(pattern){if('vibrate' in navigator) navigator.vibrate(pattern);}
+
+/* ── SAVE AFFIRMATION ── */
+function saveAffirmation(){
+  const text=document.getElementById('cardQuote').textContent.replace(/^"|"$/g,'');
+  if(!text||text.includes('You are not behind. You are not broken')) return;
+  const name=document.getElementById('nameInput').value.trim();
+  const arr=loadSaved();
+  arr.unshift({id:Date.now(),date:new Date().toISOString(),mood:selMoodVal,theme:selThemeVal,text,name});
+  if(arr.length>50) arr.splice(50);
+  saveSaved(arr);
+  haptic([60,20,60]);
+  const btn=event.target;
+  btn.textContent='✓ Saved!';
+  setTimeout(()=>btn.textContent='♥ Save',2000);
+  renderSaved();
+}
+
+/* ── SAVED SECTION ── */
+function renderSaved(){
+  const arr=loadSaved();
+  const grid=document.getElementById('savedGrid');
+  if(!grid) return;
+  if(!arr.length){
+    grid.innerHTML='<div class="saved-empty">Nothing saved yet.<br>Generate an affirmation and tap ♥ Save to keep it.</div>';
+    return;
+  }
+  grid.innerHTML=arr.map(a=>{
+    const d=new Date(a.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    const preview=a.text.length>120?a.text.slice(0,120)+'…':a.text;
+    return `<div class="saved-card">
+      <button class="saved-card-del" onclick="deleteSaved(${a.id})">✕</button>
+      <div class="saved-card-date">${d}</div>
+      <div class="saved-card-tags">
+        ${a.mood?`<span class="saved-card-tag">${a.mood}</span>`:''}
+        ${a.theme?`<span class="saved-card-tag">${a.theme}</span>`:''}
+      </div>
+      <div class="saved-card-text">"${preview}"</div>
+    </div>`;
+  }).join('');
+}
+
+function deleteSaved(id){
+  const arr=loadSaved().filter(a=>a.id!==id);
+  saveSaved(arr);
+  renderSaved();
+}
+
+/* ── HISTORY ── */
+function recordAffirmation(mood,theme,text){
+  const arr=loadHistory();
+  arr.unshift({date:new Date().toISOString(),mood,theme,text});
+  if(arr.length>100) arr.splice(100);
+  saveHistory(arr);
+}
+
+function openHistory(){
+  const arr=loadHistory();
+  document.getElementById('histCount').textContent=arr.length
+    ?`${arr.length} affirmation${arr.length!==1?'s':''} generated`
+    :'No affirmations generated yet.';
+  document.getElementById('histList').innerHTML=arr.slice(0,20).map(a=>{
+    const d=new Date(a.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    const preview=a.text.length>100?a.text.slice(0,100)+'…':a.text;
+    return `<div class="hist-entry">
+      <div class="hist-entry-meta">
+        ${a.mood?`<span class="hist-entry-tag">${a.mood}</span>`:''}
+        ${a.theme?`<span class="hist-entry-tag">${a.theme}</span>`:''}
+        <span class="hist-entry-date">${d}</span>
+      </div>
+      <div class="hist-entry-text">"${preview}"</div>
+    </div>`;
+  }).join('')||'<div style="color:var(--muted2);font-size:.875rem;padding:1rem 0">No history yet.</div>';
+  document.getElementById('histOverlay').classList.add('open');
+}
+
+function closeHistory(){
+  document.getElementById('histOverlay').classList.remove('open');
+}
+</script>
+</body>
+</html>
+

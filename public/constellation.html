@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>MindShift+ · Mood Constellation</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--serif:'Cormorant Garamond',Georgia,serif;--sans:'DM Sans',sans-serif;--mono:'DM Mono',monospace}
+html,body{width:100%;height:100%;overflow:hidden;background:#020409;font-family:var(--sans)}
+body{color:#fff;position:relative}
+
+#bgCanvas{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+
+/* Grain */
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E");z-index:1;pointer-events:none}
+
+/* Top bar */
+#topbar{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:1.4rem 2rem;background:linear-gradient(to bottom,rgba(2,4,9,.95),transparent)}
+.logo{font-family:var(--serif);font-size:1.3rem;color:rgba(255,255,255,.6);letter-spacing:-.02em}
+.logo span{color:#9d8ff0}
+.top-right{display:flex;align-items:center;gap:.75rem}
+.chip{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.45);padding:.35rem .9rem;border-radius:2rem;font-size:.75rem;letter-spacing:.04em;cursor:pointer;transition:all .2s;font-family:var(--sans)}
+.chip:hover{background:rgba(157,143,240,.15);border-color:rgba(157,143,240,.4);color:#c5bff8}
+.chip.active{background:rgba(107,95,207,.25);border-color:rgba(157,143,240,.5);color:#c5bff8}
+
+/* Left panel */
+#leftPanel{position:fixed;top:50%;left:2rem;transform:translateY(-50%);z-index:40;display:flex;flex-direction:column;gap:.75rem;max-height:80vh}
+.legend-item{display:flex;align-items:center;gap:.6rem;font-size:.75rem;color:rgba(255,255,255,.4);transition:all .2s;cursor:pointer;padding:.2rem 0}
+.legend-item:hover{color:rgba(255,255,255,.75)}
+.legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.legend-item.dimmed{opacity:.25}
+
+/* Tooltip */
+#tooltip{position:fixed;z-index:100;pointer-events:none;opacity:0;transition:opacity .2s;background:rgba(10,12,28,.92);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:1rem 1.2rem;backdrop-filter:blur(16px);max-width:220px;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+.tt-date{font-size:.68rem;color:rgba(255,255,255,.35);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.3rem;font-family:var(--mono)}
+.tt-mood{font-family:var(--serif);font-size:1.3rem;margin-bottom:.25rem}
+.tt-note{font-size:.8rem;color:rgba(255,255,255,.55);line-height:1.6;font-style:italic;font-family:var(--serif)}
+.tt-tag{display:inline-block;font-size:.65rem;margin-top:.5rem;padding:.15rem .6rem;border-radius:2rem;background:rgba(157,143,240,.15);color:#c5bff8}
+
+/* Bottom bar */
+#bottomBar{position:fixed;bottom:60px;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:1.2rem 2rem;background:linear-gradient(to top,rgba(2,4,9,.95),transparent);flex-wrap:wrap;gap:.75rem}
+.bb-left{display:flex;flex-direction:column;gap:.2rem}
+.bb-title{font-family:var(--serif);font-size:1.1rem;font-weight:400;color:rgba(255,255,255,.7)}
+.bb-sub{font-size:.75rem;color:rgba(255,255,255,.3);letter-spacing:.04em}
+.bb-right{display:flex;align-items:center;gap:.6rem}
+
+/* Log mood panel */
+#logPanel{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:2rem;background:rgba(2,4,9,.88);backdrop-filter:blur(20px);opacity:0;pointer-events:none;transition:opacity .35s}
+#logPanel.open{opacity:1;pointer-events:auto}
+.log-card{background:rgba(15,17,35,.9);border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:2rem;max-width:420px;width:100%}
+.log-h{font-family:var(--serif);font-size:1.8rem;font-weight:300;margin-bottom:.4rem;letter-spacing:-.02em}
+.log-sub{font-size:.85rem;color:rgba(255,255,255,.4);margin-bottom:1.8rem;line-height:1.6}
+.mood-row{display:flex;gap:.6rem;margin-bottom:1.5rem;justify-content:center}
+.mood-opt{width:52px;height:52px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;border:1.5px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);transition:all .2s;gap:2px}
+.mood-opt:hover{transform:translateY(-3px);border-color:rgba(255,255,255,.25)}
+.mood-opt.sel{border-color:var(--c,#9d8ff0);background:rgba(157,143,240,.15);transform:scale(1.1)}
+.mood-emoji{font-size:20px}
+.mood-word{font-size:9px;color:rgba(255,255,255,.4);letter-spacing:.03em}
+.log-input{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.85rem 1rem;color:#fff;font-size:1rem;font-family:var(--serif);font-style:italic;resize:none;outline:none;margin-bottom:1.2rem;line-height:1.65}
+.log-input:focus{border-color:rgba(157,143,240,.4)}
+.log-input::placeholder{color:rgba(255,255,255,.2)}
+.tag-row{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1.5rem}
+.tag-opt{font-size:.7rem;padding:.25rem .7rem;border-radius:2rem;border:1px solid rgba(255,255,255,.1);background:transparent;color:rgba(255,255,255,.35);cursor:pointer;transition:all .15s;font-family:var(--sans)}
+.tag-opt.sel{background:rgba(107,95,207,.25);border-color:rgba(157,143,240,.5);color:#c5bff8}
+.log-actions{display:flex;gap:.6rem}
+.log-btn-primary{flex:1;background:linear-gradient(135deg,#6b5fcf,#9d8ff0);color:#fff;border:none;padding:.8rem;border-radius:2rem;font-size:.875rem;font-weight:500;cursor:pointer;font-family:var(--sans);transition:all .2s}
+.log-btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(107,95,207,.4)}
+.log-btn-ghost{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.45);padding:.8rem 1.2rem;border-radius:2rem;font-size:.875rem;cursor:pointer;font-family:var(--sans);transition:all .2s}
+.log-btn-ghost:hover{background:rgba(255,255,255,.09)}
+
+/* Stats strip */
+#statsStrip{position:fixed;top:5rem;right:2rem;z-index:40;display:flex;flex-direction:column;gap:.6rem;text-align:right}
+.ss-item .ss-val{font-family:var(--serif);font-size:1.5rem;font-weight:300;color:rgba(255,255,255,.7);line-height:1}
+.ss-item .ss-lbl{font-size:.65rem;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.08em}
+
+/* Constellation name label */
+.const-label{position:absolute;font-family:var(--serif);font-size:.75rem;font-style:italic;color:rgba(255,255,255,.2);pointer-events:none;letter-spacing:.05em;text-shadow:0 0 8px rgba(157,143,240,.5)}
+
+/* Add btn */
+.add-btn{background:linear-gradient(135deg,#6b5fcf,#9d8ff0);color:#fff;border:none;padding:.65rem 1.4rem;border-radius:2rem;font-size:.82rem;font-weight:500;cursor:pointer;font-family:var(--sans);transition:all .2s;box-shadow:0 4px 16px rgba(107,95,207,.35);display:flex;align-items:center;gap:.4rem}
+.add-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(107,95,207,.5)}
+
+/* ── Mobile responsive ── */
+@media(max-width:768px){
+  #topbar{padding:1rem 1.2rem}
+  .logo{font-size:1.1rem}
+  .chip{padding:.5rem 1rem;font-size:.8rem;min-height:36px}
+  #leftPanel{display:none}
+  #statsStrip{top:auto;bottom:5.5rem;right:1rem;text-align:right;gap:.4rem}
+  .ss-item .ss-val{font-size:1.2rem}
+  #bottomBar{padding:.9rem 1.2rem;gap:.5rem}
+  .bb-title{font-size:.95rem}
+  .bb-sub{font-size:.72rem}
+  .add-btn{padding:.7rem 1.2rem;font-size:.85rem;min-height:44px}
+  .log-card{padding:1.5rem 1.2rem;border-radius:18px}
+  .log-h{font-size:1.5rem}
+  .mood-row{gap:.4rem}
+  .mood-opt{width:48px;height:48px}
+  .tag-opt{padding:.45rem .85rem;font-size:.78rem;min-height:36px}
+  .log-btn-primary,.log-btn-ghost{padding:.9rem;font-size:.9rem;min-height:48px}
+}
+@media(max-width:480px){
+  .top-right{gap:.4rem}
+  .chip{padding:.45rem .75rem;font-size:.75rem}
+  .mood-row{gap:.3rem}
+  .mood-opt{width:44px;height:44px}
+  .mood-emoji{font-size:18px}
+  #statsStrip{display:none}
+}
+</style>
+</head>
+<body>
+<canvas id="bgCanvas"></canvas>
+
+<div id="topbar">
+  <div class="logo">MindShift<span>+</span> <span style="font-size:.75rem;color:rgba(255,255,255,.3);font-family:var(--sans);font-weight:300;margin-left:.5rem">Constellation</span></div>
+  <div class="top-right">
+    <div class="chip active" onclick="setView('all',this)">All Time</div>
+    <div class="chip" onclick="setView('month',this)">This Month</div>
+    <div class="chip" onclick="setView('week',this)">This Week</div>
+  </div>
+</div>
+
+<div id="leftPanel">
+  <div style="font-size:.65rem;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:.12em;margin-bottom:.3rem">Moods</div>
+  <div class="legend-item" onclick="filterMood('Amazing')"><div class="legend-dot" style="background:#f5c842;box-shadow:0 0 6px #f5c842aa"></div>Amazing</div>
+  <div class="legend-item" onclick="filterMood('Great')"><div class="legend-dot" style="background:#52b788;box-shadow:0 0 6px #52b788aa"></div>Great</div>
+  <div class="legend-item" onclick="filterMood('Good')"><div class="legend-dot" style="background:#9d8ff0;box-shadow:0 0 6px #9d8ff0aa"></div>Good</div>
+  <div class="legend-item" onclick="filterMood('Okay')"><div class="legend-dot" style="background:#4ecdc4;box-shadow:0 0 6px #4ecdc4aa"></div>Okay</div>
+  <div class="legend-item" onclick="filterMood('Low')"><div class="legend-dot" style="background:#e07a8f;box-shadow:0 0 6px #e07a8faa"></div>Low</div>
+  <div class="legend-item" onclick="filterMood(null)" style="margin-top:.4rem;opacity:.5"><div class="legend-dot" style="background:rgba(255,255,255,.3)"></div>Show All</div>
+</div>
+
+<div id="statsStrip">
+  <div class="ss-item"><div class="ss-val" id="ssTotal">0</div><div class="ss-lbl">Entries</div></div>
+  <div class="ss-item" style="margin-top:.3rem"><div class="ss-val" id="ssStreak">0</div><div class="ss-lbl">Day Streak</div></div>
+  <div class="ss-item" style="margin-top:.3rem"><div class="ss-val" id="ssDom">—</div><div class="ss-lbl">Top Mood</div></div>
+  <div class="ss-item" style="margin-top:.3rem"><div class="ss-val" id="ssClear" style="display:none"><span onclick="clearMyEntries()" style="font-size:.7rem;color:rgba(157,143,240,.4);cursor:pointer;letter-spacing:.04em">Clear my data</span></div></div>
+</div>
+
+<div id="tooltip">
+  <div class="tt-date" id="ttDate"></div>
+  <div class="tt-mood" id="ttMood"></div>
+  <div class="tt-note" id="ttNote"></div>
+  <div id="ttTag"></div>
+</div>
+
+<div id="bottomBar">
+  <div class="bb-left">
+    <div class="bb-title">Your Emotional Sky</div>
+    <div class="bb-sub" id="bbSub">Each star is a moment you showed up for yourself.</div>
+  </div>
+  <div class="bb-right">
+    <button class="add-btn" onclick="openLog()">✦ Log Today's Mood</button>
+  </div>
+</div>
+
+<!-- Log Panel -->
+<div id="logPanel">
+  <div class="log-card">
+    <div class="log-h">How are you,<br><em style="color:#c5bff8">right now?</em></div>
+    <div class="log-sub">Be honest. This space is only for you.</div>
+    <div class="mood-row">
+      <div class="mood-opt" data-mood="Low" data-color="#e07a8f" onclick="selMood(this)"><div class="mood-emoji">😔</div><div class="mood-word">Low</div></div>
+      <div class="mood-opt" data-mood="Okay" data-color="#4ecdc4" onclick="selMood(this)"><div class="mood-emoji">😐</div><div class="mood-word">Okay</div></div>
+      <div class="mood-opt" data-mood="Good" data-color="#9d8ff0" onclick="selMood(this)"><div class="mood-emoji">🙂</div><div class="mood-word">Good</div></div>
+      <div class="mood-opt" data-mood="Great" data-color="#52b788" onclick="selMood(this)"><div class="mood-emoji">😊</div><div class="mood-word">Great</div></div>
+      <div class="mood-opt" data-mood="Amazing" data-color="#f5c842" onclick="selMood(this)"><div class="mood-emoji">🌟</div><div class="mood-word">Amazing</div></div>
+    </div>
+    <textarea class="log-input" id="logNote" rows="3" placeholder="A few words about this moment… (optional)"></textarea>
+    <div class="tag-row">
+      <div class="tag-opt" onclick="togTag(this)">Gratitude</div>
+      <div class="tag-opt" onclick="togTag(this)">Anxiety</div>
+      <div class="tag-opt" onclick="togTag(this)">Peaceful</div>
+      <div class="tag-opt" onclick="togTag(this)">Stressed</div>
+      <div class="tag-opt" onclick="togTag(this)">Hopeful</div>
+      <div class="tag-opt" onclick="togTag(this)">Healing</div>
+      <div class="tag-opt" onclick="togTag(this)">Tired</div>
+      <div class="tag-opt" onclick="togTag(this)">Proud</div>
+    </div>
+    <div class="log-actions">
+      <button class="log-btn-primary" onclick="submitLog()">Add to My Sky ✦</button>
+      <button class="log-btn-ghost" onclick="closeLog()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const MOOD_COLORS={Amazing:'#f5c842',Great:'#52b788',Good:'#9d8ff0',Okay:'#4ecdc4',Low:'#e07a8f'};
+const MOOD_EMOJI={Amazing:'🌟',Great:'😊',Good:'🙂',Okay:'😐',Low:'😔'};
+
+// Seed data — rich constellation history
+const CONSTELLATIONS=[
+  {name:"Orion's Calm",moods:['Good','Great','Amazing','Good','Great']},
+  {name:'The Healer',moods:['Low','Okay','Good','Great','Amazing']},
+  {name:'Inner Light',moods:['Good','Amazing','Great','Good','Amazing','Great']},
+  {name:'Still Water',moods:['Okay','Okay','Good','Good','Great']},
+  {name:'The Turning',moods:['Low','Low','Okay','Good','Great']},
+];
+
+let entries=[];
+let filterActive=null;
+let currentView='all';
+
+function genSeedEntries(){
+  const notes={
+    Amazing:['Woke up feeling genuinely at peace.','Everything clicked today.','So grateful for this moment.','Pure joy today, no reason needed.'],
+    Great:['A good day — simple and full.','Felt grounded and strong.','Connected with someone I love.','Made progress that felt real.'],
+    Good:["Steady. That's enough.",'Did the small things. It mattered.','Not perfect, but present.','Chose myself today.'],
+    Okay:['Getting through it, one breath at a time.','Not great, not bad. Just here.','Tired but still showing up.'],
+    Low:['Heavy today. Writing it down helps.','Needed rest more than I let myself have.','Tomorrow is different.'],
+  };
+  const tags=['Gratitude','Peaceful','Hopeful','Healing','Proud','Anxious','Stressed','Tired'];
+  const moods=['Low','Low','Okay','Okay','Good','Good','Good','Great','Great','Amazing'];
+  const now=Date.now();
+  for(let i=89;i>=0;i--){
+    if(Math.random()<0.72){
+      const mood=moods[Math.floor(Math.random()*moods.length)];
+      const d=new Date(now-i*86400000);
+      const note=notes[mood][Math.floor(Math.random()*notes[mood].length)];
+      const tag=tags[Math.floor(Math.random()*tags.length)];
+      entries.push({mood,note,tag,date:d,ts:d.getTime(),seed:true});
+    }
+  }
+}
+genSeedEntries();
+
+function loadSavedEntries(){
+  try{
+    const saved=JSON.parse(localStorage.getItem('ms_const_entries')||'[]');
+    saved.forEach(e=>{e.date=new Date(e.date);entries.push(e);});
+  }catch(e){}
+}
+function persistEntries(){
+  const real=entries.filter(e=>!e.seed);
+  localStorage.setItem('ms_const_entries',JSON.stringify(real.map(e=>({...e,date:e.date.toISOString()}))));
+}
+function clearMyEntries(){
+  if(!confirm('Clear all your logged entries?'))return;
+  localStorage.removeItem('ms_const_entries');
+  entries=entries.filter(e=>e.seed);
+  layoutStars();
+  document.getElementById('ssClear').style.display='none';
+}
+loadSavedEntries();
+if(entries.some(e=>!e.seed))document.getElementById('ssClear').style.display='block';
+
+// Canvas
+const canvas=document.getElementById('bgCanvas');
+const ctx=canvas.getContext('2d');
+let W,H;
+function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight}
+resize();window.addEventListener('resize',()=>{resize();draw()});
+
+// Background stars (ambient)
+const bgStars=Array.from({length:180},()=>({
+  x:Math.random(),y:Math.random(),
+  r:Math.random()*0.8+0.2,
+  a:Math.random()*0.4+0.05,
+  twinkleSpeed:Math.random()*0.02+0.005,
+  twinklePhase:Math.random()*Math.PI*2
+}));
+
+// Map entries to canvas positions
+function getMoodStars(){
+  const now=Date.now();
+  const ranges={all:90,month:30,week:7};
+  const days=ranges[currentView]||90;
+  const cutoff=now-days*86400000;
+  return entries.filter(e=>(filterActive?e.mood===filterActive:true)&&e.ts>=cutoff);
+}
+
+// Layout stars in constellation groups
+let starPositions=[];
+let constLines=[];
+let constLabels=[];
+
+function layoutStars(){
+  starPositions=[];constLines=[];constLabels=[];
+  const stars=getMoodStars();
+  if(!stars.length)return;
+
+  const cx=W*0.5,cy=H*0.48;
+  const maxR=Math.min(W,H)*0.38;
+  const phi=1.6180339887;
+
+  stars.forEach((e,i)=>{
+    const t=i/Math.max(stars.length-1,1);
+    const angle=i*phi*Math.PI*2;
+    const radius=maxR*(0.2+0.8*Math.sqrt(t));
+    const jx=Math.sin(i*3.7)*maxR*0.12;
+    const jy=Math.cos(i*2.3)*maxR*0.1;
+    const x=cx+Math.cos(angle)*radius+jx;
+    const y=cy+Math.sin(angle)*radius*0.7+jy;
+    const size=e.mood==='Amazing'?3.5:e.mood==='Great'?3:e.mood==='Good'?2.5:e.mood==='Okay'?2:1.8;
+    const brightness=e.mood==='Amazing'?1:e.mood==='Great'?.85:e.mood==='Good'?.7:e.mood==='Okay'?.55:.45;
+    starPositions.push({...e,x,y,size,brightness,i,
+      twinklePhase:Math.random()*Math.PI*2,
+      twinkleSpeed:Math.random()*0.015+0.005});
+  });
+
+  for(let i=0;i<starPositions.length-1;i++){
+    const a=starPositions[i],b=starPositions[i+1];
+    const dx=b.x-a.x,dy=b.y-a.y;
+    const dist=Math.sqrt(dx*dx+dy*dy);
+    if(dist<maxR*0.35){
+      constLines.push({x1:a.x,y1:a.y,x2:b.x,y2:b.y,alpha:0.06+Math.random()*0.08});
+    }
+  }
+
+  const groups=5;
+  const perGroup=Math.ceil(starPositions.length/groups);
+  for(let g=0;g<groups&&g*perGroup<starPositions.length;g++){
+    const slice=starPositions.slice(g*perGroup,(g+1)*perGroup);
+    if(!slice.length)continue;
+    const mx=slice.reduce((s,p)=>s+p.x,0)/slice.length;
+    const my=slice.reduce((s,p)=>s+p.y,0)/slice.length - 24;
+    const name=CONSTELLATIONS[g]?.name||'';
+    constLabels.push({x:mx,y:my,name});
+  }
+}
+
+let hovered=null;
+canvas.addEventListener('mousemove',e=>{
+  const rect=canvas.getBoundingClientRect();
+  const mx=e.clientX-rect.left,my=e.clientY-rect.top;
+  hovered=null;
+  for(const s of starPositions){
+    const dx=s.x-mx,dy=s.y-my;
+    if(Math.sqrt(dx*dx+dy*dy)<s.size*4+8){hovered=s;break}
+  }
+  const tt=document.getElementById('tooltip');
+  if(hovered){
+    tt.style.opacity='1';
+    tt.style.left=Math.min(e.clientX+16,W-240)+'px';
+    tt.style.top=Math.max(e.clientY-60,60)+'px';
+    document.getElementById('ttDate').textContent=hovered.date.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+    document.getElementById('ttMood').textContent=MOOD_EMOJI[hovered.mood]+' '+hovered.mood;
+    document.getElementById('ttNote').textContent=hovered.note;
+    document.getElementById('ttTag').innerHTML=hovered.tag?`<span class="tt-tag">${hovered.tag}</span>`:'';
+  } else {
+    tt.style.opacity='0';
+  }
+});
+canvas.addEventListener('mouseleave',()=>{document.getElementById('tooltip').style.opacity='0';hovered=null});
+
+let frame=0;
+function draw(){
+  ctx.clearRect(0,0,W,H);
+
+  const grad=ctx.createRadialGradient(W*.5,H*.45,0,W*.5,H*.45,Math.max(W,H)*.7);
+  grad.addColorStop(0,'#0a0b1a');
+  grad.addColorStop(.5,'#050610');
+  grad.addColorStop(1,'#020409');
+  ctx.fillStyle=grad;
+  ctx.fillRect(0,0,W,H);
+
+  bgStars.forEach(s=>{
+    const tw=Math.sin(frame*s.twinkleSpeed+s.twinklePhase)*0.15;
+    ctx.beginPath();
+    ctx.arc(s.x*W,s.y*H,s.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(200,200,255,${s.a+tw})`;
+    ctx.fill();
+  });
+
+  const mw=ctx.createLinearGradient(0,H*.2,W,H*.8);
+  mw.addColorStop(0,'transparent');
+  mw.addColorStop(.3,'rgba(100,90,180,.025)');
+  mw.addColorStop(.5,'rgba(120,110,200,.04)');
+  mw.addColorStop(.7,'rgba(100,90,180,.025)');
+  mw.addColorStop(1,'transparent');
+  ctx.fillStyle=mw;
+  ctx.fillRect(0,0,W,H);
+
+  constLines.forEach(l=>{
+    ctx.beginPath();
+    ctx.moveTo(l.x1,l.y1);
+    ctx.lineTo(l.x2,l.y2);
+    ctx.strokeStyle=`rgba(157,143,240,${l.alpha})`;
+    ctx.lineWidth=.8;
+    ctx.stroke();
+  });
+
+  constLabels.forEach(l=>{
+    ctx.font=`300 italic 11px ${getComputedStyle(document.body).getPropertyValue('--serif')||'Georgia'}`;
+    ctx.fillStyle='rgba(255,255,255,.12)';
+    ctx.textAlign='center';
+    ctx.fillText(l.name,l.x,l.y);
+  });
+
+  starPositions.forEach(s=>{
+    const tw=Math.sin(frame*s.twinkleSpeed+s.twinklePhase)*0.2;
+    const color=MOOD_COLORS[s.mood]||'#fff';
+    const isHov=hovered===s;
+    const size=isHov?s.size*1.8:s.size;
+    const alpha=(s.brightness+tw)*(isHov?1.4:1);
+
+    const grd=ctx.createRadialGradient(s.x,s.y,0,s.x,s.y,size*(isHov?14:10));
+    grd.addColorStop(0,color+'66');
+    grd.addColorStop(.3,color+'22');
+    grd.addColorStop(1,'transparent');
+    ctx.fillStyle=grd;
+    ctx.beginPath();
+    ctx.arc(s.x,s.y,size*(isHov?14:10),0,Math.PI*2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(s.x,s.y,size*(isHov?1.4:1),0,Math.PI*2);
+    ctx.fillStyle=color;
+    ctx.globalAlpha=Math.min(alpha,1);
+    ctx.fill();
+    ctx.globalAlpha=1;
+
+    if(s.mood==='Amazing'||(s.mood==='Great'&&isHov)){
+      ctx.strokeStyle=color+'88';
+      ctx.lineWidth=.5;
+      ctx.globalAlpha=.4+tw;
+      [0,Math.PI/2].forEach(angle=>{
+        ctx.beginPath();
+        ctx.moveTo(s.x+Math.cos(angle)*(size*6),s.y+Math.sin(angle)*(size*6));
+        ctx.lineTo(s.x-Math.cos(angle)*(size*6),s.y-Math.sin(angle)*(size*6));
+        ctx.stroke();
+      });
+      ctx.globalAlpha=1;
+    }
+  });
+
+  if(hovered){
+    ctx.beginPath();
+    ctx.arc(hovered.x,hovered.y,hovered.size*3+8+Math.sin(frame*.08)*2,0,Math.PI*2);
+    ctx.strokeStyle=MOOD_COLORS[hovered.mood]+'66';
+    ctx.lineWidth=1;
+    ctx.stroke();
+  }
+
+  frame++;
+  updateStats();
+  requestAnimationFrame(draw);
+}
+
+function updateStats(){
+  const visible=getMoodStars();
+  document.getElementById('ssTotal').textContent=visible.length;
+  let streak=0,prev=null;
+  const sorted=[...entries].sort((a,b)=>b.ts-a.ts);
+  for(const e of sorted){
+    const d=new Date(e.ts);d.setHours(0,0,0,0);
+    if(!prev){streak=1;prev=d;continue}
+    const diff=(prev-d)/86400000;
+    if(diff===1){streak++;prev=d}else if(diff>1)break;
+  }
+  document.getElementById('ssStreak').textContent=streak+'d';
+  const counts={};
+  visible.forEach(e=>counts[e.mood]=(counts[e.mood]||0)+1);
+  const dom=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('ssDom').textContent=dom?MOOD_EMOJI[dom[0]]:'—';
+}
+
+layoutStars();draw();
+
+function setView(v,el){
+  currentView=v;
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  layoutStars();
+}
+function filterMood(m){
+  filterActive=filterActive===m?null:m;
+  document.querySelectorAll('.legend-item').forEach((el,i)=>{
+    const moods=['Amazing','Great','Good','Okay','Low'];
+    el.classList.toggle('dimmed',filterActive&&moods[i]!==filterActive);
+  });
+  layoutStars();
+}
+
+function loadCustomTags(){
+  try{return JSON.parse(localStorage.getItem('ms_const_tags')||'[]');}catch(e){return [];}
+}
+function saveCustomTags(tags){localStorage.setItem('ms_const_tags',JSON.stringify(tags));}
+
+function renderCustomTags(){
+  const existing=document.getElementById('customTagsRow');
+  if(existing)existing.remove();
+  const tags=loadCustomTags();
+  const row=document.createElement('div');
+  row.id='customTagsRow';
+  row.style.cssText='display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem;align-items:center';
+  tags.forEach(t=>{
+    const el=document.createElement('div');
+    el.className='tag-opt';
+    el.style.cssText='display:flex;align-items:center;gap:.3rem';
+    el.innerHTML='<span onclick="togTagCustom(this,\''+t+'\')">'+t+'</span><span onclick="removeCustomTag(\''+t+'\')" style="cursor:pointer;opacity:.5;font-size:.65rem">✕</span>';
+    row.appendChild(el);
+  });
+  const addBtn=document.createElement('div');
+  addBtn.id='addTagBtn';
+  addBtn.style.cssText='font-size:.7rem;color:rgba(157,143,240,.5);cursor:pointer;padding:.25rem .5rem;border:1px dashed rgba(157,143,240,.25);border-radius:2rem;transition:all .2s';
+  addBtn.textContent='+ tag';
+  addBtn.onclick=showAddTagInput;
+  row.appendChild(addBtn);
+  const logCard=document.querySelector('.log-card');
+  const actions=logCard.querySelector('.log-actions');
+  logCard.insertBefore(row,actions);
+}
+
+function togTagCustom(span,tagName){
+  const parent=span.parentElement;
+  parent.classList.toggle('sel');
+  if(selTags.includes(tagName))selTags=selTags.filter(x=>x!==tagName);
+  else selTags.push(tagName);
+}
+
+function showAddTagInput(){
+  const btn=document.getElementById('addTagBtn');
+  btn.style.display='none';
+  const inp=document.createElement('input');
+  inp.id='newTagInput';
+  inp.placeholder='Tag name\u2026';
+  inp.maxLength=12;
+  inp.style.cssText='background:rgba(255,255,255,.07);border:1px solid rgba(157,143,240,.35);border-radius:2rem;padding:.2rem .6rem;color:#fff;font-size:.7rem;font-family:var(--sans);outline:none;width:90px';
+  inp.onkeydown=function(e){if(e.key==='Enter')confirmNewTag();if(e.key==='Escape')cancelAddTag();};
+  btn.parentElement.insertBefore(inp,btn);
+  inp.focus();
+  const confirmBtn=document.createElement('span');
+  confirmBtn.textContent='\u2713';
+  confirmBtn.style.cssText='cursor:pointer;font-size:.7rem;color:rgba(157,143,240,.7);margin-left:.25rem';
+  confirmBtn.onclick=confirmNewTag;
+  btn.parentElement.insertBefore(confirmBtn,btn);
+}
+
+function confirmNewTag(){
+  const inp=document.getElementById('newTagInput');
+  if(!inp)return;
+  const val=inp.value.trim();
+  if(val){
+    const tags=loadCustomTags();
+    if(!tags.includes(val)&&tags.length<10){
+      tags.push(val);
+      saveCustomTags(tags);
+    }
+  }
+  renderCustomTags();
+}
+
+function cancelAddTag(){
+  renderCustomTags();
+}
+
+function removeCustomTag(tagName){
+  const tags=loadCustomTags().filter(t=>t!==tagName);
+  saveCustomTags(tags);
+  selTags=selTags.filter(t=>t!==tagName);
+  renderCustomTags();
+}
+
+let selMoodVal=null,selTags=[];
+function openLog(){document.getElementById('logPanel').classList.add('open');document.getElementById('logNote').value='';selMoodVal=null;selTags=[];document.querySelectorAll('.mood-opt').forEach(e=>e.classList.remove('sel'));document.querySelectorAll('.tag-opt').forEach(e=>e.classList.remove('sel'));renderCustomTags();}
+function closeLog(){document.getElementById('logPanel').classList.remove('open')}
+function selMood(el){if('vibrate' in navigator)navigator.vibrate([20]);selMoodVal=el.dataset.mood;document.querySelectorAll('.mood-opt').forEach(e=>{e.classList.remove('sel');e.style.removeProperty('--c')});el.classList.add('sel');el.style.setProperty('--c',el.dataset.color)}
+function togTag(el){el.classList.toggle('sel');const t=el.textContent;if(selTags.includes(t))selTags=selTags.filter(x=>x!==t);else selTags.push(t)}
+function submitLog(){
+  if(!selMoodVal){alert('Please select a mood ✦');return}
+  const note=document.getElementById('logNote').value.trim();
+  entries.push({mood:selMoodVal,note:note||'A moment captured.',tag:selTags[0]||'',date:new Date(),ts:Date.now()});
+  persistEntries();
+  if('vibrate' in navigator)navigator.vibrate([60,30,60]);
+  document.getElementById('ssClear').style.display='block';
+  closeLog();layoutStars();
+  setTimeout(()=>{
+    const real=entries.filter(e=>!e.seed).length;
+    const total=entries.length;
+    document.getElementById('bbSub').textContent='✦ '+real+' entr'+(real===1?'y':'ies')+' logged by you · '+total+' total';
+  },300);
+}
+</script>
+</body>
+</html>
+

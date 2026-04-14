@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="description" content="MindShift+ is your personal AI wellness companion — helping you reflect, breathe, heal, and grow with AI coaching, guided journaling, and breathing exercises."/>
+<title>MindShift+ — Find Your Calm. Shift Your Mind.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#06080f;--ink2:#0d1020;--ink3:#141830;
+  --pearl:#f5f0ee;--cream:#ede8e3;--warm:#d4ccc6;
+  --indigo:#3d3a8c;--violet:#6b5fcf;--lilac:#9d8ff0;--mist:#c5bff8;
+  --teal:#2a9d8f;--sage:#52b788;--blush:#e07a8f;--gold:#c9a84c;
+  --txt:#1a1c2e;--muted:#6b6d80;--muted2:#9b9dae;
+  --serif:'Cormorant Garamond',Georgia,serif;
+  --sans:'DM Sans',sans-serif;
+  --mono:'DM Mono',monospace;
+  --ease:cubic-bezier(.22,.68,0,1.2);
+  --easesmooth:cubic-bezier(.4,0,.2,1);
+}
+html{scroll-behavior:smooth;overflow-x:hidden}
+body{background:var(--pearl);color:var(--txt);font-family:var(--sans);line-height:1.6;overflow-x:hidden}
+
+/* ── CURSOR ── */
+.cursor{width:10px;height:10px;border-radius:50%;background:var(--violet);position:fixed;top:0;left:0;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .2s,height .2s,opacity .2s;mix-blend-mode:multiply}
+.cursor-ring{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--violet);position:fixed;top:0;left:0;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:transform .12s var(--easesmooth),width .25s,height .25s,border-color .25s;opacity:.5}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;padding:1.4rem 5%;display:flex;align-items:center;justify-content:space-between;transition:background .4s,backdrop-filter .4s,box-shadow .4s}
+nav.scrolled{background:rgba(245,240,238,.88);backdrop-filter:blur(20px);box-shadow:0 1px 0 rgba(0,0,0,.06)}
+.nav-logo{font-family:var(--serif);font-size:1.5rem;font-weight:600;color:var(--ink);letter-spacing:-.02em;text-decoration:none}
+.nav-logo span{color:var(--violet)}
+.nav-links{display:flex;align-items:center;gap:2rem;list-style:none}
+.nav-links a{font-size:.875rem;font-weight:500;color:var(--muted);text-decoration:none;transition:color .2s;letter-spacing:.01em}
+.nav-links a:hover{color:var(--ink)}
+.nav-cta{background:var(--ink);color:var(--pearl)!important;padding:.55rem 1.3rem;border-radius:2rem;font-weight:600!important;transition:background .2s,transform .15s!important}
+.nav-cta:hover{background:var(--violet)!important;transform:scale(1.03)!important}
+.nav-toggle{display:none;flex-direction:column;gap:5px;cursor:pointer;background:none;border:none;padding:4px}
+.nav-toggle span{display:block;width:22px;height:2px;background:var(--ink);border-radius:2px;transition:all .3s}
+
+/* ── HERO ── */
+#hero{min-height:100vh;display:grid;place-items:center;position:relative;overflow:hidden;padding:8rem 5% 6rem;background:var(--pearl)}
+.hero-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:.35}
+.orb1{width:60vw;height:60vw;max-width:700px;max-height:700px;top:-20%;left:-15%;background:radial-gradient(circle,#c5bff8,#6b5fcf)}
+.orb2{width:40vw;height:40vw;max-width:500px;max-height:500px;bottom:-10%;right:-10%;background:radial-gradient(circle,#9d8ff0,#2a9d8f)}
+.orb3{width:30vw;height:30vw;max-width:350px;max-height:350px;top:50%;left:55%;background:radial-gradient(circle,#e07a8f,#c9a84c);opacity:.2}
+.noise{position:absolute;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");opacity:.5}
+.hero-inner{position:relative;z-index:1;max-width:1100px;width:100%;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:5rem;align-items:center}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:.5rem;font-size:.75rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--violet);background:rgba(107,95,207,.1);padding:.4rem 1rem;border-radius:2rem;margin-bottom:1.5rem;border:1px solid rgba(107,95,207,.2)}
+.hero-eyebrow::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--violet);animation:pulse-dot 2s ease-in-out infinite}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+.hero-h1{font-family:var(--serif);font-size:clamp(3rem,6vw,5.5rem);line-height:1.05;font-weight:300;letter-spacing:-.03em;margin-bottom:1.5rem;color:var(--ink)}
+.hero-h1 em{font-style:italic;color:var(--violet)}
+.hero-h1 strong{font-weight:600}
+.hero-sub{font-size:1.05rem;color:var(--muted);line-height:1.75;max-width:480px;margin-bottom:2.5rem}
+.hero-actions{display:flex;align-items:center;gap:1rem;flex-wrap:wrap}
+.btn-primary{display:inline-flex;align-items:center;gap:.5rem;background:var(--ink);color:var(--pearl);padding:.85rem 2rem;border-radius:3rem;font-weight:600;font-size:.9rem;text-decoration:none;border:none;cursor:pointer;transition:all .25s var(--ease);letter-spacing:.01em}
+.btn-primary:hover{background:var(--violet);transform:translateY(-2px);box-shadow:0 12px 30px rgba(107,95,207,.35)}
+.btn-primary svg{transition:transform .2s}
+.btn-primary:hover svg{transform:translateX(4px)}
+.btn-ghost{display:inline-flex;align-items:center;gap:.5rem;background:transparent;color:var(--ink);padding:.85rem 2rem;border-radius:3rem;font-weight:500;font-size:.9rem;text-decoration:none;border:1.5px solid rgba(26,28,46,.2);cursor:pointer;transition:all .25s}
+.btn-ghost:hover{background:rgba(26,28,46,.05);border-color:rgba(26,28,46,.4)}
+.hero-trust{display:flex;align-items:center;gap:.75rem;margin-top:2rem;font-size:.8rem;color:var(--muted2)}
+.stars{color:var(--gold);letter-spacing:1px;font-size:.85rem}
+.hero-visual{position:relative}
+.phone-wrap{position:relative;perspective:1000px}
+.phone{width:260px;background:var(--ink2);border-radius:36px;padding:3px;box-shadow:0 40px 80px rgba(6,8,15,.35),0 0 0 1px rgba(255,255,255,.05);transform:rotateY(-8deg) rotateX(4deg);transition:transform .6s var(--easesmooth);margin:0 auto}
+.phone:hover{transform:rotateY(-2deg) rotateX(1deg)}
+.phone-inner{background:var(--ink3);border-radius:34px;overflow:hidden;aspect-ratio:9/19;position:relative;display:flex;flex-direction:column}
+.phone-status{height:40px;background:var(--ink3);display:flex;align-items:center;justify-content:space-between;padding:0 20px;flex-shrink:0}
+.phone-notch{width:90px;height:20px;background:var(--ink2);border-radius:0 0 14px 14px;position:absolute;top:0;left:50%;transform:translateX(-50%)}
+.phone-time{font-size:11px;font-family:var(--sans);color:rgba(255,255,255,.7);font-weight:600;margin-top:4px;z-index:1}
+.phone-icons{font-size:10px;color:rgba(255,255,255,.6);margin-top:4px;z-index:1}
+.phone-screen{flex:1;padding:16px;overflow:hidden;background:linear-gradient(160deg,#0d1228,#141830)}
+.app-header{margin-bottom:14px}
+.app-greeting{font-size:10px;color:rgba(200,200,230,.5);font-family:var(--sans);margin-bottom:2px}
+.app-name{font-size:16px;color:#f0f0ff;font-weight:700;font-family:var(--sans)}
+.mood-card{background:rgba(107,95,207,.2);border:1px solid rgba(107,95,207,.3);border-radius:14px;padding:10px 12px;margin-bottom:10px}
+.mood-label{font-size:9px;color:rgba(200,200,230,.6);font-family:var(--sans);margin-bottom:6px}
+.mood-emojis{display:flex;gap:6px}
+.mood-emoji{font-size:14px;background:rgba(255,255,255,.08);border-radius:8px;width:26px;height:26px;display:flex;align-items:center;justify-content:center}
+.mood-emoji.active{background:rgba(107,95,207,.4);border:1px solid rgba(107,95,207,.6)}
+.quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.quick-btn{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:8px;text-align:center}
+.quick-icon{font-size:14px;margin-bottom:2px}
+.quick-lbl{font-size:8px;color:rgba(200,200,230,.6);font-family:var(--sans)}
+.chat-preview{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:10px}
+.chat-bubble{background:rgba(107,95,207,.3);border-radius:8px 8px 8px 2px;padding:6px 10px;margin-bottom:6px;max-width:85%}
+.chat-bubble p{font-size:8px;color:rgba(240,240,255,.85);font-family:var(--sans);line-height:1.5}
+.chat-bubble.user{background:rgba(42,157,143,.25);border-radius:8px 8px 2px 8px;margin-left:auto}
+.float-badge{position:absolute;background:white;border-radius:16px;padding:.6rem 1rem;box-shadow:0 8px 24px rgba(0,0,0,.12);font-size:.78rem;font-weight:600;white-space:nowrap;color:var(--ink);border:1px solid rgba(0,0,0,.06)}
+.badge-streak{top:10%;right:-10%;animation:float1 4s ease-in-out infinite}
+.badge-calm{bottom:18%;left:-12%;animation:float2 5s ease-in-out infinite}
+.badge-journal{bottom:40%;right:-14%;animation:float3 4.5s ease-in-out infinite}
+@keyframes float1{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes float2{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
+@keyframes float3{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-6px) rotate(2deg)}}
+
+/* ── REVEAL ANIMATIONS ── */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .7s var(--easesmooth),transform .7s var(--easesmooth)}
+.reveal.visible{opacity:1;transform:none}
+.reveal-left{opacity:0;transform:translateX(-30px);transition:opacity .7s var(--easesmooth),transform .7s var(--easesmooth)}
+.reveal-left.visible{opacity:1;transform:none}
+.reveal-right{opacity:0;transform:translateX(30px);transition:opacity .7s var(--easesmooth),transform .7s var(--easesmooth)}
+.reveal-right.visible{opacity:1;transform:none}
+[data-delay="1"]{transition-delay:.1s}
+[data-delay="2"]{transition-delay:.2s}
+[data-delay="3"]{transition-delay:.3s}
+[data-delay="4"]{transition-delay:.4s}
+[data-delay="5"]{transition-delay:.5s}
+[data-delay="6"]{transition-delay:.6s}
+
+/* ── SECTION COMMONS ── */
+section{padding:7rem 5%}
+.section-label{font-size:.72rem;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--violet);margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.section-label::before{content:'';display:inline-block;width:20px;height:1.5px;background:var(--violet)}
+.section-h{font-family:var(--serif);font-size:clamp(2.2rem,4vw,3.5rem);font-weight:300;line-height:1.1;letter-spacing:-.03em;color:var(--ink);margin-bottom:1.2rem}
+.section-h em{font-style:italic;color:var(--violet)}
+.section-sub{font-size:1rem;color:var(--muted);line-height:1.75;max-width:540px}
+
+/* ── MARQUEE ── */
+.marquee-wrap{background:var(--ink);padding:1.1rem 0;overflow:hidden;position:relative}
+.marquee-track{display:flex;gap:0;animation:marquee 28s linear infinite;width:max-content}
+.marquee-item{font-family:var(--serif);font-size:1rem;color:rgba(245,240,238,.4);padding:0 2.5rem;white-space:nowrap;display:flex;align-items:center;gap:1.5rem}
+.marquee-item span{color:var(--lilac);font-style:italic}
+.marquee-dot{width:4px;height:4px;border-radius:50%;background:var(--violet);opacity:.5}
+@keyframes marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+/* ── FEATURES ── */
+#features{background:var(--pearl);position:relative}
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5px;background:rgba(107,95,207,.12);border-radius:24px;overflow:hidden;margin-top:4rem}
+.feat-cell{background:var(--pearl);padding:2.5rem;transition:background .3s}
+.feat-cell:hover{background:var(--cream)}
+.feat-num{font-family:var(--mono);font-size:.72rem;color:var(--muted2);margin-bottom:1.2rem;letter-spacing:.05em}
+.feat-icon{font-size:1.8rem;margin-bottom:1rem;display:block}
+.feat-title{font-family:var(--serif);font-size:1.4rem;font-weight:600;margin-bottom:.6rem;color:var(--ink)}
+.feat-desc{font-size:.875rem;color:var(--muted);line-height:1.75}
+.feat-tag{display:inline-block;margin-top:1rem;font-size:.7rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--violet);background:rgba(107,95,207,.08);padding:.3rem .8rem;border-radius:2rem}
+
+/* ── MIA SECTION ── */
+#mia{background:var(--ink);position:relative;overflow:hidden}
+.mia-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%,rgba(107,95,207,.25) 0%,transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(42,157,143,.15) 0%,transparent 50%)}
+.mia-inner{position:relative;z-index:1;max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:5rem;align-items:center}
+.mia-badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(107,95,207,.2);border:1px solid rgba(107,95,207,.3);border-radius:2rem;padding:.4rem 1rem;font-size:.75rem;font-weight:600;color:var(--lilac);letter-spacing:.08em;text-transform:uppercase;margin-bottom:1.5rem}
+.mia-h{font-family:var(--serif);font-size:clamp(2.5rem,4vw,3.8rem);font-weight:300;line-height:1.1;color:var(--pearl);margin-bottom:1.2rem;letter-spacing:-.03em}
+.mia-h em{font-style:italic;color:var(--lilac)}
+.mia-sub{font-size:.95rem;color:rgba(245,240,238,.55);line-height:1.75;margin-bottom:2rem}
+.mia-traits{display:flex;flex-direction:column;gap:.75rem;margin-bottom:2.5rem}
+.mia-trait{display:flex;align-items:center;gap:.75rem;font-size:.875rem;color:rgba(245,240,238,.7)}
+.trait-dot{width:6px;height:6px;border-radius:50%;background:var(--lilac);flex-shrink:0}
+.chat-demo{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:1.5rem;backdrop-filter:blur(10px)}
+.demo-header{display:flex;align-items:center;gap:.75rem;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,255,255,.07)}
+.mia-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#9d8ff0,#6b5fcf);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.mia-name{font-weight:600;font-size:.9rem;color:var(--pearl)}
+.mia-status{font-size:.75rem;color:var(--sage)}
+.demo-messages{display:flex;flex-direction:column;gap:.75rem}
+.dmsg{max-width:82%;padding:.75rem 1rem;border-radius:1rem;font-size:.82rem;line-height:1.65}
+.dmsg.mia-msg{background:rgba(107,95,207,.25);border-radius:1rem 1rem 1rem .2rem;color:rgba(245,240,238,.9)}
+.dmsg.user-msg{background:rgba(42,157,143,.2);border-radius:1rem 1rem .2rem 1rem;color:rgba(245,240,238,.85);align-self:flex-end}
+.typing{display:flex;align-items:center;gap:4px;padding:.6rem 1rem;background:rgba(107,95,207,.15);border-radius:1rem 1rem 1rem .2rem;width:fit-content}
+.typing-dot{width:5px;height:5px;border-radius:50%;background:var(--lilac);animation:typing-anim 1.2s ease-in-out infinite}
+.typing-dot:nth-child(2){animation-delay:.2s}
+.typing-dot:nth-child(3){animation-delay:.4s}
+@keyframes typing-anim{0%,80%,100%{transform:scale(1);opacity:.5}40%{transform:scale(1.2);opacity:1}}
+
+/* ── STATS ── */
+#stats{background:var(--cream)}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:2rem;max-width:900px;margin:0 auto;text-align:center}
+.stat-num{font-family:var(--serif);font-size:clamp(2.5rem,5vw,4rem);font-weight:300;color:var(--ink);letter-spacing:-.04em;line-height:1}
+.stat-unit{font-family:var(--serif);font-size:2rem;color:var(--violet)}
+.stat-label{font-size:.82rem;color:var(--muted);margin-top:.4rem;font-weight:500}
+.stat-divider{width:1px;background:rgba(107,95,207,.2);height:60px;align-self:center;justify-self:center}
+
+/* ── HOW IT WORKS ── */
+#how{background:var(--pearl)}
+.steps-wrap{max-width:900px;margin:4rem auto 0;display:flex;flex-direction:column;gap:0}
+.step{display:grid;grid-template-columns:80px 1fr;gap:2rem;padding:2.5rem 0;border-bottom:1px solid rgba(107,95,207,.1);align-items:start}
+.step:last-child{border-bottom:none}
+.step-num{font-family:var(--serif);font-size:3.5rem;font-weight:300;color:rgba(107,95,207,.2);line-height:1;letter-spacing:-.04em}
+.step-tag{font-size:.7rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--violet);margin-bottom:.5rem}
+.step-h{font-family:var(--serif);font-size:1.6rem;font-weight:600;margin-bottom:.5rem;color:var(--ink)}
+.step-p{font-size:.9rem;color:var(--muted);line-height:1.75}
+
+/* ── TESTIMONIALS ── */
+#testimonials{background:var(--ink);overflow:hidden;position:relative}
+.test-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 70% 30%,rgba(107,95,207,.12) 0%,transparent 55%)}
+.test-inner{position:relative;z-index:1;max-width:1100px;margin:0 auto}
+.test-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:3.5rem}
+.test-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:2rem;transition:background .3s,transform .3s}
+.test-card:hover{background:rgba(255,255,255,.07);transform:translateY(-4px)}
+.test-stars{color:var(--gold);font-size:.85rem;margin-bottom:1rem;letter-spacing:2px}
+.test-quote{font-family:var(--serif);font-size:1rem;font-style:italic;color:rgba(245,240,238,.75);line-height:1.75;margin-bottom:1.5rem}
+.test-author{display:flex;align-items:center;gap:.75rem}
+.test-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;color:#fff;flex-shrink:0}
+.test-name{font-size:.85rem;font-weight:600;color:var(--pearl)}
+.test-role{font-size:.75rem;color:rgba(245,240,238,.4)}
+.test-feat{background:rgba(107,95,207,.12);border:1px solid rgba(107,95,207,.2);border-radius:20px;padding:2rem;grid-column:span 1;display:flex;flex-direction:column;justify-content:space-between}
+
+/* ── PROGRAMS ── */
+#programs{background:var(--cream)}
+.prog-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1.5rem;margin-top:3.5rem}
+.prog-card{background:var(--pearl);border:1px solid rgba(107,95,207,.12);border-radius:20px;padding:2rem;transition:all .3s;position:relative;overflow:hidden}
+.prog-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:20px 20px 0 0}
+.prog-card.c1::before{background:linear-gradient(90deg,#6b5fcf,#9d8ff0)}
+.prog-card.c2::before{background:linear-gradient(90deg,#2a9d8f,#52b788)}
+.prog-card.c3::before{background:linear-gradient(90deg,#c9a84c,#e07a8f)}
+.prog-card.c4::before{background:linear-gradient(90deg,#e07a8f,#9d8ff0)}
+.prog-card:hover{box-shadow:0 12px 40px rgba(107,95,207,.12);transform:translateY(-3px)}
+.prog-icon{font-size:2rem;margin-bottom:1rem}
+.prog-badge{display:inline-block;font-size:.7rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2);background:rgba(0,0,0,.05);padding:.25rem .75rem;border-radius:2rem;margin-bottom:1rem}
+.prog-title{font-family:var(--serif);font-size:1.4rem;font-weight:600;margin-bottom:.5rem;color:var(--ink)}
+.prog-desc{font-size:.875rem;color:var(--muted);line-height:1.7;margin-bottom:1.2rem}
+.prog-link{font-size:.82rem;font-weight:600;color:var(--violet);text-decoration:none;display:inline-flex;align-items:center;gap:.3rem;transition:gap .2s}
+.prog-link:hover{gap:.6rem}
+
+/* ── PRICING ── */
+#pricing{background:var(--pearl)}
+.price-toggle{display:flex;align-items:center;gap:.75rem;margin:2rem 0 3.5rem;font-size:.875rem;color:var(--muted)}
+.toggle-track{width:46px;height:24px;background:var(--indigo);border-radius:12px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.toggle-thumb{position:absolute;width:18px;height:18px;border-radius:50%;background:white;top:3px;left:3px;transition:transform .2s}
+.toggle-track.yearly .toggle-thumb{transform:translateX(22px)}
+.save-badge{background:rgba(42,157,143,.12);color:var(--teal);font-size:.7rem;font-weight:700;padding:.2rem .6rem;border-radius:2rem}
+.price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;max-width:950px;margin:0 auto}
+.price-card{border-radius:24px;padding:2rem;border:1.5px solid rgba(0,0,0,.08);background:var(--cream);transition:all .3s}
+.price-card.featured{background:var(--ink);border-color:var(--indigo);position:relative}
+.price-card.featured::before{content:'Most loved';position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--violet);color:var(--pearl);font-size:.72rem;font-weight:700;padding:.3rem 1rem;border-radius:2rem;white-space:nowrap}
+.price-card:hover:not(.featured){border-color:rgba(107,95,207,.3);transform:translateY(-3px);box-shadow:0 12px 40px rgba(107,95,207,.1)}
+.price-tier{font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted2);margin-bottom:.75rem}
+.price-card.featured .price-tier{color:var(--lilac)}
+.price-amount{font-family:var(--serif);font-size:3rem;font-weight:300;color:var(--ink);letter-spacing:-.04em;line-height:1;margin-bottom:.25rem}
+.price-card.featured .price-amount{color:var(--pearl)}
+.price-period{font-size:.8rem;color:var(--muted);margin-bottom:1.5rem}
+.price-card.featured .price-period{color:rgba(245,240,238,.5)}
+.price-feats{list-style:none;display:flex;flex-direction:column;gap:.6rem;margin-bottom:2rem}
+.price-feat{font-size:.85rem;color:var(--muted);display:flex;align-items:flex-start;gap:.6rem}
+.price-card.featured .price-feat{color:rgba(245,240,238,.7)}
+.price-check{color:var(--sage);font-size:.85rem;flex-shrink:0;margin-top:.05em}
+.price-check.no{color:var(--muted2)}
+.price-btn{display:block;text-align:center;padding:.85rem;border-radius:3rem;font-weight:600;font-size:.875rem;text-decoration:none;transition:all .25s;border:1.5px solid rgba(0,0,0,.12);background:transparent;color:var(--ink);cursor:pointer;font-family:var(--sans)}
+.price-btn:hover{background:var(--ink);color:var(--pearl);border-color:var(--ink)}
+.price-card.featured .price-btn{background:var(--violet);color:var(--pearl);border-color:var(--violet)}
+.price-card.featured .price-btn:hover{background:#8474e8}
+
+/* ── JOURNAL SHOWCASE ── */
+#journal-sec{background:var(--ink2);padding:7rem 5%;position:relative;overflow:hidden}
+.journal-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 20% 60%,rgba(200,164,76,.08),transparent 50%),radial-gradient(ellipse at 80% 20%,rgba(107,95,207,.15),transparent 50%)}
+.journal-inner{position:relative;z-index:1;max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:5rem;align-items:center}
+.journal-ui{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:1.5rem;backdrop-filter:blur(10px)}
+.jui-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;padding-bottom:.8rem;border-bottom:1px solid rgba(255,255,255,.07)}
+.jui-title{font-family:var(--serif);font-size:1rem;color:rgba(245,240,238,.8);font-style:italic}
+.jui-date{font-size:.72rem;color:rgba(245,240,238,.3);font-family:var(--mono)}
+.jui-mood-row{display:flex;gap:.5rem;margin-bottom:1rem}
+.jui-mood{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;background:rgba(255,255,255,.05)}
+.jui-mood.active{background:rgba(107,95,207,.3);border:1px solid rgba(107,95,207,.5)}
+.jui-text{font-size:.82rem;color:rgba(245,240,238,.5);line-height:1.75;margin-bottom:1rem;font-family:var(--serif);font-style:italic}
+.jui-tags{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1rem}
+.jui-tag{font-size:.68rem;padding:.2rem .7rem;border-radius:2rem;background:rgba(107,95,207,.15);color:var(--lilac);font-weight:500}
+.jui-insight{background:rgba(42,157,143,.1);border:1px solid rgba(42,157,143,.2);border-radius:10px;padding:.75rem;font-size:.78rem;color:rgba(245,240,238,.6);line-height:1.6}
+.jui-insight strong{color:var(--sage);font-weight:600}
+
+/* ── CTA ── */
+#cta{background:linear-gradient(160deg,var(--ink),var(--ink2) 40%,var(--ink3));padding:8rem 5%;text-align:center;position:relative;overflow:hidden}
+.cta-orbs{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.cta-orb{position:absolute;border-radius:50%;filter:blur(100px);opacity:.2}
+.cta-orb1{width:500px;height:500px;background:var(--violet);top:-20%;left:-10%}
+.cta-orb2{width:400px;height:400px;background:var(--teal);bottom:-20%;right:-10%}
+.cta-inner{position:relative;z-index:1;max-width:650px;margin:0 auto}
+.cta-h{font-family:var(--serif);font-size:clamp(2.5rem,5vw,4rem);font-weight:300;color:var(--pearl);line-height:1.1;letter-spacing:-.03em;margin-bottom:1.2rem}
+.cta-h em{font-style:italic;color:var(--lilac)}
+.cta-sub{font-size:1rem;color:rgba(245,240,238,.5);line-height:1.75;margin-bottom:2.5rem}
+.cta-actions{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
+.btn-light{display:inline-flex;align-items:center;gap:.5rem;background:var(--pearl);color:var(--ink);padding:.9rem 2.2rem;border-radius:3rem;font-weight:700;font-size:.95rem;text-decoration:none;border:none;cursor:pointer;transition:all .25s}
+.btn-light:hover{background:#fff;transform:translateY(-2px);box-shadow:0 12px 30px rgba(245,240,238,.25)}
+.btn-outline-light{display:inline-flex;align-items:center;gap:.5rem;background:transparent;color:rgba(245,240,238,.8);padding:.9rem 2.2rem;border-radius:3rem;font-weight:500;font-size:.95rem;text-decoration:none;border:1.5px solid rgba(245,240,238,.25);cursor:pointer;transition:all .25s}
+.btn-outline-light:hover{border-color:rgba(245,240,238,.6);color:var(--pearl)}
+.cta-note{font-size:.8rem;color:rgba(245,240,238,.3);margin-top:1.5rem}
+
+/* ── FAQ ── */
+#faq{background:var(--cream);padding:7rem 5%}
+.faq-wrap{max-width:700px;margin:3.5rem auto 0}
+.faq-item{border-bottom:1px solid rgba(107,95,207,.15);padding:1.4rem 0}
+.faq-q{display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-family:var(--serif);font-size:1.1rem;font-weight:600;color:var(--ink);gap:1rem;list-style:none}
+.faq-q::after{content:'+';font-size:1.4rem;font-weight:300;color:var(--violet);flex-shrink:0;transition:transform .3s}
+.faq-item.open .faq-q::after{transform:rotate(45deg)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .35s var(--easesmooth),padding .35s}
+.faq-item.open .faq-a{max-height:200px}
+.faq-a p{font-size:.9rem;color:var(--muted);line-height:1.75;padding-top:.75rem}
+
+/* ── FOOTER ── */
+footer{background:var(--ink);padding:5rem 5% 2.5rem;position:relative}
+footer::before{content:'';position:absolute;top:0;left:5%;right:5%;height:1px;background:linear-gradient(to right,transparent,rgba(157,143,240,.35),rgba(42,157,143,.2),transparent)}
+.footer-top{display:grid;grid-template-columns:1.6fr 1.6fr 1fr 1fr;gap:3rem;margin-bottom:3rem;padding-bottom:3rem;border-bottom:1px solid rgba(255,255,255,.07)}
+.footer-logo{font-family:var(--serif);font-size:1.5rem;font-weight:600;color:var(--pearl);margin-bottom:.6rem}
+.footer-logo span{color:var(--lilac)}
+.footer-tagline{font-size:.85rem;color:rgba(245,240,238,.35);line-height:1.75;max-width:240px;margin-bottom:1.8rem}
+.social-row{display:flex;gap:.6rem}
+.social-btn{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:.75rem;color:rgba(245,240,238,.4);text-decoration:none;transition:all .2s}
+.social-btn:hover{background:rgba(107,95,207,.3);border-color:rgba(107,95,207,.5);color:var(--lilac)}
+.footer-clinic-col{}
+.footer-clinic-eyebrow{font-size:.68rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(157,143,240,.5);margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem}
+.footer-clinic-eyebrow::before{content:'';width:14px;height:1px;background:rgba(157,143,240,.4)}
+.footer-clinic-name{font-family:var(--serif);font-size:1.25rem;font-weight:600;color:rgba(245,240,238,.85);letter-spacing:-.01em;margin-bottom:.4rem;line-height:1.2}
+.footer-clinic-slogan{font-family:var(--serif);font-size:.88rem;font-style:italic;color:rgba(157,143,240,.6);line-height:1.65;margin-bottom:1.4rem}
+.footer-clinic-divider{height:1px;background:linear-gradient(to right,rgba(157,143,240,.2),transparent);margin-bottom:1.2rem}
+.footer-contact-list{list-style:none;display:flex;flex-direction:column;gap:.65rem}
+.footer-contact-list li{display:flex;align-items:flex-start;gap:.55rem}
+.fc-icon{width:16px;flex-shrink:0;font-size:.8rem;color:rgba(157,143,240,.45);margin-top:.1rem;font-style:normal}
+.footer-contact-list a{font-size:.82rem;color:rgba(245,240,238,.4);text-decoration:none;transition:color .2s;line-height:1.4}
+.footer-contact-list a:hover{color:rgba(157,143,240,.9)}
+.footer-col h4{font-size:.68rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(245,240,238,.3);margin-bottom:1.2rem}
+.footer-links{list-style:none;display:flex;flex-direction:column;gap:.65rem}
+.footer-links a{font-size:.85rem;color:rgba(245,240,238,.4);text-decoration:none;transition:color .2s}
+.footer-links a:hover{color:rgba(245,240,238,.8)}
+.footer-bottom{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem}
+.footer-copy{font-size:.78rem;color:rgba(245,240,238,.2)}
+.footer-legal{display:flex;gap:1.5rem}
+.footer-legal a{font-size:.78rem;color:rgba(245,240,238,.2);text-decoration:none;transition:color .2s}
+.footer-legal a:hover{color:rgba(245,240,238,.5)}
+
+/* ── COOKIE BANNER ── */
+#cookieBanner{position:fixed;bottom:0;left:0;right:0;z-index:2000;background:rgba(13,16,32,.97);backdrop-filter:blur(20px);border-top:1px solid rgba(157,143,240,.2);padding:1.4rem 5%;display:flex;align-items:center;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;transform:translateY(100%);transition:transform .45s cubic-bezier(.22,.68,0,1.2);box-shadow:0 -8px 32px rgba(0,0,0,.3)}
+#cookieBanner.visible{transform:translateY(0)}
+.cb-text{flex:1;min-width:260px}
+.cb-text p{font-size:.85rem;color:rgba(245,240,238,.55);line-height:1.65}
+.cb-text a{color:var(--lilac);text-decoration:none;border-bottom:1px solid rgba(157,143,240,.3)}
+.cb-text a:hover{border-bottom-color:var(--lilac)}
+.cb-actions{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;flex-shrink:0}
+.cb-btn-accept{background:var(--violet);color:#fff;border:none;padding:.7rem 1.6rem;border-radius:2rem;font-size:.875rem;font-weight:600;cursor:pointer;font-family:var(--sans);transition:all .2s;white-space:nowrap}
+.cb-btn-accept:hover{background:#5a4eba}
+.cb-btn-manage{background:transparent;color:rgba(245,240,238,.5);border:1.5px solid rgba(255,255,255,.15);padding:.65rem 1.3rem;border-radius:2rem;font-size:.875rem;cursor:pointer;font-family:var(--sans);transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;white-space:nowrap}
+.cb-btn-manage:hover{border-color:rgba(157,143,240,.5);color:var(--lilac)}
+.cb-btn-reject{background:transparent;color:rgba(245,240,238,.3);border:none;padding:.65rem;border-radius:2rem;font-size:.8rem;cursor:pointer;font-family:var(--sans);transition:all .2s;white-space:nowrap}
+.cb-btn-reject:hover{color:rgba(245,240,238,.6)}
+@media(max-width:600px){#cookieBanner{padding:1.2rem 5%}.cb-actions{width:100%}.cb-btn-accept,.cb-btn-manage{flex:1;text-align:center;justify-content:center}}
+
+/* ── MOBILE ── */
+@media(max-width:900px){
+  .hero-inner{grid-template-columns:1fr;gap:3rem;text-align:center}
+  .hero-sub{max-width:100%;margin-left:auto;margin-right:auto}
+  .hero-actions{justify-content:center}
+  .hero-trust{justify-content:center}
+  .phone{transform:none!important}
+  .float-badge{display:none}
+  .features-grid{grid-template-columns:1fr}
+  .mia-inner{grid-template-columns:1fr}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .stat-divider{display:none}
+  .test-grid{grid-template-columns:1fr}
+  .prog-grid{grid-template-columns:1fr}
+  .price-grid{grid-template-columns:1fr;max-width:420px}
+  .journal-inner{grid-template-columns:1fr}
+  .footer-top{grid-template-columns:1fr 1fr}
+  .footer-clinic-col{grid-column:1/-1}
+  .nav-links{display:none}
+  .therapist-grid{grid-template-columns:1fr !important}
+  .nav-links.open{display:flex;flex-direction:column;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--pearl);z-index:999;padding:6rem 2rem 2rem;align-items:center;justify-content:center;gap:1.5rem}
+  .nav-links.open a{font-size:1.3rem;color:var(--ink)}
+  .nav-toggle{display:flex;z-index:1001}
+}
+@media(max-width:600px){
+  .stats-grid{grid-template-columns:1fr 1fr}
+  .footer-top{grid-template-columns:1fr}
+  section{padding:5rem 5%}
+  .price-grid{max-width:100%}
+  .therapist-grid{grid-template-columns:1fr !important}
+  #cookieBanner{flex-direction:column;align-items:flex-start;padding:1.2rem 5%}
+}
+</style>
+</head>
+<body>
+
+<!-- Cursor -->
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- Nav -->
+<nav id="navbar">
+  <a href="#" class="nav-logo">MindShift<span>+</span></a>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#mia">Meet Mia</a></li>
+    <li><a href="#programs">Programs</a></li>
+    <li><a href="#therapist">Our Therapist</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+    <li><a href="#faq">FAQ</a></li>
+    <li><a href="#" onclick="return openApp('dashboard')">Log in</a></li>
+    <li><a href="#" class="nav-cta" onclick="return openApp('onboarding')">Start Free</a></li>
+  </ul>
+  <button class="nav-toggle" id="navToggle" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- Hero -->
+<section id="hero">
+  <div class="hero-bg">
+    <div class="orb orb1"></div>
+    <div class="orb orb2"></div>
+    <div class="orb orb3"></div>
+    <div class="noise"></div>
+  </div>
+  <div class="hero-inner">
+    <div class="hero-content">
+      <div class="hero-eyebrow">AI-Powered Wellness Platform</div>
+      <h1 class="hero-h1">
+        <em>Peace</em> lives<br>
+        <strong>inside you.</strong><br>
+        Let's find it.
+      </h1>
+      <p class="hero-sub">MindShift+ combines AI coaching, guided journaling, breathing exercises, and emotional insights — all in one beautifully calm space built for your real life.</p>
+      <div class="hero-actions">
+        <a href="#" class="btn-primary" onclick="return openApp('onboarding')">
+          Begin Your Journey
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#mia" class="btn-ghost">Meet Mia, your coach</a>
+      </div>
+      <div class="hero-trust">
+        <div class="stars">★★★★★</div>
+        <span>Loved by <strong>50,000+</strong> people on their wellness journey</span>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="phone-wrap">
+        <div class="phone">
+          <div class="phone-inner">
+            <div class="phone-status">
+              <div class="phone-notch"></div>
+              <span class="phone-time">9:41</span>
+              <span class="phone-icons">●●●</span>
+            </div>
+            <div class="phone-screen">
+              <div class="app-header">
+                <div class="app-greeting">Good morning ✦</div>
+                <div class="app-name">Hello, Sarah</div>
+              </div>
+              <div class="mood-card">
+                <div class="mood-label">How are you feeling today?</div>
+                <div class="mood-emojis">
+                  <div class="mood-emoji">😔</div>
+                  <div class="mood-emoji">😐</div>
+                  <div class="mood-emoji active">🙂</div>
+                  <div class="mood-emoji">😊</div>
+                  <div class="mood-emoji">🌟</div>
+                </div>
+              </div>
+              <div class="quick-grid">
+                <div class="quick-btn"><div class="quick-icon">◎</div><div class="quick-lbl">Talk to Mia</div></div>
+                <div class="quick-btn"><div class="quick-icon">◈</div><div class="quick-lbl">Journal</div></div>
+                <div class="quick-btn"><div class="quick-icon">◉</div><div class="quick-lbl">Breathe</div></div>
+                <div class="quick-btn"><div class="quick-icon">◧</div><div class="quick-lbl">Programs</div></div>
+              </div>
+              <div class="chat-preview">
+                <div class="chat-bubble"><p>Good morning 🌿 You showed up again today — that matters more than you know.</p></div>
+                <div class="chat-bubble user"><p>I've been feeling anxious about work…</p></div>
+                <div class="typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="float-badge badge-streak">🔥 7-day streak</div>
+        <div class="float-badge badge-calm">✦ Calm restored</div>
+        <div class="float-badge badge-journal">◈ 14 journal entries</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Marquee -->
+<div class="marquee-wrap">
+  <div class="marquee-track" id="marqueeTrack">
+    <div class="marquee-item">Today is a new chance to reset <span class="marquee-dot"></span></div>
+    <div class="marquee-item"><span>Emotional clarity</span> <span class="marquee-dot"></span></div>
+    <div class="marquee-item">Take a breath — you're doing better than you think <span class="marquee-dot"></span></div>
+    <div class="marquee-item"><span>Personal growth</span> <span class="marquee-dot"></span></div>
+    <div class="marquee-item">Your growth is happening, even when it feels slow <span class="marquee-dot"></span></div>
+    <div class="marquee-item"><span>AI Coaching</span> <span class="marquee-dot"></span></div>
+    <div class="marquee-item">Small steps still move you forward <span class="marquee-dot"></span></div>
+    <div class="marquee-item"><span>Guided Journaling</span> <span class="marquee-dot"></span></div>
+    <div class="marquee-item">Today is a new chance to reset <span class="marquee-dot"></span></div>
+    <div class="marquee-item"><span>Emotional clarity</span> <span class="marquee-dot"></span></div>
+    <div class="marquee-item">Take a breath — you're doing better than you think <span class="marquee-dot"></span></div>
+    <div class="marquee-item"><span>Personal growth</span> <span class="marquee-dot"></span></div>
+    <div class="marquee-item">Your growth is happening, even when it feels slow <span class="marquee-dot"></span></div>
+    <div class="marquee-item"><span>AI Coaching</span> <span class="marquee-dot"></span></div>
+    <div class="marquee-item">Small steps still move you forward <span class="marquee-dot"></span></div>
+    <div class="marquee-item"><span>Guided Journaling</span> <span class="marquee-dot"></span></div>
+  </div>
+</div>
+
+<!-- Features -->
+<section id="features">
+  <div style="max-width:1100px;margin:0 auto">
+    <div class="section-label reveal">Core features</div>
+    <h2 class="section-h reveal" data-delay="1">Everything you need<br><em>in one quiet place</em></h2>
+    <p class="section-sub reveal" data-delay="2">Built around how you actually feel — not how you think you should feel.</p>
+    <div class="features-grid reveal" data-delay="2">
+      <div class="feat-cell">
+        <div class="feat-num">01</div>
+        <span class="feat-icon">◎</span>
+        <div class="feat-title">AI Coach Mia</div>
+        <div class="feat-desc">A warm, emotionally intelligent companion available any time. Mia listens without judgment, reflects your feelings back, and gently guides you toward clarity and calm.</div>
+        <span class="feat-tag">Always available</span>
+      </div>
+      <div class="feat-cell">
+        <div class="feat-num">02</div>
+        <span class="feat-icon">◈</span>
+        <div class="feat-title">Guided Journaling</div>
+        <div class="feat-desc">Beautiful journaling with mood tracking, reflection prompts, and AI-powered pattern detection. Understand your emotional landscape over time.</div>
+        <span class="feat-tag">AI Pattern Detection</span>
+      </div>
+      <div class="feat-cell">
+        <div class="feat-num">03</div>
+        <span class="feat-icon">◉</span>
+        <div class="feat-title">Breathing Sessions</div>
+        <div class="feat-desc">Immersive, animated breathing exercises — Box, 4-7-8, Calm Reset, Sleep Wind-Down. Your nervous system will thank you within minutes.</div>
+        <span class="feat-tag">Instant calm</span>
+      </div>
+      <div class="feat-cell">
+        <div class="feat-num">04</div>
+        <span class="feat-icon">◧</span>
+        <div class="feat-title">Wellness Programs</div>
+        <div class="feat-desc">Structured multi-day journeys for anxiety, confidence, healing, and mind renewal. Daily lessons, exercises, and reflections that build real momentum.</div>
+        <span class="feat-tag">Science-backed</span>
+      </div>
+      <div class="feat-cell">
+        <div class="feat-num">05</div>
+        <span class="feat-icon">◐</span>
+        <div class="feat-title">Emotional Insights</div>
+        <div class="feat-desc">See your mood trends, identify patterns, and celebrate progress. Data that empowers instead of overwhelms — warm, visual, and personal.</div>
+        <span class="feat-tag">Weekly summaries</span>
+      </div>
+      <div class="feat-cell">
+        <div class="feat-num">06</div>
+        <span class="feat-icon">◆</span>
+        <div class="feat-title">Daily Check-In</div>
+        <div class="feat-desc">A gentle daily ritual that takes 30 seconds. Track your mood, build streak momentum, and create a long-term picture of your emotional health.</div>
+        <span class="feat-tag">Streak tracking</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Mia Section -->
+<section id="mia">
+  <div class="mia-bg"></div>
+  <div class="mia-inner" style="max-width:1100px;margin:0 auto">
+    <div class="reveal-left">
+      <div class="mia-badge">◎ Meet your coach</div>
+      <h2 class="mia-h">She listens.<br>She <em>understands.</em><br>She helps.</h2>
+      <p class="mia-sub">Mia is your AI wellness coach — warm, patient, and always present. Whether you're spiraling at 2am or just need to process a hard day, she holds space for all of it.</p>
+      <div class="mia-traits">
+        <div class="mia-trait"><div class="trait-dot"></div>Emotionally intelligent — reads between the lines</div>
+        <div class="mia-trait"><div class="trait-dot"></div>Never clinical, never cold, never rushed</div>
+        <div class="mia-trait"><div class="trait-dot"></div>Remembers what matters to you</div>
+        <div class="mia-trait"><div class="trait-dot"></div>Guides breathing, reflection, and reframing</div>
+        <div class="mia-trait"><div class="trait-dot"></div>Available every single day, no appointment needed</div>
+      </div>
+      <a href="#" class="btn-primary" style="background:var(--violet)" onclick="return openApp('mia')">
+        Start talking to Mia
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+    <div class="reveal-right">
+      <div class="chat-demo">
+        <div class="demo-header">
+          <div class="mia-avatar">◎</div>
+          <div>
+            <div class="mia-name">Mia</div>
+            <div class="mia-status">● Online now</div>
+          </div>
+        </div>
+        <div class="demo-messages">
+          <div class="dmsg mia-msg">Hi there 🌿 I'm Mia. This is your safe space — share anything. What's on your mind today?</div>
+          <div class="dmsg user-msg">I've been really anxious about work. I can't stop overthinking everything.</div>
+          <div class="dmsg mia-msg">That sounds exhausting — carrying that mental weight all day. Let's slow down for a second. When you notice the overthinking starting, what does it feel like in your body?</div>
+          <div class="dmsg user-msg">Like a knot in my chest, honestly.</div>
+          <div class="dmsg mia-msg">That knot is your nervous system sending a signal. It's not the enemy — it's asking to be heard. Would you like to try a quick breathing reset together? It can help that knot loosen. 💙</div>
+          <div class="typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Stats -->
+<section id="stats">
+  <div class="stats-grid reveal">
+    <div>
+      <div class="stat-num"><span class="stat-unit">50</span>k+</div>
+      <div class="stat-label">Active users worldwide</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div>
+      <div class="stat-num">4.<span class="stat-unit">9</span></div>
+      <div class="stat-label">Average app rating</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div>
+      <div class="stat-num"><span class="stat-unit">2</span>M+</div>
+      <div class="stat-label">Journal entries written</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div>
+      <div class="stat-num">87<span style="font-size:2rem;color:var(--violet)">%</span></div>
+      <div class="stat-label">Report less anxiety in 30 days</div>
+    </div>
+  </div>
+</section>
+
+<!-- How it Works -->
+<section id="how">
+  <div style="max-width:1100px;margin:0 auto">
+    <div class="section-label reveal">How it works</div>
+    <h2 class="section-h reveal" data-delay="1">Your wellness,<br><em>step by step</em></h2>
+    <div class="steps-wrap">
+      <div class="step reveal">
+        <div class="step-num">01</div>
+        <div class="step-content">
+          <div class="step-tag">Onboarding</div>
+          <div class="step-h">Tell us what you're carrying</div>
+          <p class="step-p">A gentle 3-minute setup that personalizes your entire experience. Share your challenges, goals, and preferred growth style. We'll do the rest.</p>
+        </div>
+      </div>
+      <div class="step reveal" data-delay="1">
+        <div class="step-num">02</div>
+        <div class="step-content">
+          <div class="step-tag">Daily Ritual</div>
+          <div class="step-h">Check in with yourself every morning</div>
+          <p class="step-p">A 30-second mood check-in and personalized suggestion from Mia sets the tone for your day. Small consistency creates big change.</p>
+        </div>
+      </div>
+      <div class="step reveal" data-delay="2">
+        <div class="step-num">03</div>
+        <div class="step-content">
+          <div class="step-tag">Grow</div>
+          <div class="step-h">Journal, breathe, and talk it through</div>
+          <p class="step-p">Use the tools that fit the moment — reflect in your journal, reset with a breathing session, or have a deeper conversation with Mia. Everything works together.</p>
+        </div>
+      </div>
+      <div class="step reveal" data-delay="3">
+        <div class="step-num">04</div>
+        <div class="step-content">
+          <div class="step-tag">Insights</div>
+          <div class="step-h">Watch yourself transform over time</div>
+          <p class="step-p">Your emotional trend data, journal patterns, and streak momentum build a picture of real, lasting growth. Celebrate how far you've come.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Pricing -->
+<section id="pricing">
+  <div style="max-width:1100px;margin:0 auto">
+    <div class="section-label reveal">Pricing</div>
+    <h2 class="section-h reveal" data-delay="1">Invest in your<br><em>inner world</em></h2>
+    <div class="price-toggle reveal" data-delay="2">
+      <span>Monthly</span>
+      <div class="toggle-track yearly" id="toggleTrack" onclick="togglePricing()">
+        <div class="toggle-thumb"></div>
+      </div>
+      <span>Yearly</span>
+      <span class="save-badge">Save 40%</span>
+    </div>
+    <div class="price-grid">
+      <div class="price-card reveal" data-delay="1">
+        <div class="price-tier">Free</div>
+        <div class="price-amount">$0</div>
+        <div class="price-period">Forever free · No card needed</div>
+        <ul class="price-feats">
+          <li class="price-feat"><span class="price-check">✓</span>Daily mood check-in</li>
+          <li class="price-feat"><span class="price-check">✓</span>5 journal entries/month</li>
+          <li class="price-feat"><span class="price-check">✓</span>2 breathing modes</li>
+          <li class="price-feat"><span class="price-check">✓</span>10 Mia messages/day</li>
+          <li class="price-feat"><span class="price-check">✓</span>1 wellness program</li>
+          <li class="price-feat"><span class="price-check no">–</span><span style="opacity:.4">Advanced insights</span></li>
+          <li class="price-feat"><span class="price-check no">–</span><span style="opacity:.4">Journal vault</span></li>
+        </ul>
+        <button class="price-btn" onclick="openApp('onboarding')">Get started free</button>
+      </div>
+      <div class="price-card featured reveal" data-delay="2">
+        <div class="price-tier">Premium</div>
+        <div class="price-amount" id="priceAmt">$7<span style="font-size:1.2rem">.99</span></div>
+        <div class="price-period" id="pricePeriod">per month, billed yearly · Save $62</div>
+        <ul class="price-feats">
+          <li class="price-feat"><span class="price-check">✓</span>Everything in Free</li>
+          <li class="price-feat"><span class="price-check">✓</span>Unlimited Mia AI coaching</li>
+          <li class="price-feat"><span class="price-check">✓</span>Advanced journal insights & AI patterns</li>
+          <li class="price-feat"><span class="price-check">✓</span>Full emotional trend analytics</li>
+          <li class="price-feat"><span class="price-check">✓</span>All breathing modes + audio</li>
+          <li class="price-feat"><span class="price-check">✓</span>All wellness programs</li>
+          <li class="price-feat"><span class="price-check">✓</span>Secure encrypted journal vault</li>
+          <li class="price-feat"><span class="price-check">✓</span>Ad-free experience</li>
+        </ul>
+        <button class="price-btn" onclick="openApp('premium')">Start 7-day free trial</button>
+      </div>
+      <div class="price-card reveal" data-delay="3">
+        <div class="price-tier">Teams</div>
+        <div class="price-amount" style="font-size:2rem">Custom</div>
+        <div class="price-period">For wellness teams & organizations</div>
+        <ul class="price-feats">
+          <li class="price-feat"><span class="price-check">✓</span>Everything in Premium</li>
+          <li class="price-feat"><span class="price-check">✓</span>Team dashboard & analytics</li>
+          <li class="price-feat"><span class="price-check">✓</span>Admin controls & reporting</li>
+          <li class="price-feat"><span class="price-check">✓</span>Branded onboarding</li>
+          <li class="price-feat"><span class="price-check">✓</span>Dedicated account manager</li>
+          <li class="price-feat"><span class="price-check">✓</span>SSO & compliance</li>
+          <li class="price-feat"><span class="price-check">✓</span>Priority support SLA</li>
+        </ul>
+        <button class="price-btn" onclick="openApp('dashboard')">Contact sales</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MEET THE THERAPIST -->
+<section id="therapist" style="background:var(--pearl);padding:7rem 5%">
+  <div style="max-width:1100px;margin:0 auto">
+    <div class="reveal" style="text-align:center;margin-bottom:4rem">
+      <div class="section-label" style="justify-content:center">Meet Your Therapist</div>
+      <h2 class="section-h" style="margin:0 auto 1rem">Care led by <em>real expertise</em></h2>
+      <p class="section-sub" style="margin:0 auto;text-align:center">Board-certified, compassionate, and here for you.</p>
+    </div>
+
+    <div class="therapist-grid reveal" style="display:grid;grid-template-columns:1fr 1.6fr;gap:4rem;align-items:start">
+
+      <!-- Left: photo + quick facts -->
+      <div>
+        <div style="background:linear-gradient(135deg,rgba(107,95,207,.15),rgba(42,157,143,.1));border:1px solid rgba(107,95,207,.2);border-radius:28px;padding:2rem;text-align:center;margin-bottom:1.5rem">
+          <div style="width:100px;height:100px;border-radius:50%;overflow:hidden;margin:0 auto 1.2rem;border:3px solid rgba(107,95,207,.3)">
+            <img src="https://photos.psychologytoday.com/4458ebe4-67f5-4edc-b57c-bdcfe1c2123b/1/320x400.jpeg" alt="Kenneth Mutegyeki" style="width:100%;height:100%;object-fit:cover;object-position:top"/>
+          </div>
+          <h3 style="font-family:var(--serif);font-size:1.5rem;font-weight:600;color:var(--ink);margin-bottom:.3rem">Kenneth Mutegyeki</h3>
+          <p style="font-size:.85rem;color:var(--violet);font-weight:600;margin-bottom:1rem">Psychiatric Nurse Practitioner, BC, BSN, MSN</p>
+          <div style="display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;margin-bottom:1.2rem">
+            <span style="background:rgba(107,95,207,.1);color:var(--violet);font-size:.7rem;font-weight:700;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(107,95,207,.2)">PMHNP</span>
+            <span style="background:rgba(42,157,143,.1);color:var(--teal);font-size:.7rem;font-weight:700;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(42,157,143,.2)">15+ Yrs Experience</span>
+            <span style="background:rgba(201,168,76,.1);color:var(--gold);font-size:.7rem;font-weight:700;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(201,168,76,.2)">Psychology Today Verified</span>
+          </div>
+          <a href="https://care.headway.co/providers/kenneth-mutegyeki" target="_blank" class="btn-primary" style="width:100%;justify-content:center;font-size:.875rem">Book a Session →</a>
+          <p style="font-size:.75rem;color:var(--muted);margin-top:.75rem">✓ Accepting new clients &nbsp;·&nbsp; Free 15-min intro call</p>
+        </div>
+
+        <!-- Contact -->
+        <div style="background:var(--cream);border-radius:20px;padding:1.5rem;display:flex;flex-direction:column;gap:.75rem">
+          <div style="display:flex;gap:.75rem;align-items:flex-start">
+            <span style="font-size:1rem;flex-shrink:0">📍</span>
+            <div style="font-size:.82rem;color:var(--muted);line-height:1.6">31 Granite St. Suite #2, Milford, MA 01757<br>100 Cambridge St. 14th Fl, Boston, MA 02114</div>
+          </div>
+          <div style="display:flex;gap:.75rem;align-items:center">
+            <span style="font-size:1rem;flex-shrink:0">📞</span>
+            <a href="tel:5086191044" style="font-size:.82rem;color:var(--muted);text-decoration:none">(508) 619-1044</a>
+          </div>
+          <div style="display:flex;gap:.75rem;align-items:center">
+            <span style="font-size:1rem;flex-shrink:0">✉️</span>
+            <a href="mailto:info@mindshiftwellnessclinic.org" style="font-size:.82rem;color:var(--muted);text-decoration:none">info@mindshiftwellnessclinic.org</a>
+          </div>
+          <div style="display:flex;gap:.75rem;align-items:center">
+            <span style="font-size:1rem;flex-shrink:0">💳</span>
+            <span style="font-size:.82rem;color:var(--muted)">$150/session · Initial: $400</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: bio + details -->
+      <div>
+        <blockquote style="font-family:var(--serif);font-size:1.1rem;font-style:italic;color:var(--ink);line-height:1.8;border-left:3px solid var(--violet);padding-left:1.5rem;margin-bottom:2rem">
+          "I am a compassionate PMHNP with 15 years of diverse nursing experience, specializing in psychiatric assessment, diagnosis, and evidence-based treatment. I provide culturally competent, trauma-informed care, supporting holistic wellness, recovery, and improved quality of life across the lifespan."
+        </blockquote>
+
+        <p style="font-size:.9rem;color:var(--muted);line-height:1.8;margin-bottom:2rem">My ideal clients are children up to adults facing anxiety, depression, trauma, mood disorders, or life transitions. A typical plan may include assessment, medication management, and supportive therapy — focused on helping you feel heard, understood, and empowered.</p>
+
+        <!-- Specialties -->
+        <div style="margin-bottom:1.5rem">
+          <h4 style="font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:.75rem">Specialties</h4>
+          <div style="display:flex;flex-wrap:wrap;gap:.5rem">
+            <span style="background:rgba(107,95,207,.08);color:var(--violet);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(107,95,207,.15)">Anxiety</span>
+            <span style="background:rgba(107,95,207,.08);color:var(--violet);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(107,95,207,.15)">Depression</span>
+            <span style="background:rgba(107,95,207,.08);color:var(--violet);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(107,95,207,.15)">Trauma</span>
+            <span style="background:rgba(107,95,207,.08);color:var(--violet);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(107,95,207,.15)">ADHD</span>
+            <span style="background:rgba(107,95,207,.08);color:var(--violet);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(107,95,207,.15)">Addiction</span>
+            <span style="background:rgba(107,95,207,.08);color:var(--violet);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(107,95,207,.15)">Bipolar Disorder</span>
+            <span style="background:rgba(107,95,207,.08);color:var(--violet);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(107,95,207,.15)">BPD</span>
+            <span style="background:rgba(107,95,207,.08);color:var(--violet);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(107,95,207,.15)">OCD</span>
+            <span style="background:rgba(107,95,207,.08);color:var(--violet);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(107,95,207,.15)">Mood Disorders</span>
+            <span style="background:rgba(107,95,207,.08);color:var(--violet);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(107,95,207,.15)">Life Transitions</span>
+            <span style="background:rgba(107,95,207,.08);color:var(--violet);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(107,95,207,.15)">Medication Management</span>
+            <span style="background:rgba(107,95,207,.08);color:var(--violet);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(107,95,207,.15)">Relationship Issues</span>
+            <span style="background:rgba(107,95,207,.08);color:var(--violet);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(107,95,207,.15)">Anger Management</span>
+          </div>
+        </div>
+
+        <!-- Therapy types -->
+        <div style="margin-bottom:1.5rem">
+          <h4 style="font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:.75rem">Treatment Approaches</h4>
+          <div style="display:flex;flex-wrap:wrap;gap:.5rem">
+            <span style="background:rgba(42,157,143,.08);color:var(--teal);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(42,157,143,.15)">CBT</span>
+            <span style="background:rgba(42,157,143,.08);color:var(--teal);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(42,157,143,.15)">DBT</span>
+            <span style="background:rgba(42,157,143,.08);color:var(--teal);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(42,157,143,.15)">Christian Counseling</span>
+            <span style="background:rgba(42,157,143,.08);color:var(--teal);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(42,157,143,.15)">Compassion Focused</span>
+            <span style="background:rgba(42,157,143,.08);color:var(--teal);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(42,157,143,.15)">Culturally Sensitive</span>
+            <span style="background:rgba(42,157,143,.08);color:var(--teal);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(42,157,143,.15)">Family / Marital</span>
+            <span style="background:rgba(42,157,143,.08);color:var(--teal);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(42,157,143,.15)">Interpersonal</span>
+            <span style="background:rgba(42,157,143,.08);color:var(--teal);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(42,157,143,.15)">Motivational Interviewing</span>
+          </div>
+        </div>
+
+        <!-- Insurance -->
+        <div style="background:var(--cream);border-radius:16px;padding:1.2rem">
+          <h4 style="font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:.75rem">Insurance Accepted</h4>
+          <div style="display:flex;flex-wrap:wrap;gap:.5rem">
+            <span style="background:rgba(224,122,143,.08);color:var(--blush);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(224,122,143,.15)">Aetna</span>
+            <span style="background:rgba(224,122,143,.08);color:var(--blush);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(224,122,143,.15)">Cigna &amp; Evernorth</span>
+            <span style="background:rgba(224,122,143,.08);color:var(--blush);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(224,122,143,.15)">Horizon BCBS</span>
+            <span style="background:rgba(224,122,143,.08);color:var(--blush);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(224,122,143,.15)">Independence Blue Cross</span>
+            <span style="background:rgba(224,122,143,.08);color:var(--blush);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(224,122,143,.15)">Meritain Health</span>
+            <span style="background:rgba(224,122,143,.08);color:var(--blush);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(224,122,143,.15)">Quest Behavioral Health</span>
+            <span style="background:rgba(224,122,143,.08);color:var(--blush);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(224,122,143,.15)">UnitedHealthcare</span>
+            <span style="background:rgba(224,122,143,.08);color:var(--blush);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(224,122,143,.15)">1199SEIU</span>
+            <span style="background:rgba(224,122,143,.08);color:var(--blush);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(224,122,143,.15)">Carelon Behavioral Health</span>
+            <span style="background:rgba(224,122,143,.08);color:var(--blush);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(224,122,143,.15)">GEHA</span>
+            <span style="background:rgba(224,122,143,.08);color:var(--blush);font-size:.75rem;padding:.3rem .8rem;border-radius:2rem;border:1px solid rgba(224,122,143,.15)">Coventry</span>
+          </div>
+          <p style="font-size:.78rem;color:var(--muted2);margin-top:.75rem">Also accepts cash, check, HSA, Venmo, Zelle, and all major cards. Self-pay options available.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section id="cta">
+  <div class="cta-orbs">
+    <div class="cta-orb cta-orb1"></div>
+    <div class="cta-orb cta-orb2"></div>
+  </div>
+  <div class="cta-inner">
+    <div class="reveal">
+      <h2 class="cta-h">You deserve to<br>feel <em>at peace.</em></h2>
+      <p class="cta-sub">Join over 50,000 people who chose to invest in their inner world. Your journey begins with one small, brave step.</p>
+      <div class="cta-actions">
+        <a href="#" class="btn-light" onclick="return openApp('onboarding')">
+          Begin for Free
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#pricing" class="btn-outline-light">View pricing</a>
+      </div>
+      <p class="cta-note">Free to start. Premium plans from $7.99/month. Cancel anytime.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+  <div style="max-width:1100px;margin:0 auto">
+    <div class="section-label reveal">FAQ</div>
+    <h2 class="section-h reveal" data-delay="1">Questions,<br><em>answered gently</em></h2>
+    <div class="faq-wrap">
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">Is MindShift+ a replacement for therapy?</div>
+        <div class="faq-a"><p>No, and we're clear about that. MindShift+ is a wellness companion for daily emotional support, reflection, and growth — not a clinical tool. If you're experiencing severe mental health challenges, we always encourage working with a qualified professional. Mia can be a beautiful complement to therapy, though.</p></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">How does Mia, the AI coach, actually work?</div>
+        <div class="faq-a"><p>Mia is powered by a large language model carefully tuned to provide warm, emotionally intelligent support. She draws on your check-ins, journal entries, and conversation history to offer personalized guidance. She's designed to feel human — not robotic — while being clear that she's an AI.</p></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">Is my journal private and secure?</div>
+        <div class="faq-a"><p>Absolutely. Your journal is encrypted and private. Premium users get access to the Secure Journal Vault with end-to-end encryption. We will never sell or share your personal data. Your inner world belongs only to you.</p></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">Can I try Premium before paying?</div>
+        <div class="faq-a"><p>Yes. Every new account gets a free 7-day Premium trial — no credit card required. You'll have access to everything: unlimited Mia, all programs, full journaling insights, and the complete breathing library. You only pay if you love it.</p></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">What devices does MindShift+ work on?</div>
+        <div class="faq-a"><p>MindShift+ is a fully responsive web app that works beautifully on desktop, tablet, and mobile browsers. Native iOS and Android apps are coming soon.</p></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">How do the wellness programs work?</div>
+        <div class="faq-a"><p>Each program has a daily structure: a short lesson (5 min read), a guided exercise (breathing, affirmation, or reflection), and a journaling prompt. Programs adapt to your pace — miss a day? No guilt. Pick up exactly where you left off.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-top">
+    <div class="footer-brand">
+      <div class="footer-logo">MindShift<span>+</span></div>
+      <p class="footer-tagline">Your personal AI wellness companion. Find your calm, shift your mind, and grow — one gentle day at a time.</p>
+      <div class="social-row">
+        <a href="#" class="social-btn">𝕏</a>
+        <a href="#" class="social-btn">in</a>
+        <a href="#" class="social-btn">ig</a>
+        <a href="#" class="social-btn">yt</a>
+      </div>
+    </div>
+
+    <div class="footer-clinic-col">
+      <div class="footer-clinic-eyebrow">Wellness Clinic</div>
+      <div class="footer-clinic-name">MindShift Wellness Clinic</div>
+      <div class="footer-clinic-slogan">"Where Mindsets Change<br>and Healing Begins"</div>
+      <div class="footer-clinic-divider"></div>
+      <ul class="footer-contact-list">
+        <li><span class="fc-icon">☏</span><a href="tel:5083061128">508 306 1128</a></li>
+        <li><span class="fc-icon">@</span><a href="mailto:info@mindshiftwellnessclinic.org">info@mindshiftwellnessclinic.org</a></li>
+        <li><span class="fc-icon">↗</span><a href="https://mindshiftwellnessclinic.org" target="_blank" rel="noopener">mindshiftwellnessclinic.org</a></li>
+      </ul>
+    </div>
+
+    <div class="footer-col">
+      <h4>Product</h4>
+      <ul class="footer-links">
+        <li><a href="#">Features</a></li>
+        <li><a href="#">Meet Mia</a></li>
+        <li><a href="#">Programs</a></li>
+        <li><a href="#">Insights</a></li>
+        <li><a href="#">Pricing</a></li>
+      </ul>
+    </div>
+
+    <div class="footer-col">
+      <h4>Support</h4>
+      <ul class="footer-links">
+        <li><a href="#">Help Center</a></li>
+        <li><a href="#">About</a></li>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a href="terms.html">Terms</a></li>
+        <li><a href="#">Contact</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <span class="footer-copy">© 2026 MindShift+ · MindShift Wellness Clinic. All rights reserved.</span>
+    <div class="footer-legal">
+      <a href="privacy.html">Privacy Policy</a>
+      <a href="terms.html">Terms of Service</a>
+      <a href="cookies.html">Cookie Settings</a>
+    </div>
+  </div>
+</footer>
+
+<!-- Cookie Consent Banner -->
+<div id="cookieBanner" role="dialog" aria-label="Cookie consent">
+  <div class="cb-text">
+    <p>We use cookies to keep MindShift+ running, remember your preferences, and (with your consent) understand how people use the app. We never sell your data. <a href="privacy.html#cookies">Learn more</a></p>
+  </div>
+  <div class="cb-actions">
+    <a href="cookies.html" class="cb-btn-manage">Manage Preferences</a>
+    <button class="cb-btn-reject" onclick="cookieReject()">Reject Non-Essential</button>
+    <button class="cb-btn-accept" onclick="cookieAccept()">Accept All</button>
+  </div>
+</div>
+
+<script>
+// Cookie banner
+(function(){
+  const key='ms_cookie_consent';
+  try{ if(localStorage.getItem(key)) return; } catch{}
+  setTimeout(()=>document.getElementById('cookieBanner').classList.add('visible'), 1200);
+})();
+function cookieAccept(){
+  try{localStorage.setItem('ms_cookie_consent',JSON.stringify({functional:true,analytics:true,marketing:true,savedAt:Date.now()}))}catch{}
+  document.getElementById('cookieBanner').classList.remove('visible');
+}
+function cookieReject(){
+  try{localStorage.setItem('ms_cookie_consent',JSON.stringify({functional:false,analytics:false,marketing:false,savedAt:Date.now()}))}catch{}
+  document.getElementById('cookieBanner').classList.remove('visible');
+}
+
+function openApp(page){
+  try{
+    if(window.parent && window.parent !== window){
+      // Always open the auth modal — parent React app handles routing after sign-in
+      window.parent.postMessage({type:'mindshift-plus:openAuth'},'*');
+      return false;
+    }
+    window.location.href = '/';
+    return false;
+  }catch(e){
+    return false;
+  }
+}
+
+// Cursor
+const cursor=document.getElementById('cursor'),ring=document.getElementById('cursorRing');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cursor.style.left=mx+'px';cursor.style.top=my+'px'});
+(function animRing(){rx+=(mx-rx)*.12;ry+=(my-ry)*.12;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(animRing)})();
+document.querySelectorAll('a,button,.prog-card,.test-card,.feat-cell').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{cursor.style.width='16px';cursor.style.height='16px';ring.style.width='50px';ring.style.height='50px';ring.style.borderColor='var(--violet)'});
+  el.addEventListener('mouseleave',()=>{cursor.style.width='10px';cursor.style.height='10px';ring.style.width='36px';ring.style.height='36px';ring.style.borderColor='var(--violet)'});
+});
+
+// Nav scroll
+const nav=document.getElementById('navbar');
+window.addEventListener('scroll',()=>{nav.classList.toggle('scrolled',scrollY>40)});
+
+// Mobile nav
+const toggle=document.getElementById('navToggle'),links=document.getElementById('navLinks');
+toggle.addEventListener('click',()=>{links.classList.toggle('open');const s=toggle.querySelectorAll('span');if(links.classList.contains('open')){s[0].style.transform='rotate(45deg) translate(5px,5px)';s[1].style.opacity='0';s[2].style.transform='rotate(-45deg) translate(5px,-5px)'}else{s.forEach(x=>{x.style.transform='';x.style.opacity=''})}});
+links.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{links.classList.remove('open');toggle.querySelectorAll('span').forEach(x=>{x.style.transform='';x.style.opacity=''})}));
+
+// Marquee clone
+const track=document.getElementById('marqueeTrack');
+track.innerHTML+=track.innerHTML;
+
+// Reveal on scroll
+const io=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')})},{threshold:.12,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.reveal,.reveal-left,.reveal-right').forEach(el=>io.observe(el));
+
+// FAQ
+function toggleFaq(el){const item=el.parentElement;item.classList.toggle('open')}
+
+// Pricing toggle
+let isYearly=true;
+function togglePricing(){
+  isYearly=!isYearly;
+  const t=document.getElementById('toggleTrack');
+  const a=document.getElementById('priceAmt');
+  const p=document.getElementById('pricePeriod');
+  t.classList.toggle('yearly',isYearly);
+  if(isYearly){a.innerHTML='$7<span style="font-size:1.2rem">.99</span>';p.textContent='per month, billed yearly · Save $62'}
+  else{a.innerHTML='$12<span style="font-size:1.2rem">.99</span>';p.textContent='per month, billed monthly'}
+}
+
+// Parallax orbs
+window.addEventListener('scroll',()=>{
+  const y=scrollY;
+  document.querySelectorAll('.orb1').forEach(o=>o.style.transform=`translateY(${y*.08}px)`);
+  document.querySelectorAll('.orb2').forEach(o=>o.style.transform=`translateY(${-y*.05}px)`);
+});
+</script>
+</body>
+</html>
+

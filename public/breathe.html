@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>MindShift+ · Breathe</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --serif:'Cormorant Garamond',Georgia,serif;
+    --sans:'DM Sans',sans-serif;
+    --ease:cubic-bezier(.4,0,.2,1);
+    --ease-bounce:cubic-bezier(.22,.68,0,1.2);
+  }
+  html,body{width:100%;height:100%;overflow:hidden;font-family:var(--sans)}
+  body{background:#04060f;color:#fff;position:relative}
+  
+  /* Canvas layer */
+  #bgCanvas{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+  
+  /* Grain overlay */
+  body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E");z-index:1;pointer-events:none;opacity:.6}
+  
+  /* Main UI */
+  #app{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem}
+  
+  /* Top bar */
+  #topbar{position:fixed;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:1.5rem 2rem;background:linear-gradient(to bottom,rgba(4,6,15,.9),transparent)}
+  .logo{font-family:var(--serif);font-size:1.3rem;color:rgba(255,255,255,.7);letter-spacing:-.02em}
+  .logo span{color:#9d8ff0}
+  #closeBtn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.5);padding:.45rem 1.1rem;border-radius:2rem;font-size:.8rem;cursor:pointer;font-family:var(--sans);transition:all .2s;letter-spacing:.04em}
+  #closeBtn:hover{background:rgba(255,255,255,.12);color:rgba(255,255,255,.8)}
+  
+  /* Mode selector screen */
+  #modeScreen{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;background:rgba(4,6,15,.97);transition:opacity .6s var(--ease),transform .6s var(--ease)}
+  #modeScreen.hidden{opacity:0;transform:scale(1.03);pointer-events:none}
+  .ms-eyebrow{font-size:.72rem;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:#9d8ff0;margin-bottom:1.2rem;display:flex;align-items:center;gap:.5rem}
+  .ms-eyebrow::before,.ms-eyebrow::after{content:'';flex:1;height:1px;background:rgba(157,143,240,.3)}
+  .ms-h{font-family:var(--serif);font-size:clamp(2rem,4vw,3.2rem);font-weight:300;text-align:center;line-height:1.1;margin-bottom:.6rem;letter-spacing:-.03em}
+  .ms-h em{font-style:italic;color:#c5bff8}
+  .ms-sub{font-size:.9rem;color:rgba(255,255,255,.4);text-align:center;margin-bottom:3rem;line-height:1.7}
+  .modes-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;max-width:640px;width:100%;margin-bottom:2.5rem}
+  @media(min-width:700px){.modes-grid{grid-template-columns:repeat(4,1fr)}}
+  .mode-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:1.5rem 1rem;text-align:center;cursor:pointer;transition:all .25s var(--ease-bounce);position:relative;overflow:hidden}
+  .mode-card::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity .3s;border-radius:20px}
+  .mode-card:hover{transform:translateY(-4px);border-color:rgba(157,143,240,.4)}
+  .mode-card:hover::before{opacity:1}
+  .mode-card.active{border-color:rgba(157,143,240,.7);background:rgba(107,95,207,.15)}
+  .mode-card.active::before{opacity:1}
+  .mode-icon{font-size:1.8rem;margin-bottom:.75rem;display:block}
+  .mode-name{font-family:var(--serif);font-size:1.1rem;font-weight:400;color:rgba(255,255,255,.9);margin-bottom:.3rem}
+  .mode-pattern{font-size:.72rem;color:rgba(255,255,255,.35);font-family:var(--sans);letter-spacing:.05em;margin-bottom:.5rem}
+  .mode-desc{font-size:.75rem;color:rgba(255,255,255,.4);line-height:1.5}
+  
+  /* Duration selector */
+  .dur-row{display:flex;align-items:center;gap:.75rem;margin-bottom:2.5rem}
+  .dur-label{font-size:.8rem;color:rgba(255,255,255,.4)}
+  .dur-btn{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.5);padding:.45rem 1.1rem;border-radius:2rem;font-size:.8rem;cursor:pointer;font-family:var(--sans);transition:all .2s}
+  .dur-btn.active{background:rgba(107,95,207,.25);border-color:rgba(157,143,240,.5);color:#c5bff8}
+  .dur-btn:hover:not(.active){background:rgba(255,255,255,.08);color:rgba(255,255,255,.7)}
+  .start-btn{background:linear-gradient(135deg,#6b5fcf,#9d8ff0);color:#fff;border:none;padding:1rem 3rem;border-radius:3rem;font-size:1rem;font-weight:500;cursor:pointer;font-family:var(--sans);transition:all .3s var(--ease-bounce);letter-spacing:.02em;box-shadow:0 8px 32px rgba(107,95,207,.4)}
+  .start-btn:hover{transform:translateY(-3px) scale(1.03);box-shadow:0 16px 40px rgba(107,95,207,.5)}
+  
+  /* Session screen */
+  #sessionScreen{position:fixed;inset:0;z-index:25;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .8s var(--ease)}
+  #sessionScreen.visible{opacity:1;pointer-events:auto}
+  
+  /* Central orb system */
+  #orbWrap{position:relative;width:min(60vw,320px);height:min(60vw,320px);display:flex;align-items:center;justify-content:center;margin-bottom:3rem}
+  .orb-ring{position:absolute;border-radius:50%;border:1px solid rgba(157,143,240,.12);animation:ringPulse 4s ease-in-out infinite}
+  .orb-ring:nth-child(1){inset:-40px;animation-delay:0s}
+  .orb-ring:nth-child(2){inset:-20px;animation-delay:.5s;border-color:rgba(157,143,240,.08)}
+  .orb-ring:nth-child(3){inset:-60px;animation-delay:1s;border-color:rgba(157,143,240,.05)}
+  @keyframes ringPulse{0%,100%{opacity:.3;transform:scale(1)}50%{opacity:.8;transform:scale(1.02)}}
+  #orbCore{width:100%;height:100%;border-radius:50%;position:relative;display:flex;align-items:center;justify-content:center;transition:transform 1s var(--ease),box-shadow 1s var(--ease);will-change:transform}
+  .orb-glow{position:absolute;inset:-30px;border-radius:50%;filter:blur(40px);opacity:.4;transition:opacity 1.5s,background 1.5s;will-change:opacity}
+  .orb-surface{width:100%;height:100%;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;position:relative;overflow:hidden;transition:background 1.5s}
+  .orb-surface::before{content:'';position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.25),transparent 65%)}
+  .orb-surface::after{content:'';position:absolute;inset:0;border-radius:50%;border:1px solid rgba(255,255,255,.15)}
+  #phaseLabel{font-family:var(--serif);font-size:clamp(1.2rem,3vw,1.8rem);font-weight:300;color:rgba(255,255,255,.95);letter-spacing:.02em;text-align:center;transition:opacity .4s;z-index:1;text-shadow:0 2px 20px rgba(0,0,0,.3)}
+  #countNum{font-family:var(--serif);font-size:clamp(2.5rem,6vw,4rem);font-weight:300;color:rgba(255,255,255,.9);line-height:1;margin-top:.2rem;z-index:1;transition:opacity .3s;text-shadow:0 2px 20px rgba(0,0,0,.3)}
+  
+  /* Progress arc */
+  #arcSvg{position:absolute;inset:-8px;width:calc(100% + 16px);height:calc(100% + 16px);transform:rotate(-90deg);pointer-events:none;z-index:2}
+  #arcBg{fill:none;stroke:rgba(255,255,255,.06);stroke-width:2}
+  #arcFill{fill:none;stroke-width:2.5;stroke-linecap:round;transition:stroke .8s}
+  
+  /* Phase indicator dots */
+  #phaseDots{display:flex;gap:.6rem;margin-bottom:1.5rem;justify-content:center}
+  .pdot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.15);transition:all .4s}
+  .pdot.active{background:#9d8ff0;transform:scale(1.3);box-shadow:0 0 8px rgba(157,143,240,.6)}
+  .pdot.done{background:rgba(157,143,240,.4)}
+  
+  /* Phase name strip */
+  #phaseStrip{display:flex;gap:0;border:1px solid rgba(255,255,255,.08);border-radius:2rem;overflow:hidden;margin-bottom:2.5rem;backdrop-filter:blur(10px)}
+  .ps-item{padding:.4rem 1rem;font-size:.75rem;color:rgba(255,255,255,.3);letter-spacing:.05em;font-weight:500;transition:all .3s;white-space:nowrap}
+  .ps-item.active{background:rgba(107,95,207,.3);color:rgba(255,255,255,.85)}
+  
+  /* Stats row */
+  #statsRow{display:flex;gap:2.5rem;align-items:center;justify-content:center;opacity:.7}
+  .stat-item{text-align:center}
+  .stat-val{font-family:var(--serif);font-size:1.4rem;font-weight:300;color:rgba(255,255,255,.85)}
+  .stat-lbl{font-size:.68rem;color:rgba(255,255,255,.35);letter-spacing:.08em;text-transform:uppercase;margin-top:.2rem}
+  .stat-sep{width:1px;height:28px;background:rgba(255,255,255,.1)}
+  
+  /* Instruction text */
+  #instructText{position:absolute;bottom:6rem;left:0;right:0;text-align:center;font-family:var(--serif);font-size:1rem;font-style:italic;color:rgba(255,255,255,.25);transition:opacity .6s;letter-spacing:.02em}
+  
+  /* Ambient label */
+  #ambientLabel{position:fixed;bottom:4.5rem;left:50%;transform:translateX(-50%);font-size:.72rem;color:rgba(255,255,255,.2);letter-spacing:.12em;text-transform:uppercase;display:flex;align-items:center;gap:.5rem;z-index:30;transition:opacity .4s}
+  #ambientLabel::before{content:'';width:5px;height:5px;border-radius:50%;background:rgba(157,143,240,.5);animation:ambPulse 2s ease-in-out infinite}
+  @keyframes ambPulse{0%,100%{opacity:.3}50%{opacity:1}}
+  
+  /* Controls */
+  #controls{position:fixed;bottom:4.5rem;right:2rem;z-index:30;display:flex;gap:.6rem;opacity:0;transition:opacity .5s}
+  #controls.visible{opacity:1}
+  .ctrl-btn{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.45);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.85rem;transition:all .2s}
+  .ctrl-btn:hover{background:rgba(255,255,255,.12);color:rgba(255,255,255,.8);border-color:rgba(255,255,255,.2)}
+  .ctrl-btn.active{background:rgba(107,95,207,.3);border-color:rgba(157,143,240,.5);color:#c5bff8}
+  
+  /* Completion screen */
+  #doneScreen{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;background:rgba(4,6,15,.0);pointer-events:none;opacity:0;transition:opacity .8s}
+  #doneScreen.visible{opacity:1;pointer-events:auto;background:rgba(4,6,15,.85);backdrop-filter:blur(20px)}
+  .done-glyph{font-family:var(--serif);font-size:4rem;color:rgba(157,143,240,.6);margin-bottom:1.5rem;animation:glyphFloat 3s ease-in-out infinite}
+  @keyframes glyphFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+  .done-h{font-family:var(--serif);font-size:clamp(2rem,4vw,3rem);font-weight:300;text-align:center;margin-bottom:.8rem;letter-spacing:-.02em}
+  .done-h em{font-style:italic;color:#c5bff8}
+  .done-sub{font-size:.95rem;color:rgba(255,255,255,.45);text-align:center;max-width:400px;line-height:1.75;margin-bottom:.5rem;font-family:var(--serif);font-style:italic}
+  .done-stats{display:flex;gap:2rem;margin:2rem 0;justify-content:center}
+  .done-stat{text-align:center;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:1rem 1.5rem}
+  .done-stat-num{font-family:var(--serif);font-size:2rem;font-weight:300;color:#c5bff8}
+  .done-stat-lbl{font-size:.72rem;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.08em;margin-top:.2rem}
+  .done-actions{display:flex;gap:.75rem;flex-wrap:wrap;justify-content:center;margin-top:.5rem}
+  .done-btn{padding:.8rem 1.8rem;border-radius:2rem;font-size:.875rem;font-weight:500;cursor:pointer;font-family:var(--sans);transition:all .25s;letter-spacing:.02em}
+  .done-btn-primary{background:linear-gradient(135deg,#6b5fcf,#9d8ff0);color:#fff;border:none;box-shadow:0 8px 24px rgba(107,95,207,.35)}
+  .done-btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(107,95,207,.5)}
+  .done-btn-ghost{background:transparent;color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.15)}
+  .done-btn-ghost:hover{border-color:rgba(255,255,255,.3);color:rgba(255,255,255,.8)}
+  
+  /* Breath guide text */
+  #guideRow{display:flex;gap:.5rem;align-items:center;justify-content:center;height:24px;margin-bottom:1rem;overflow:hidden}
+  .guide-word{font-size:.8rem;color:rgba(255,255,255,.3);font-weight:300;letter-spacing:.08em;transition:all .4s;transform:translateY(0);opacity:1}
+  .guide-word.fade{opacity:0;transform:translateY(-8px)}
+  
+  /* Transition: phase flash */
+  #phaseFlash{position:fixed;inset:0;z-index:35;pointer-events:none;opacity:0;border-radius:0;transition:opacity .15s}
+  
+/* Overlay panels */
+.overlay-panel{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(4,6,15,.96);backdrop-filter:blur(20px);transition:opacity .4s var(--ease),transform .4s var(--ease);overflow-y:auto;padding:2rem}
+.overlay-panel.hidden{opacity:0;transform:scale(1.02);pointer-events:none}
+.op-inner{width:100%;max-width:480px}
+.op-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem}
+.overlay-close{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.5);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:.8rem;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+.overlay-close:hover{background:rgba(255,255,255,.15);color:#fff}
+/* Custom builder */
+.cb-phase{display:grid;grid-template-columns:90px 1fr 36px;align-items:center;gap:1rem;margin-bottom:1.2rem}
+.cb-phase-label{font-size:.8rem;color:rgba(255,255,255,.5);letter-spacing:.05em;display:flex;align-items:center;gap:.5rem}
+.cb-slider{-webkit-appearance:none;appearance:none;width:100%;height:3px;background:rgba(255,255,255,.12);border-radius:2px;outline:none;cursor:pointer}
+.cb-slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#9d8ff0;cursor:pointer;border:2px solid #04060f}
+.cb-slider:disabled{opacity:.3;cursor:not-allowed}
+.cb-dur-val{font-family:var(--serif);font-size:1rem;color:rgba(255,255,255,.6);text-align:right}
+.cb-toggle{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.4);width:20px;height:20px;border-radius:50%;font-size:.6rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .2s;padding:0;flex-shrink:0;vertical-align:middle}
+.cb-toggle.active{background:rgba(107,95,207,.3);border-color:rgba(157,143,240,.5);color:#c5bff8}
+.cb-name-input{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.75rem 1rem;color:#fff;font-family:var(--sans);font-size:1rem;outline:none;margin-bottom:1.8rem;transition:border-color .2s}
+.cb-name-input:focus{border-color:rgba(157,143,240,.5)}
+.cb-name-input::placeholder{color:rgba(255,255,255,.25)}
+.cb-preview{text-align:center;font-family:var(--serif);font-size:1.4rem;color:#9d8ff0;letter-spacing:.15em;margin:1.5rem 0 1rem;padding:.75rem;background:rgba(157,143,240,.08);border-radius:12px;border:1px solid rgba(157,143,240,.15)}
+.cb-color-row{display:flex;gap:.6rem;justify-content:center;margin-bottom:1.8rem}
+.cb-swatch{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .2s;flex-shrink:0}
+.cb-swatch.active{border-color:#fff;transform:scale(1.2)}
+.cb-actions{display:flex;gap:.75rem;justify-content:center}
+/* History panel */
+.hist-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1.5rem}
+.hist-stat{text-align:center;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:.9rem .5rem}
+.hist-stat-num{font-family:var(--serif);font-size:1.5rem;font-weight:300;color:#c5bff8}
+.hist-stat-lbl{font-size:.65rem;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.08em;margin-top:.2rem}
+.hist-fav{font-size:.78rem;color:rgba(255,255,255,.35);margin-bottom:1rem;letter-spacing:.03em}
+.hist-list{max-height:260px;overflow-y:auto}
+.hist-item{display:flex;justify-content:space-between;align-items:center;padding:.65rem 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.hist-item:last-child{border-bottom:none}
+.hist-item-mode{font-size:.85rem;color:rgba(255,255,255,.75)}
+.hist-item-meta{font-size:.72rem;color:rgba(255,255,255,.3);text-align:right;line-height:1.6}
+.hist-empty{text-align:center;color:rgba(255,255,255,.25);font-family:var(--serif);font-style:italic;padding:3rem 1rem;font-size:1rem;line-height:1.7}
+/* Mode screen history link + custom grid */
+.ms-hist-link{display:block;text-align:center;font-size:.78rem;color:rgba(157,143,240,.55);cursor:pointer;letter-spacing:.06em;background:none;border:none;font-family:var(--sans);margin-bottom:1.5rem;transition:color .2s}
+.ms-hist-link:hover{color:#9d8ff0}
+#customModesGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;max-width:640px;width:100%;margin-bottom:1rem}
+@media(min-width:700px){#customModesGrid{grid-template-columns:repeat(4,1fr)}}
+.mode-card-del{position:absolute;top:.5rem;right:.5rem;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.3);width:28px;height:28px;border-radius:50%;font-size:.65rem;cursor:pointer;display:none;align-items:center;justify-content:center;transition:all .2s;z-index:5;padding:0}
+.mode-card:hover .mode-card-del{display:flex}
+.mode-card-del:hover,.mode-card-del:active{background:rgba(220,50,50,.3);border-color:rgba(220,50,50,.5);color:#ff8080}
+@media(pointer:coarse){.mode-card-del{display:flex}}
+</style>
+</head>
+<body>
+  
+  <canvas id="bgCanvas"></canvas>
+  <div id="phaseFlash"></div>
+  
+  <!-- Top bar -->
+  <div id="topbar">
+    <div class="logo">MindShift<span>+</span></div>
+    <button id="closeBtn" onclick="showModeScreen()">← Change Mode</button>
+  </div>
+  
+  <!-- Mode Selection Screen -->
+  <div id="modeScreen">
+    <div class="ms-eyebrow">Breathe</div>
+    <h1 class="ms-h">Choose your <em>breath</em></h1>
+    <p class="ms-sub">Each technique is a different doorway to calm.<br>Pick what your body is asking for right now.</p>
+  
+    <div class="modes-grid">
+      <div class="mode-card active" data-mode="box" onclick="selectMode('box',this)">
+        <span class="mode-icon">◻</span>
+        <div class="mode-name">Box</div>
+        <div class="mode-pattern">4 · 4 · 4 · 4</div>
+        <div class="mode-desc">Equal sides. Builds focus and grounding. Used by Navy SEALs.</div>
+      </div>
+      <div class="mode-card" data-mode="478" onclick="selectMode('478',this)">
+        <span class="mode-icon">◑</span>
+        <div class="mode-name">4-7-8</div>
+        <div class="mode-pattern">4 · 7 · 8</div>
+        <div class="mode-desc">Deep calm. Activates the parasympathetic nervous system instantly.</div>
+      </div>
+      <div class="mode-card" data-mode="calm" onclick="selectMode('calm',this)">
+        <span class="mode-icon">〜</span>
+        <div class="mode-name">Calm Reset</div>
+        <div class="mode-pattern">4 · 6</div>
+        <div class="mode-desc">Extended exhale. Slows the heart rate. Best for anxiety.</div>
+      </div>
+      <div class="mode-card" data-mode="sleep" onclick="selectMode('sleep',this)">
+        <span class="mode-icon">◌</span>
+        <div class="mode-name">Sleep</div>
+        <div class="mode-pattern">4 · 4 · 8</div>
+        <div class="mode-desc">Wind down the mind. Prepares body for deep rest.</div>
+      </div>
+    </div>
+  
+  <div id="customModesGrid"></div>
+  <button class="ms-hist-link" onclick="openHistory()">↗ Session History</button>
+
+    <div class="dur-row">
+      <span class="dur-label">Duration</span>
+      <button class="dur-btn active" data-dur="3" onclick="selectDur(3,this)">3 min</button>
+      <button class="dur-btn" data-dur="5" onclick="selectDur(5,this)">5 min</button>
+      <button class="dur-btn" data-dur="10" onclick="selectDur(10,this)">10 min</button>
+    </div>
+  
+    <button class="start-btn" onclick="startSession()">
+      Begin Session &nbsp;→
+    </button>
+  </div>
+  
+  <!-- Session Screen -->
+  <div id="sessionScreen">
+    <div id="phaseDots"></div>
+  
+    <div id="orbWrap">
+      <div class="orb-ring"></div>
+      <div class="orb-ring"></div>
+      <div class="orb-ring"></div>
+  
+      <svg id="arcSvg" viewBox="0 0 100 100">
+        <circle id="arcBg" cx="50" cy="50" r="47"/>
+        <circle id="arcFill" cx="50" cy="50" r="47" stroke="#9d8ff0" stroke-dasharray="295.3" stroke-dashoffset="295.3"/>
+      </svg>
+  
+      <div id="orbCore">
+        <div class="orb-glow" id="orbGlow"></div>
+        <div class="orb-surface" id="orbSurface">
+          <div id="phaseLabel">Ready</div>
+          <div id="countNum">—</div>
+        </div>
+      </div>
+    </div>
+  
+    <div id="phaseStrip"></div>
+    <div id="guideRow"></div>
+  
+    <div id="statsRow">
+      <div class="stat-item"><div class="stat-val" id="statCycles">0</div><div class="stat-lbl">Cycles</div></div>
+      <div class="stat-sep"></div>
+      <div class="stat-item"><div class="stat-val" id="statTime">0:00</div><div class="stat-lbl">Elapsed</div></div>
+      <div class="stat-sep"></div>
+      <div class="stat-item"><div class="stat-val" id="statLeft">—</div><div class="stat-lbl">Remaining</div></div>
+    </div>
+  
+    <div id="instructText">Follow the orb. Let your breath do the rest.</div>
+  </div>
+  
+  <!-- Controls -->
+  <div id="controls">
+    <button class="ctrl-btn" id="pauseBtn" onclick="togglePause()" title="Pause">⏸</button>
+    <button class="ctrl-btn active" id="soundBtn" onclick="toggleSound()" title="Sound">♪</button>
+    <button class="ctrl-btn" id="hapticBtn" onclick="toggleHaptic()" title="Haptic">〰</button>
+    <button class="ctrl-btn" onclick="showModeScreen()" title="Exit">✕</button>
+  </div>
+  
+  <!-- Ambient label -->
+  <div id="ambientLabel" id="ambLbl">Ambient tones active</div>
+  
+  <!-- Done Screen -->
+  <div id="doneScreen">
+    <div class="done-glyph">✦</div>
+    <h2 class="done-h">Beautiful. <em>Well done.</em></h2>
+    <p class="done-sub">"Take a breath — you're doing better than you think."</p>
+    <div class="done-stats" id="doneStats"></div>
+    <div class="done-actions">
+      <button class="done-btn done-btn-primary" onclick="restartSame()">Breathe Again</button>
+      <button class="done-btn done-btn-ghost" onclick="showModeScreen()">New Session</button>
+    </div>
+  </div>
+  
+<!-- Custom Pattern Builder -->
+<div id="customBuilder" class="overlay-panel hidden">
+  <div class="op-inner">
+    <div class="op-header">
+      <div class="ms-eyebrow" style="margin-bottom:0">Create Pattern</div>
+      <button class="overlay-close" onclick="closeCustomBuilder()">✕</button>
+    </div>
+    <input id="cbName" class="cb-name-input" placeholder="Pattern name…" maxlength="24" />
+    <div class="cb-phase">
+      <div class="cb-phase-label">Inhale</div>
+      <input type="range" id="cbInhale" min="2" max="12" value="4" class="cb-slider" oninput="updateCbPreview()"/>
+      <span class="cb-dur-val" id="cbInhaleVal">4s</span>
+    </div>
+    <div class="cb-phase">
+      <div class="cb-phase-label">Hold <button class="cb-toggle active" id="cbHold1Btn" onclick="toggleCbPhase('hold1')">✓</button></div>
+      <input type="range" id="cbHold1" min="1" max="12" value="4" class="cb-slider" oninput="updateCbPreview()"/>
+      <span class="cb-dur-val" id="cbHold1Val">4s</span>
+    </div>
+    <div class="cb-phase">
+      <div class="cb-phase-label">Exhale</div>
+      <input type="range" id="cbExhale" min="2" max="12" value="4" class="cb-slider" oninput="updateCbPreview()"/>
+      <span class="cb-dur-val" id="cbExhaleVal">4s</span>
+    </div>
+    <div class="cb-phase">
+      <div class="cb-phase-label">Hold 2 <button class="cb-toggle" id="cbHold2Btn" onclick="toggleCbPhase('hold2')">+</button></div>
+      <input type="range" id="cbHold2" min="1" max="12" value="4" class="cb-slider" disabled oninput="updateCbPreview()"/>
+      <span class="cb-dur-val" id="cbHold2Val">4s</span>
+    </div>
+    <div class="cb-preview" id="cbPreview">4 · 4 · 4</div>
+    <div class="cb-color-row" id="cbColorRow"></div>
+    <div class="cb-actions">
+      <button class="done-btn done-btn-primary" onclick="saveCustomMode()">Save Pattern</button>
+      <button class="done-btn done-btn-ghost" onclick="closeCustomBuilder()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- History Panel -->
+<div id="historyPanel" class="overlay-panel hidden">
+  <div class="op-inner">
+    <div class="op-header">
+      <div class="ms-eyebrow" style="margin-bottom:0">Session History</div>
+      <button class="overlay-close" onclick="closeHistory()">✕</button>
+    </div>
+    <div id="historyContent"></div>
+  </div>
+</div>
+
+  <script>
+  /* ── CONFIG ─────────────────────────────────────────── */
+  const MODES = {
+    box:  { name:'Box Breathing', phases:[{n:'Inhale',d:4},{n:'Hold',d:4},{n:'Exhale',d:4},{n:'Hold',d:4}], colors:['#6b5fcf','#9d8ff0','#c5bff8'], glow:'#6b5fcf', guide:['Breathe in slowly','Hold steady','Let it all go','Rest here'] },
+    478:  { name:'4-7-8',         phases:[{n:'Inhale',d:4},{n:'Hold',d:7},{n:'Exhale',d:8}],                colors:['#2a9d8f','#4ecdc4','#a8e6e2'], glow:'#2a9d8f', guide:['Breathe in','Hold… let it settle','Long slow exhale'] },
+    calm: { name:'Calm Reset',    phases:[{n:'Inhale',d:4},{n:'Exhale',d:6}],                               colors:['#8b5cf6','#a78bfa','#ddd6fe'], glow:'#8b5cf6', guide:['Open and receive','Soften… release'] },
+    sleep:{ name:'Sleep Wind-Down',phases:[{n:'Inhale',d:4},{n:'Hold',d:4},{n:'Exhale',d:8}],               colors:['#1e3a5f','#2d6a9f','#7eb8e8'], glow:'#1e3a5f', guide:['Gentle inhale','Still…','Long gentle exhale'] },
+  };
+
+  function getModeConfig(mode) {
+    return MODES[mode] || loadCustomModes().find(c => c.id === mode) || MODES.box;
+  }
+  
+  let selectedMode = 'box';
+  let selectedDur  = 3;
+  let session = null;
+  let soundOn = true;
+  let paused  = false;
+  let audioCtx = null;
+
+  /* ── ARC ANIMATION ──────────────────────────────────── */
+  const ARC_LEN = 295.3;
+  let arcRaf       = null;
+  let arcPhaseStart= null;
+  let arcPausedAt  = null;
+  let arcPhaseDur  = 0;
+  let arcIsExhale  = false;
+
+  function runArc() {
+    const progress = Math.min((performance.now() - arcPhaseStart) / arcPhaseDur, 1);
+    document.getElementById('arcFill').style.strokeDashoffset =
+      arcIsExhale ? ARC_LEN * progress : ARC_LEN * (1 - progress);
+    arcRaf = (progress < 1 && !paused) ? requestAnimationFrame(runArc) : null;
+  }
+
+  function startArc(phase) {
+    if (arcRaf) { cancelAnimationFrame(arcRaf); arcRaf = null; }
+    arcIsExhale  = phase.n === 'Exhale';
+    arcPhaseDur  = phase.d * 1000;
+    arcPhaseStart= performance.now();
+    document.getElementById('arcFill').style.strokeDashoffset = arcIsExhale ? 0 : ARC_LEN;
+    arcRaf = requestAnimationFrame(runArc);
+  }
+  
+  /* ── MODE & DUR SELECT ──────────────────────────────── */
+  function selectMode(key, el) {
+    selectedMode = key;
+    document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+  }
+  function selectDur(d, el) {
+    selectedDur = d;
+    document.querySelectorAll('.dur-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+  }
+  
+  /* ── SHOW / HIDE SCREENS ────────────────────────────── */
+  function showModeScreen() {
+    stopSession();
+    document.getElementById('modeScreen').classList.remove('hidden');
+    document.getElementById('sessionScreen').classList.remove('visible');
+    document.getElementById('doneScreen').classList.remove('visible');
+    document.getElementById('controls').classList.remove('visible');
+    document.getElementById('ambientLabel').style.opacity = '0';
+  }
+  function hideModeScreen() {
+    document.getElementById('modeScreen').classList.add('hidden');
+    document.getElementById('sessionScreen').classList.add('visible');
+    document.getElementById('controls').classList.add('visible');
+    setTimeout(() => document.getElementById('ambientLabel').style.opacity = '1', 1000);
+  }
+  
+  /* ── AUDIO ──────────────────────────────────────────── */
+  function getAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+  let currentDrone = null;
+  function startDrone(mode) {
+    if (!soundOn) return;
+    stopDrone();
+    const ctx = getAudio();
+    const freqs = { box:[174,220,262], '478':[136,174,207], calm:[396,440,528], sleep:[174,196,220] };
+    const f = freqs[mode] || freqs.box;
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0, ctx.currentTime);
+    master.gain.linearRampToValueAtTime(0.07, ctx.currentTime + 3);
+    master.connect(ctx.destination);
+    const oscs = f.map((freq, i) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = i === 0 ? 'sine' : 'sine';
+      o.frequency.value = freq;
+      g.gain.value = i === 0 ? 1 : 0.35 - i * 0.1;
+      o.connect(g); g.connect(master);
+      o.start();
+      return {o, g};
+    });
+    // add subtle LFO wobble
+    const lfo = ctx.createOscillator();
+    const lfoG = ctx.createGain();
+    lfo.frequency.value = 0.12;
+    lfoG.gain.value = 2;
+    lfo.connect(lfoG);
+    oscs.forEach(({o}) => lfoG.connect(o.frequency));
+    lfo.start();
+    currentDrone = { oscs, master, lfo };
+  }
+  function stopDrone() {
+    if (!currentDrone) return;
+    try {
+      const ctx = getAudio();
+      currentDrone.master.gain.linearRampToValueAtTime(0, ctx.currentTime + 1.5);
+      setTimeout(() => {
+        try { currentDrone.oscs.forEach(({o}) => o.stop()); currentDrone.lfo.stop(); } catch(e){}
+      }, 1600);
+    } catch(e){}
+    currentDrone = null;
+  }
+  function playTick(phase) {
+    triggerHaptic(phase);
+    if (!soundOn) return;
+    const ctx = getAudio();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    const freqMap = { Inhale: 528, Hold: 396, Exhale: 396 };
+    o.frequency.value = freqMap[phase] || 440;
+    o.type = 'sine';
+    g.gain.setValueAtTime(0, ctx.currentTime);
+    g.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime + 0.7);
+  }
+  function toggleSound() {
+    soundOn = !soundOn;
+    const btn = document.getElementById('soundBtn');
+    btn.classList.toggle('active', soundOn);
+    btn.textContent = soundOn ? '♪' : '♩';
+    document.getElementById('ambientLabel').style.opacity = soundOn ? '1' : '0';
+    if (soundOn && session) startDrone(selectedMode);
+    else stopDrone();
+  }
+  
+  /* ── CANVAS BACKGROUND ──────────────────────────────── */
+  const canvas = document.getElementById('bgCanvas');
+  const ctx2d  = canvas.getContext('2d');
+  let W, H, particles = [], bgTarget = { r:4, g:6, b:20 }, bgCurrent = { r:4, g:6, b:20 };
+  
+  function resizeCanvas() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+  
+  // Particle class
+  class Particle {
+    constructor() { this.reset(true); }
+    reset(init = false) {
+      this.x = Math.random() * W;
+      this.y = init ? Math.random() * H : H + 20;
+      this.size = Math.random() * 2.5 + 0.5;
+      this.speedY = -(Math.random() * 0.4 + 0.1);
+      this.speedX = (Math.random() - 0.5) * 0.2;
+      this.life = 0;
+      this.maxLife = Math.random() * 400 + 200;
+      this.hue = Math.random() * 60 + 240;
+    }
+    update() {
+      this.life++;
+      this.x += this.speedX;
+      this.y += this.speedY;
+      if (this.life > this.maxLife || this.y < -10) this.reset();
+    }
+    draw() {
+      const progress = this.life / this.maxLife;
+      const alpha = progress < 0.1 ? progress * 10 * 0.4 : progress > 0.8 ? (1 - progress) * 5 * 0.4 : 0.4;
+      ctx2d.beginPath();
+      ctx2d.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx2d.fillStyle = `hsla(${this.hue},60%,70%,${alpha * (session ? 1 : 0.4)})`;
+      ctx2d.fill();
+    }
+  }
+  
+  for (let i = 0; i < 80; i++) particles.push(new Particle());
+  
+  // Ripple system
+  let ripples = [];
+  function addRipple(x, y, color) {
+    ripples.push({ x, y, r: 0, maxR: Math.min(W, H) * 0.7, alpha: 0.15, color });
+  }
+  
+  const BG_THEMES = {
+    box:   { r:8,  g:7,  b:28 },
+    '478': { r:4,  g:16, b:14 },
+    calm:  { r:10, g:6,  b:22 },
+    sleep: { r:2,  g:8,  b:20 },
+    idle:  { r:4,  g:6,  b:20 }
+  };
+  
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  
+  function animateCanvas() {
+    requestAnimationFrame(animateCanvas);
+  
+    // Lerp bg color
+    bgCurrent.r = lerp(bgCurrent.r, bgTarget.r, 0.01);
+    bgCurrent.g = lerp(bgCurrent.g, bgTarget.g, 0.01);
+    bgCurrent.b = lerp(bgCurrent.b, bgTarget.b, 0.01);
+  
+    ctx2d.fillStyle = `rgb(${bgCurrent.r|0},${bgCurrent.g|0},${bgCurrent.b|0})`;
+    ctx2d.fillRect(0, 0, W, H);
+  
+    // Ripples
+    ripples = ripples.filter(rp => rp.alpha > 0.002);
+    ripples.forEach(rp => {
+      rp.r += 3;
+      rp.alpha *= 0.97;
+      ctx2d.beginPath();
+      ctx2d.arc(W/2, H/2, rp.r, 0, Math.PI*2);
+      ctx2d.strokeStyle = rp.color + Math.floor(rp.alpha*255).toString(16).padStart(2,'0');
+      ctx2d.lineWidth = 1.5;
+      ctx2d.stroke();
+    });
+  
+    // Particles
+    particles.forEach(p => { p.update(); p.draw(); });
+  }
+  animateCanvas();
+  
+  /* ── SESSION LOGIC ──────────────────────────────────── */
+  function buildPhaseStrip(mode) {
+    const cfg = getModeConfig(mode);
+    document.getElementById('phaseStrip').innerHTML = cfg.phases.map((p,i) =>
+      `<div class="ps-item" id="ps${i}">${p.n}</div>`
+    ).join('');
+  }
+  function buildPhaseDots(mode) {
+    document.getElementById('phaseDots').innerHTML = getModeConfig(mode).phases.map((_,i) =>
+      `<div class="pdot" id="pdot${i}"></div>`
+    ).join('');
+  }
+  
+  function startSession() {
+    hideModeScreen();
+    const cfg = getModeConfig(selectedMode);
+    if (!cfg.guide) cfg.guide = cfg.phases.map(p => p.n);
+  
+    bgTarget = BG_THEMES[selectedMode] || BG_THEMES.idle;
+  
+    buildPhaseStrip(selectedMode);
+    buildPhaseDots(selectedMode);
+  
+    startDrone(selectedMode);
+  
+    const totalSecs = selectedDur * 60;
+  
+    let elapsed  = 0;
+    let phaseIdx = 0;
+    let phaseTick= 0;
+    let cycles   = 0;
+    paused = false;
+  
+    document.getElementById('pauseBtn').textContent = '⏸';
+  
+    function applyPhaseStyle(idx) {
+      const phase = cfg.phases[idx];
+      const [c1, c2, c3] = cfg.colors;
+      const orbSurface = document.getElementById('orbSurface');
+      const orbGlow    = document.getElementById('orbGlow');
+      const arcFill    = document.getElementById('arcFill');
+      const orbCore    = document.getElementById('orbCore');
+  
+      // Orb color
+      const isInhale  = phase.n === 'Inhale';
+      const isExhale  = phase.n === 'Exhale';
+      const scale     = isInhale ? 1.28 : isExhale ? 0.78 : 1.05;
+  
+      orbSurface.style.background = isInhale
+        ? `radial-gradient(circle at 40% 35%, ${c3}, ${c2}, ${c1})`
+        : isExhale
+          ? `radial-gradient(circle at 40% 35%, ${c1}aa, ${c1}66, ${c1}33)`
+          : `radial-gradient(circle at 40% 35%, ${c2}cc, ${c1}aa, ${c1}66)`;
+  
+      orbCore.style.transform     = `scale(${scale})`;
+      orbCore.style.boxShadow     = `0 0 ${isInhale ? 80 : 30}px ${cfg.glow}${isInhale?'88':'33'}`;
+      orbGlow.style.background    = `radial-gradient(circle, ${cfg.glow}, transparent 70%)`;
+      orbGlow.style.opacity       = isInhale ? '0.7' : isExhale ? '0.2' : '0.45';
+  
+      arcFill.style.stroke        = cfg.colors[1];
+      startArc(phase);
+  
+      // Phase strip highlight
+      document.querySelectorAll('.ps-item').forEach((el,i) => el.classList.toggle('active', i===idx));
+      document.querySelectorAll('.pdot').forEach((el,i) => {
+        el.classList.toggle('active', i===idx);
+        el.classList.toggle('done', i<idx);
+      });
+  
+      // Guide text & count reset
+      document.getElementById('phaseLabel').textContent = phase.n;
+      document.getElementById('countNum').textContent = phase.d;
+  
+      // Ripple on phase change
+      addRipple(W/2, H/2, cfg.glow);
+  
+      // Phase flash
+      const flash = document.getElementById('phaseFlash');
+      flash.style.background = cfg.glow + '22';
+      flash.style.opacity = '1';
+      setTimeout(() => flash.style.opacity = '0', 150);
+  
+      playTick(phase.n);
+    }
+  
+    applyPhaseStyle(0);
+  
+    function tick() {
+      if (paused) return;
+  
+      elapsed++;
+      phaseTick++;
+  
+      const phase     = cfg.phases[phaseIdx];
+      const remaining = phase.d - phaseTick;
+      const progress  = phaseTick / phase.d;
+
+      // Count
+      document.getElementById('countNum').textContent = remaining > 0 ? remaining : phase.d;
+  
+      // Stats
+      document.getElementById('statCycles').textContent = cycles;
+      const elMin = Math.floor(elapsed/60), elSec = elapsed%60;
+      document.getElementById('statTime').textContent = `${elMin}:${String(elSec).padStart(2,'0')}`;
+      const leftSecs = Math.max(0, totalSecs - elapsed);
+      const lMin = Math.floor(leftSecs/60), lSec = leftSecs%60;
+      document.getElementById('statLeft').textContent = `${lMin}:${String(lSec).padStart(2,'0')}`;
+  
+      // Phase transition
+      if (phaseTick >= phase.d) {
+        phaseTick = 0;
+        phaseIdx = (phaseIdx + 1) % cfg.phases.length;
+        if (phaseIdx === 0) cycles++;
+        applyPhaseStyle(phaseIdx);
+      }
+  
+      // Done?
+      if (elapsed >= totalSecs) {
+        stopSession();
+        showDone(cycles, elapsed, selectedMode);
+        return;
+      }
+  
+      session = setTimeout(tick, 1000);
+    }
+  
+    session = setTimeout(tick, 1000);
+  }
+  
+  function stopSession() {
+    if (session) { clearTimeout(session); session = null; }
+    if (arcRaf) { cancelAnimationFrame(arcRaf); arcRaf = null; }
+    stopDrone();
+    bgTarget = BG_THEMES.idle;
+  }
+
+  function togglePause() {
+    paused = !paused;
+    const btn = document.getElementById('pauseBtn');
+    btn.textContent = paused ? '▶' : '⏸';
+    btn.classList.toggle('active', paused);
+    if (paused) {
+      stopDrone();
+      arcPausedAt = performance.now();
+      if (arcRaf) { cancelAnimationFrame(arcRaf); arcRaf = null; }
+    } else {
+      startDrone(selectedMode);
+      if (arcPausedAt !== null) {
+        arcPhaseStart += performance.now() - arcPausedAt;
+        arcPausedAt = null;
+      }
+      arcRaf = requestAnimationFrame(runArc);
+      session = setTimeout(tick, 1000);
+    }
+  }
+  
+  function showDone(cycles, elapsed, mode) {
+    const cfg = getModeConfig(mode);
+    const doneScreen = document.getElementById('doneScreen');
+    const mins = Math.floor(elapsed/60), secs = elapsed%60;
+
+    recordSession(mode, cfg.name, selectedDur, cycles, elapsed);
+    const h = loadHistory();
+    const streak = calcStreak(h);
+
+    document.getElementById('doneStats').innerHTML = `
+      <div class="done-stat"><div class="done-stat-num">${cycles}</div><div class="done-stat-lbl">Cycles</div></div>
+      <div class="done-stat"><div class="done-stat-num">${mins}:${String(secs).padStart(2,'0')}</div><div class="done-stat-lbl">Minutes</div></div>
+      <div class="done-stat"><div class="done-stat-num">${streak}${streak>0?'🔥':''}</div><div class="done-stat-lbl">Day Streak</div></div>
+    `;
+
+    doneScreen.classList.add('visible');
+    document.getElementById('controls').classList.remove('visible');
+    document.getElementById('ambientLabel').style.opacity = '0';
+
+    for (let i = 0; i < 20; i++) {
+      setTimeout(() => addRipple(W/2, H/2, cfg.glow), i * 200);
+    }
+  }
+  
+  function restartSame() {
+    document.getElementById('doneScreen').classList.remove('visible');
+    startSession();
+  }
+  
+  /* ── STORAGE ─────────────────────────────────────────── */
+  function loadHistory() {
+    try { return JSON.parse(localStorage.getItem('ms_history') || '[]'); } catch(e) { return []; }
+  }
+  function saveHistory(h) { localStorage.setItem('ms_history', JSON.stringify(h)); }
+  function loadCustomModes() {
+    try { return JSON.parse(localStorage.getItem('ms_custom') || '[]'); } catch(e) { return []; }
+  }
+  function saveCustomModes(m) { localStorage.setItem('ms_custom', JSON.stringify(m)); }
+
+  function calcStreak(history) {
+    if (!history.length) return 0;
+    const days = [...new Set(history.map(s => s.date.slice(0,10)))].sort().reverse();
+    const today = new Date().toISOString().slice(0,10);
+    const yesterday = new Date(Date.now()-86400000).toISOString().slice(0,10);
+    if (days[0] !== today && days[0] !== yesterday) return 0;
+    let streak = 1;
+    for (let i = 1; i < days.length; i++) {
+      const diff = (new Date(days[i-1]) - new Date(days[i])) / 86400000;
+      if (diff === 1) streak++;
+      else break;
+    }
+    return streak;
+  }
+
+  function calcFavorite(history) {
+    if (!history.length) return '—';
+    const counts = {};
+    history.forEach(s => counts[s.modeName] = (counts[s.modeName]||0)+1);
+    return Object.entries(counts).sort((a,b) => b[1]-a[1])[0][0];
+  }
+
+  function recordSession(mode, modeName, durMins, cycles, secs) {
+    const h = loadHistory();
+    h.push({ date: new Date().toISOString(), mode, modeName, durMins, cycles, secs });
+    if (h.length > 200) h.splice(0, h.length - 200);
+    saveHistory(h);
+  }
+
+  /* ── HISTORY PANEL ───────────────────────────────────── */
+  function openHistory() {
+    const h = loadHistory();
+    const content = document.getElementById('historyContent');
+    if (!h.length) {
+      content.innerHTML = '<div class="hist-empty">No sessions yet.<br>Complete your first session to start tracking.</div>';
+    } else {
+      const streak = calcStreak(h);
+      const totalMins = Math.round(h.reduce((a,s) => a+s.secs, 0)/60);
+      const fav = calcFavorite(h);
+      const recent = h.slice(-10).reverse();
+      content.innerHTML = `
+        <div class="hist-summary">
+          <div class="hist-stat"><div class="hist-stat-num">${streak}${streak>0?'🔥':''}</div><div class="hist-stat-lbl">Day Streak</div></div>
+          <div class="hist-stat"><div class="hist-stat-num">${totalMins}</div><div class="hist-stat-lbl">Total Mins</div></div>
+          <div class="hist-stat"><div class="hist-stat-num">${h.length}</div><div class="hist-stat-lbl">Sessions</div></div>
+        </div>
+        <div class="hist-fav">Favourite: ${fav}</div>
+        <div class="hist-list">${recent.map(s => {
+          const d = new Date(s.date);
+          const dateStr = d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
+          return `<div class="hist-item">
+            <div class="hist-item-mode">${s.modeName}</div>
+            <div class="hist-item-meta">${s.durMins} min · ${s.cycles} cycles<br>${dateStr}</div>
+          </div>`;
+        }).join('')}</div>`;
+    }
+    document.getElementById('historyPanel').classList.remove('hidden');
+  }
+  function closeHistory() { document.getElementById('historyPanel').classList.add('hidden'); }
+
+  /* ── CUSTOM BUILDER ──────────────────────────────────── */
+  const CB_COLORS = [
+    { colors:['#6b5fcf','#9d8ff0','#c5bff8'], glow:'#6b5fcf', swatch:'#9d8ff0' },
+    { colors:['#2a9d8f','#4ecdc4','#a8e6e2'], glow:'#2a9d8f', swatch:'#4ecdc4' },
+    { colors:['#be185d','#f472b6','#fce7f3'], glow:'#be185d', swatch:'#f472b6' },
+    { colors:['#b45309','#f59e0b','#fef3c7'], glow:'#b45309', swatch:'#f59e0b' },
+    { colors:['#1e3a5f','#2d6a9f','#7eb8e8'], glow:'#1e3a5f', swatch:'#2d6a9f' },
+  ];
+  let cbSelectedColor = 0, cbHold1On = true, cbHold2On = false, cbEditId = null;
+
+  function openCustomBuilder(editId) {
+    cbEditId = editId || null;
+    if (editId) {
+      const m = loadCustomModes().find(c => c.id === editId);
+      if (m) {
+        document.getElementById('cbName').value = m.name;
+        const pi = m.phases.findIndex(p => p.n==='Inhale');
+        const pe = m.phases.findIndex(p => p.n==='Exhale');
+        const holds = m.phases.filter(p => p.n==='Hold');
+        document.getElementById('cbInhale').value = m.phases[pi]?.d || 4;
+        cbHold1On = holds.length > 0;
+        document.getElementById('cbHold1').value = holds[0]?.d || 4;
+        document.getElementById('cbHold1').disabled = !cbHold1On;
+        document.getElementById('cbHold1Btn').className = 'cb-toggle'+(cbHold1On?' active':'');
+        document.getElementById('cbHold1Btn').textContent = cbHold1On ? '✓' : '+';
+        document.getElementById('cbExhale').value = m.phases[pe]?.d || 4;
+        cbHold2On = holds.length > 1;
+        document.getElementById('cbHold2').value = holds[1]?.d || 4;
+        document.getElementById('cbHold2').disabled = !cbHold2On;
+        document.getElementById('cbHold2Btn').className = 'cb-toggle'+(cbHold2On?' active':'');
+        document.getElementById('cbHold2Btn').textContent = cbHold2On ? '✓' : '+';
+      }
+    } else {
+      document.getElementById('cbName').value = '';
+      cbHold1On = true; cbHold2On = false; cbSelectedColor = 0;
+      document.getElementById('cbInhale').value = 4;
+      document.getElementById('cbHold1').value = 4; document.getElementById('cbHold1').disabled = false;
+      document.getElementById('cbHold1Btn').className = 'cb-toggle active'; document.getElementById('cbHold1Btn').textContent = '✓';
+      document.getElementById('cbExhale').value = 4;
+      document.getElementById('cbHold2').value = 4; document.getElementById('cbHold2').disabled = true;
+      document.getElementById('cbHold2Btn').className = 'cb-toggle'; document.getElementById('cbHold2Btn').textContent = '+';
+    }
+    document.getElementById('cbColorRow').innerHTML = CB_COLORS.map((c,i) =>
+      `<div class="cb-swatch${i===cbSelectedColor?' active':''}" style="background:${c.swatch}" onclick="selectCbColor(${i})"></div>`
+    ).join('');
+    updateCbPreview();
+    document.getElementById('customBuilder').classList.remove('hidden');
+  }
+  function closeCustomBuilder() { document.getElementById('customBuilder').classList.add('hidden'); }
+
+  function toggleCbPhase(which) {
+    if (which === 'hold1') {
+      cbHold1On = !cbHold1On;
+      document.getElementById('cbHold1').disabled = !cbHold1On;
+      document.getElementById('cbHold1Btn').className = 'cb-toggle'+(cbHold1On?' active':'');
+      document.getElementById('cbHold1Btn').textContent = cbHold1On ? '✓' : '+';
+    } else {
+      cbHold2On = !cbHold2On;
+      document.getElementById('cbHold2').disabled = !cbHold2On;
+      document.getElementById('cbHold2Btn').className = 'cb-toggle'+(cbHold2On?' active':'');
+      document.getElementById('cbHold2Btn').textContent = cbHold2On ? '✓' : '+';
+    }
+    updateCbPreview();
+  }
+  function selectCbColor(i) {
+    cbSelectedColor = i;
+    document.querySelectorAll('.cb-swatch').forEach((s,j) => s.classList.toggle('active', j===i));
+  }
+  function updateCbPreview() {
+    const i = document.getElementById('cbInhale').value;
+    const h1 = document.getElementById('cbHold1').value;
+    const e = document.getElementById('cbExhale').value;
+    const h2 = document.getElementById('cbHold2').value;
+    document.getElementById('cbInhaleVal').textContent = i+'s';
+    document.getElementById('cbHold1Val').textContent = h1+'s';
+    document.getElementById('cbExhaleVal').textContent = e+'s';
+    document.getElementById('cbHold2Val').textContent = h2+'s';
+    const parts = [i];
+    if (cbHold1On) parts.push(h1);
+    parts.push(e);
+    if (cbHold2On) parts.push(h2);
+    document.getElementById('cbPreview').textContent = parts.join(' · ');
+  }
+  function saveCustomMode() {
+    const name = document.getElementById('cbName').value.trim() || 'My Pattern';
+    const phases = [];
+    phases.push({n:'Inhale', d:+document.getElementById('cbInhale').value});
+    if (cbHold1On) phases.push({n:'Hold', d:+document.getElementById('cbHold1').value});
+    phases.push({n:'Exhale', d:+document.getElementById('cbExhale').value});
+    if (cbHold2On) phases.push({n:'Hold', d:+document.getElementById('cbHold2').value});
+    const col = CB_COLORS[cbSelectedColor];
+    const customs = loadCustomModes();
+    if (cbEditId) {
+      const idx = customs.findIndex(c => c.id===cbEditId);
+      if (idx>=0) customs[idx] = {...customs[idx], name, phases, colors:col.colors, glow:col.glow};
+    } else {
+      customs.push({ id:'custom-'+Date.now(), name, phases, colors:col.colors, glow:col.glow });
+    }
+    saveCustomModes(customs);
+    renderCustomModes();
+    closeCustomBuilder();
+  }
+  function deleteCustomMode(id, e) {
+    e.stopPropagation();
+    const customs = loadCustomModes().filter(c => c.id !== id);
+    saveCustomModes(customs);
+    if (selectedMode === id) selectedMode = 'box';
+    renderCustomModes();
+  }
+  function renderCustomModes() {
+    const customs = loadCustomModes();
+    document.getElementById('customModesGrid').innerHTML =
+      customs.map(m => {
+        const pat = m.phases.map(p => p.d).join(' · ');
+        return `<div class="mode-card${selectedMode===m.id?' active':''}" onclick="selectMode('${m.id}',this)">
+          <button class="mode-card-del" onclick="deleteCustomMode('${m.id}',event)">✕</button>
+          <span class="mode-icon" style="color:${m.colors[1]}">✦</span>
+          <div class="mode-name">${m.name}</div>
+          <div class="mode-pattern">${pat}</div>
+          <div class="mode-desc">Your custom pattern.</div>
+        </div>`;
+      }).join('') +
+      `<div class="mode-card" onclick="openCustomBuilder()" style="border-style:dashed;border-color:rgba(157,143,240,.2);cursor:pointer">
+        <span class="mode-icon" style="color:rgba(157,143,240,.35)">+</span>
+        <div class="mode-name" style="color:rgba(255,255,255,.4)">Create</div>
+        <div class="mode-desc" style="color:rgba(255,255,255,.2)">Build your own pattern</div>
+      </div>`;
+  }
+
+  /* ── HAPTIC ───────────────────────────────────────────── */
+  let hapticOn = 'vibrate' in navigator;
+  function toggleHaptic() {
+    hapticOn = !hapticOn;
+    document.getElementById('hapticBtn').classList.toggle('active', hapticOn);
+  }
+  function triggerHaptic(phaseName) {
+    if (!hapticOn || !('vibrate' in navigator)) return;
+    const patterns = { Inhale:[80], Hold:[30], Exhale:[50,30,50] };
+    navigator.vibrate(patterns[phaseName] || [40]);
+  }
+
+    /* ── IDLE ORB ANIMATION ──────────────────────────────── */
+  function idleOrb() {
+    if (session) return;
+    const orbCore = document.getElementById('orbCore');
+    const orbSurface = document.getElementById('orbSurface');
+    if (!orbCore) return;
+    const t = Date.now() / 3000;
+    const s = 1 + Math.sin(t) * 0.04;
+    orbCore.style.transform = `scale(${s})`;
+    orbSurface.style.background = `radial-gradient(circle at 40% 35%, #3d3a8c88, #0d1228aa, #04060f88)`;
+    requestAnimationFrame(idleOrb);
+  }
+  idleOrb();
+  
+  /* ── INIT ────────────────────────────────────────────── */
+  window.addEventListener('keydown', e => {
+    if (e.code === 'Space' && session) { e.preventDefault(); togglePause(); }
+    if (e.code === 'Escape') showModeScreen();
+  });
+
+  renderCustomModes();
+  // Init haptic button state
+  document.getElementById('hapticBtn').classList.toggle('active', hapticOn);
+  if (!('vibrate' in navigator)) document.getElementById('hapticBtn').style.opacity = '0.3';
+  </script>
+</body>
+</html>
