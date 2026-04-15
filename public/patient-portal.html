@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Patient Portal — MindShift Wellness Clinic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --pearl:#f5f0ee;--cream:#ede8e3;--ink:#06080f;
+  --violet:#6b5fcf;--lilac:#9d8ff0;--muted:#6b6d80;--muted2:#9b9dae;
+  --teal:#2a9d8f;
+  --serif:'Cormorant Garamond',Georgia,serif;
+  --sans:'DM Sans',sans-serif;
+}
+html{height:100%;overflow-x:hidden}
+body{background:var(--pearl);color:var(--ink);font-family:var(--sans);min-height:100vh;display:flex;flex-direction:column}
+
+nav{padding:1.2rem 5%;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(107,95,207,.1);background:rgba(245,240,238,.95);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100}
+.nav-logo{font-family:var(--serif);font-size:1.3rem;font-weight:600;color:var(--ink);text-decoration:none}
+.nav-logo span{color:var(--violet)}
+.nav-back{font-size:.85rem;color:var(--muted);text-decoration:none;display:flex;align-items:center;gap:.4rem;transition:color .2s}
+.nav-back:hover{color:var(--ink)}
+.nav-back svg{flex-shrink:0}
+
+main{flex:1;display:flex;align-items:center;justify-content:center;padding:4rem 5%}
+
+.card{background:#fff;border:1px solid rgba(107,95,207,.12);border-radius:28px;padding:3rem;max-width:480px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(107,95,207,.08)}
+
+.badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(107,95,207,.08);border:1px solid rgba(107,95,207,.15);border-radius:2rem;padding:.4rem 1rem;font-size:.72rem;font-weight:600;color:var(--violet);letter-spacing:.1em;text-transform:uppercase;margin-bottom:1.5rem}
+
+.icon{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,rgba(107,95,207,.12),rgba(42,157,143,.08));border:1px solid rgba(107,95,207,.15);display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 1.5rem}
+
+h1{font-family:var(--serif);font-size:2rem;font-weight:300;color:var(--ink);margin-bottom:.75rem;letter-spacing:-.02em}
+h1 em{font-style:italic;color:var(--violet)}
+
+.sub{font-size:.95rem;color:var(--muted);line-height:1.75;margin-bottom:2rem}
+
+.coming-soon{display:inline-flex;align-items:center;gap:.5rem;background:rgba(42,157,143,.08);border:1px solid rgba(42,157,143,.2);border-radius:2rem;padding:.5rem 1.2rem;font-size:.82rem;font-weight:600;color:var(--teal);margin-bottom:2rem}
+.coming-soon::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--teal);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+
+.divider{height:1px;background:rgba(107,95,207,.1);margin:1.5rem 0}
+
+.info-row{display:flex;flex-direction:column;gap:.75rem;text-align:left;margin-bottom:2rem}
+.info-item{display:flex;align-items:flex-start;gap:.75rem;font-size:.875rem;color:var(--muted)}
+.info-item span:first-child{font-size:1.1rem;flex-shrink:0;margin-top:.05rem}
+.info-item a{color:var(--violet);text-decoration:none}
+.info-item a:hover{text-decoration:underline}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;background:var(--ink);color:#fff;padding:.85rem 2rem;border-radius:3rem;font-weight:600;font-size:.9rem;text-decoration:none;transition:all .25s;width:100%;margin-bottom:.75rem}
+.btn:hover{background:var(--violet);transform:translateY(-1px)}
+.btn-ghost{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;background:transparent;color:var(--ink);padding:.85rem 2rem;border-radius:3rem;font-weight:500;font-size:.9rem;text-decoration:none;border:1.5px solid rgba(26,28,46,.15);transition:all .25s;width:100%}
+.btn-ghost:hover{border-color:rgba(26,28,46,.35);background:rgba(26,28,46,.03)}
+
+footer{padding:1.5rem 5%;text-align:center;border-top:1px solid rgba(107,95,207,.08)}
+footer p{font-size:.78rem;color:var(--muted2)}
+
+@media(max-width:600px){
+  .card{padding:2rem 1.5rem;border-radius:20px}
+  h1{font-size:1.6rem}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="site-main.html" class="nav-back">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M11 7H3M7 3l-4 4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Back to Clinic
+  </a>
+  <a href="site-main.html" class="nav-logo">MindShift <span>Wellness Clinic</span></a>
+  <div style="width:100px"></div>
+</nav>
+
+<main>
+  <div class="card">
+    <div class="badge">🔒 Secure Patient Access</div>
+    <div class="icon">🏥</div>
+    <h1>Patient <em>Portal</em></h1>
+    <p class="sub">Securely access your appointments, records, and care team — all in one place.</p>
+
+    <div class="coming-soon">Coming Soon</div>
+
+    <div class="divider"></div>
+
+    <p style="font-size:.82rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.75rem">In the meantime, reach us directly</p>
+
+    <div class="info-row">
+      <div class="info-item">
+        <span>📞</span>
+        <div>Call or text us at <a href="tel:5086191044">(508) 619-1044</a> to schedule, reschedule, or ask questions.</div>
+      </div>
+      <div class="info-item">
+        <span>✉️</span>
+        <div>Email us at <a href="mailto:info@mindshiftwellnessclinic.org">info@mindshiftwellnessclinic.org</a></div>
+      </div>
+      <div class="info-item">
+        <span>📅</span>
+        <div>Book online through <a href="https://care.headway.co/providers/kenneth-mutegyeki" target="_blank">Headway</a> — free 15-min intro call available.</div>
+      </div>
+    </div>
+
+    <a href="https://care.headway.co/providers/kenneth-mutegyeki" target="_blank" class="btn">
+      Book an Appointment →
+    </a>
+    <a href="site-main.html" class="btn-ghost">Return to Clinic Site</a>
+  </div>
+</main>
+
+<footer>
+  <p>© 2026 MindShift Wellness Clinic · Patient Portal coming soon</p>
+</footer>
+
+</body>
+</html>
