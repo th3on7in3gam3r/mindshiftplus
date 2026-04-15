@@ -3,6 +3,9 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/((?!site-main\\.html|site\\.html|mindshiftplus\\.html|patient-portal\\.html|breathe\\.html|constellation\\.html|daily-light\\.html|cookies\\.html|privacy\\.html|terms\\.html|robots\\.txt|sitemap\\.xml|manifest\\.json|sw\\.js|favicon\\.|icon-|og-image|icons\\.svg|logo\\.png).*)",
+      "destination": "/index.html"
+    }
   ]
 }
