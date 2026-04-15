@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "./lib/AuthContext";
 import AuthModal from "./components/AuthModal";
+import Portal from "./components/portal/Portal";
+import PublicBooking from "./components/scheduling/PublicBooking";
+import AdminSchedule from "./components/scheduling/AdminSchedule";
 
 // ── Fonts ──────────────────────────────────────────────────────────────────────
 const GlobalStyles = () => (
@@ -129,6 +132,8 @@ const navItems=[
   {id:"programs",icon:"◧",label:"Programs"},
   {id:"insights",icon:"◐",label:"Insights"},
   {id:"premium",icon:"◆",label:"Premium"},
+  {id:"portal",icon:"🏥",label:"Patient Portal"},
+  {id:"ehr-schedule",icon:"📋",label:"Admin Schedule"},
   {id:"settings",icon:"◎",label:"Settings"},
 ];
 
@@ -1525,6 +1530,11 @@ export default function App(){
   useEffect(()=>{
     if(loading) return; // wait — don't act until session is resolved
     if(user && (page==="landing" || page==="onboarding")){
+      // Check if there was a portal intent stored before login
+      try{
+        const intent = sessionStorage.getItem('ms_intent');
+        if(intent==='portal'){ sessionStorage.removeItem('ms_intent'); setPage('portal'); return; }
+      }catch{}
       setPage("dashboard");
       setShowAuth(false);
     }
@@ -1539,13 +1549,25 @@ export default function App(){
       const data=e?.data;
       if(!data||typeof data!=="object")return;
       if(data.type==="mindshift-plus:openAuth") setShowAuth(true);
-      if(data.type==="mindshift-plus:navigate") setPage(data.page);
-    };
+      if(data.type==="mindshift-plus:navigate") {
+        if(data.page==="portal"){
+          setPage("portal"); // no auth required — just shows placeholder
+        } else if(data.page==="schedule"){
+          setPage("schedule");
+        } else {
+          setPage(data.page);
+        }
+      }    };
     window.addEventListener("message",onMsg);
-    // Check if user came from mindshiftplus.html with an intent
+    // Check if user came from mindshiftplus.html or patient-portal.html with an intent
     try{
       const intent = sessionStorage.getItem('ms_intent');
-      if(intent){ sessionStorage.removeItem('ms_intent'); setShowAuth(true); }
+      if(intent){
+        sessionStorage.removeItem('ms_intent');
+        if(intent === 'portal' && user) setPage('portal');
+        else if(intent === 'schedule') setPage('schedule');
+        else setShowAuth(true); // 'auth' or any other intent opens the modal
+      }
     }catch{}
     return()=>window.removeEventListener("message",onMsg);
   },[]);
@@ -1560,6 +1582,36 @@ export default function App(){
   );
 
   const needsSidebar = user && !["landing","onboarding"].includes(page);
+
+  // Portal — placeholder, no auth required
+  if(page==="portal"){
+    return(
+      <>
+        <GlobalStyles/>
+        <Portal onExit={()=>setPage("landing")}/>
+      </>
+    );
+  }
+
+  // Public booking page — no auth required
+  if(page==="schedule"){
+    return(
+      <>
+        <GlobalStyles/>
+        <PublicBooking onBack={()=>setPage("landing")}/>
+      </>
+    );
+  }
+
+  // Admin scheduling dashboard
+  if(user && page==="ehr-schedule"){
+    return(
+      <>
+        <GlobalStyles/>
+        <AdminSchedule onBack={()=>setPage("dashboard")}/>
+      </>
+    );
+  }
 
   return(
     <>
@@ -1600,8 +1652,7 @@ export default function App(){
           {user && page==="programs" && <Programs/>}
           {user && page==="insights" && <Insights/>}
           {user && page==="premium" && <Premium/>}
-          {user && page==="settings" && <Settings user={appUser} setPage={setPage} onSignOut={signOut}/>}
-        </main>
+          {user && page==="settings" && <Settings user={appUser} setPage={setPage} onSignOut={signOut}/>}        </main>
         {/* Mobile bottom nav */}
         {needsSidebar&&(
           <div className="mobile-only mobile-bottomnav">

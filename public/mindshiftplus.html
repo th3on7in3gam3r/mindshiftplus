@@ -192,7 +192,7 @@ footer{background:var(--bg2);border-top:1px solid rgba(107,95,207,.1);padding:2.
     Back to Clinic
   </a>
   <a href="site-main.html" class="nav-logo">MindShift <span>Wellness Clinic</span></a>
-  <a href="#" class="nav-cta" onclick="return openApp('onboarding')">Get Started Free</a>
+  <a href="#" class="nav-cta" onclick="return openAuthModal()">Log In / Sign Up</a>
 </nav>
 
 <!-- Hero -->
@@ -209,7 +209,7 @@ footer{background:var(--bg2);border-top:1px solid rgba(107,95,207,.1);padding:2.
       </h1>
       <p style="font-size:1.05rem;color:var(--muted);line-height:1.75;max-width:480px;margin-bottom:2rem">MindShift+ is a secure AI-powered wellness platform offered by MindShift Wellness Clinic — designed to keep you supported, grounded, and growing between your appointments.</p>
       <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem">
-        <a href="#" class="btn-primary" onclick="return openApp('onboarding')">
+        <a href="#" class="btn-primary" onclick="return showComingSoon()">
           Start for Free
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
@@ -327,7 +327,7 @@ footer{background:var(--bg2);border-top:1px solid rgba(107,95,207,.1);padding:2.
         <div style="display:flex;align-items:center;gap:.75rem;font-size:.875rem;color:var(--txt)"><span style="width:6px;height:6px;border-radius:50%;background:var(--violet);flex-shrink:0"></span>Guides breathing, reflection, and reframing</div>
         <div style="display:flex;align-items:center;gap:.75rem;font-size:.875rem;color:var(--txt)"><span style="width:6px;height:6px;border-radius:50%;background:var(--violet);flex-shrink:0"></span>Available every day — no appointment needed</div>
       </div>
-      <a href="#" class="btn-primary" onclick="return openApp('mia')">Start talking to Mia →</a>
+      <a href="#" class="btn-primary" onclick="return showComingSoon()">Start talking to Mia →</a>
     </div>
     <div class="reveal-right">
       <div class="chat-demo">
@@ -412,7 +412,7 @@ footer{background:var(--bg2);border-top:1px solid rgba(107,95,207,.1);padding:2.
           <li class="price-feat"><span class="price-check">✓</span>1 wellness program</li>
           <li class="price-feat"><span class="price-check no">–</span><span style="opacity:.4">Advanced insights</span></li>
         </ul>
-        <button class="price-btn" onclick="openApp('onboarding')">Get started free</button>
+        <button class="price-btn" onclick="return showComingSoon()">Get started free</button>
       </div>
       <div class="price-card featured reveal" data-delay="2">
         <div class="price-tier">Premium</div>
@@ -426,7 +426,7 @@ footer{background:var(--bg2);border-top:1px solid rgba(107,95,207,.1);padding:2.
           <li class="price-feat"><span class="price-check">✓</span>All breathing modes</li>
           <li class="price-feat"><span class="price-check">✓</span>All wellness programs</li>
         </ul>
-        <button class="price-btn" onclick="openApp('premium')">Start 7-day free trial</button>
+        <button class="price-btn" onclick="return showComingSoon()">Start 7-day free trial</button>
       </div>
     </div>
   </div>
@@ -438,7 +438,7 @@ footer{background:var(--bg2);border-top:1px solid rgba(107,95,207,.1);padding:2.
     <h2 style="font-family:var(--serif);font-size:clamp(2.2rem,4vw,3.2rem);font-weight:300;color:#fff;line-height:1.1;letter-spacing:-.03em;margin-bottom:1rem">Start your wellness<br><em style="color:var(--lilac)">journey today.</em></h2>
     <p style="font-size:.95rem;color:rgba(245,240,238,.55);line-height:1.75;margin-bottom:2rem">Free to start. Available to all MindShift Wellness Clinic patients and anyone seeking daily mental wellness support.</p>
     <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
-      <a href="#" class="btn-primary" onclick="return openApp('onboarding')" style="background:#fff;color:var(--violet)">
+      <a href="#" class="btn-primary" onclick="return showComingSoon()" style="background:#fff;color:var(--violet)">
         Get Started Free
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </a>
@@ -470,17 +470,41 @@ const observer = new IntersectionObserver(entries=>{
 },{threshold:.12});
 document.querySelectorAll('.reveal,.reveal-left,.reveal-right').forEach(el=>observer.observe(el));
 
-function openApp(page){
-  // Open the React app and trigger the auth modal
-  const target = window.opener || null;
-  // If embedded in iframe, message parent
+function openApp(page){ return showComingSoon(); }
+
+function openAuthModal(){
+  // If inside the React app iframe, message parent to open auth
   if(window.parent && window.parent !== window){
     window.parent.postMessage({type:'mindshift-plus:openAuth'},'*');
     return false;
   }
-  // Otherwise navigate to root and pass intent via sessionStorage
-  try{ sessionStorage.setItem('ms_intent', page); }catch{}
+  // Otherwise navigate to the React app root — it will open auth modal
+  try{ sessionStorage.setItem('ms_intent','auth'); }catch{}
   window.location.href = '/';
+  return false;
+}
+
+function showComingSoon(){
+  const existing = document.getElementById('ms-coming-soon');
+  if(existing){ existing.remove(); return false; }
+  const banner = document.createElement('div');
+  banner.id = 'ms-coming-soon';
+  banner.innerHTML = `
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;font-family:'DM Sans',system-ui,sans-serif">
+      <div style="background:#fff;border-radius:20px;padding:2.5rem;max-width:420px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.2)">
+        <div style="font-size:48px;margin-bottom:1rem">🚧</div>
+        <h2 style="font-size:1.4rem;font-weight:700;color:#1a1c2e;margin-bottom:8px">Coming Soon</h2>
+        <p style="font-size:14px;color:#6b6d80;line-height:1.75;margin-bottom:1.5rem">
+          This feature is currently in development.<br/>Check back soon.
+        </p>
+        <div style="background:#f5f0ee;border-radius:12px;padding:1rem;margin-bottom:1.5rem;font-size:13px;color:#6b6d80;line-height:1.7">
+          In the meantime, contact us:<br/>
+          <a href="tel:5086191044" style="color:#6b5fcf;text-decoration:none;font-weight:600">(508) 619-1044</a>
+        </div>
+        <button onclick="document.getElementById('ms-coming-soon').remove()" style="background:linear-gradient(135deg,#6b5fcf,#2a9d8f);border:none;border-radius:30px;padding:11px 28px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;width:100%">Got it</button>
+      </div>
+    </div>`;
+  document.body.appendChild(banner);
   return false;
 }
 </script>
