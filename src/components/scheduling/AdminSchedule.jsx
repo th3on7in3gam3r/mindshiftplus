@@ -7,7 +7,7 @@ import {
 import { supabase } from "../../lib/supabase";
 
 // Admin emails allowed to access this dashboard
-const ADMIN_EMAILS = ["info@mindshiftwellnessclinic.org"];
+const ADMIN_EMAILS = ["info@mindshiftwellnessclinic.org", "jerlessm@gmail.com"];
 
 const P = {
   bg:"#f7f8fc", bg2:"#fff", sidebar:"#1e2a4a",
