@@ -8,6 +8,141 @@ import PortalProfile from "./PortalProfile";
 import PortalVisitNotes from "./PortalVisitNotes";
 import PortalPrescriptions from "./PortalPrescriptions";
 
+// ── Inline auth screen — stays on portal, no redirect ─────────────────────────
+function PortalAuthScreen({ onBack }) {
+  const [mode, setMode] = useState("signin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [sent, setSent] = useState(false);
+
+  const inp = {
+    width:"100%", padding:"11px 14px", borderRadius:10,
+    border:"1.5px solid #e5e7eb", fontSize:14, color:"#1a1f36",
+    background:"#fff", outline:"none", fontFamily:"inherit",
+  };
+  const focus = (e) => { e.target.style.borderColor="#4a6cf7"; e.target.style.boxShadow="0 0 0 3px rgba(74,108,247,0.1)"; };
+  const blur  = (e) => { e.target.style.borderColor="#e5e7eb"; e.target.style.boxShadow="none"; };
+
+  const handleSignIn = async (e) => {
+    e.preventDefault(); setError(""); setLoading(true);
+    const { error: err } = await supabase.auth.signInWithPassword({ email, password });
+    if (err) setError(err.message.includes("Invalid") ? "Incorrect email or password." : err.message);
+    setLoading(false);
+  };
+
+  const handleSignUp = async (e) => {
+    e.preventDefault(); setError(""); setLoading(true);
+    if (!name.trim()) { setError("Please enter your name."); setLoading(false); return; }
+    const { error: err } = await supabase.auth.signUp({ email, password, options:{ data:{ full_name: name.trim() } } });
+    if (err) setError(err.message);
+    else setSent(true);
+    setLoading(false);
+  };
+
+  const handleForgot = async (e) => {
+    e.preventDefault(); setError(""); setLoading(true);
+    const { error: err } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+    if (err) setError(err.message);
+    else setSent(true);
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ minHeight:"100vh", background:"#f7f8fc", display:"flex", fontFamily:"'Inter',system-ui,sans-serif" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');*{box-sizing:border-box}`}</style>
+
+      {/* Left branding panel */}
+      <div style={{ width:"42%", background:"linear-gradient(160deg,#1e2a4a,#2d3f6e)", display:"flex", flexDirection:"column", justifyContent:"space-between", padding:"3rem", position:"relative", overflow:"hidden" }} className="portal-auth-panel">
+        <div style={{ position:"absolute", top:"-20%", right:"-20%", width:350, height:350, borderRadius:"50%", background:"rgba(74,108,247,0.15)", filter:"blur(60px)" }}/>
+        <div style={{ position:"relative", zIndex:1 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:"3rem" }}>
+            <div style={{ width:40, height:40, borderRadius:10, background:"linear-gradient(135deg,#4a6cf7,#0ea5a0)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>🏥</div>
+            <div>
+              <div style={{ fontSize:14, fontWeight:700, color:"#fff" }}>MindShift Wellness Clinic</div>
+              <div style={{ fontSize:11, color:"rgba(255,255,255,0.45)" }}>Patient Portal</div>
+            </div>
+          </div>
+          <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"clamp(1.6rem,3vw,2.4rem)", fontWeight:300, color:"#fff", lineHeight:1.2, marginBottom:"1rem" }}>
+            Your care,<br/><em style={{ fontStyle:"italic", color:"rgba(107,138,249,0.9)" }}>at your fingertips.</em>
+          </h2>
+          <p style={{ fontSize:13, color:"rgba(255,255,255,0.5)", lineHeight:1.75 }}>Manage appointments, messages, and health records securely.</p>
+        </div>
+        <div style={{ position:"relative", zIndex:1, background:"rgba(255,255,255,0.06)", borderRadius:12, padding:"1rem", fontSize:12, color:"rgba(255,255,255,0.5)" }}>
+          Need help? <a href="tel:5086191044" style={{ color:"rgba(255,255,255,0.8)", textDecoration:"none" }}>(508) 619-1044</a>
+        </div>
+      </div>
+
+      {/* Right form panel */}
+      <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", padding:"3rem 2rem" }}>
+        <div style={{ width:"100%", maxWidth:400 }}>
+          {onBack && <button onClick={onBack} style={{ background:"transparent", border:"none", color:"#6b7280", fontSize:13, cursor:"pointer", marginBottom:"2rem", padding:0, display:"flex", alignItems:"center", gap:5 }}>← Back to clinic site</button>}
+
+          {sent ? (
+            <div style={{ textAlign:"center" }}>
+              <div style={{ fontSize:48, marginBottom:"1rem" }}>📬</div>
+              <h2 style={{ fontSize:"1.3rem", fontWeight:700, color:"#1a1f36", marginBottom:8 }}>Check your email</h2>
+              <p style={{ fontSize:14, color:"#6b7280", lineHeight:1.7, marginBottom:"1.5rem" }}>We sent a link to <strong>{email}</strong>.</p>
+              <button onClick={()=>{ setSent(false); setMode("signin"); }} style={{ background:"transparent", border:"none", color:"#4a6cf7", fontSize:14, cursor:"pointer" }}>← Back to sign in</button>
+            </div>
+          ) : mode === "signin" ? (
+            <>
+              <h2 style={{ fontSize:"1.5rem", fontWeight:700, color:"#1a1f36", marginBottom:6 }}>Welcome back</h2>
+              <p style={{ fontSize:14, color:"#6b7280", marginBottom:"1.5rem" }}>Sign in to your patient portal</p>
+              {error && <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:8, padding:"10px 14px", fontSize:13, color:"#dc2626", marginBottom:12 }}>{error}</div>}
+              <form onSubmit={handleSignIn} style={{ display:"flex", flexDirection:"column", gap:14 }}>
+                <div><label style={{ fontSize:12, fontWeight:500, color:"#374151", display:"block", marginBottom:5 }}>Email</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" required style={inp} onFocus={focus} onBlur={blur}/></div>
+                <div>
+                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}>
+                    <label style={{ fontSize:12, fontWeight:500, color:"#374151" }}>Password</label>
+                    <button type="button" onClick={()=>{ setError(""); setMode("forgot"); }} style={{ background:"transparent", border:"none", color:"#4a6cf7", fontSize:12, cursor:"pointer", padding:0 }}>Forgot?</button>
+                  </div>
+                  <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••" required style={inp} onFocus={focus} onBlur={blur}/>
+                </div>
+                <button type="submit" disabled={loading} style={{ background:"linear-gradient(135deg,#4a6cf7,#0ea5a0)", border:"none", borderRadius:10, padding:"13px", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer", opacity:loading?0.7:1 }}>{loading?"Signing in…":"Sign In to Portal"}</button>
+              </form>
+              <p style={{ textAlign:"center", marginTop:"1.2rem", fontSize:13, color:"#6b7280" }}>New patient? <button onClick={()=>{ setError(""); setMode("signup"); }} style={{ background:"transparent", border:"none", color:"#4a6cf7", fontSize:13, cursor:"pointer", fontWeight:600 }}>Create account</button></p>
+            </>
+          ) : mode === "signup" ? (
+            <>
+              <h2 style={{ fontSize:"1.5rem", fontWeight:700, color:"#1a1f36", marginBottom:6 }}>Create your account</h2>
+              <p style={{ fontSize:14, color:"#6b7280", marginBottom:"1.5rem" }}>Join as a patient of MindShift Wellness Clinic</p>
+              {error && <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:8, padding:"10px 14px", fontSize:13, color:"#dc2626", marginBottom:12 }}>{error}</div>}
+              <form onSubmit={handleSignUp} style={{ display:"flex", flexDirection:"column", gap:14 }}>
+                <div><label style={{ fontSize:12, fontWeight:500, color:"#374151", display:"block", marginBottom:5 }}>Full Name</label><input value={name} onChange={e=>setName(e.target.value)} placeholder="Your full name" required style={inp} onFocus={focus} onBlur={blur}/></div>
+                <div><label style={{ fontSize:12, fontWeight:500, color:"#374151", display:"block", marginBottom:5 }}>Email</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" required style={inp} onFocus={focus} onBlur={blur}/></div>
+                <div><label style={{ fontSize:12, fontWeight:500, color:"#374151", display:"block", marginBottom:5 }}>Password</label><input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="At least 6 characters" required minLength={6} style={inp} onFocus={focus} onBlur={blur}/></div>
+                <button type="submit" disabled={loading} style={{ background:"linear-gradient(135deg,#4a6cf7,#0ea5a0)", border:"none", borderRadius:10, padding:"13px", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer", opacity:loading?0.7:1 }}>{loading?"Creating…":"Create Account"}</button>
+              </form>
+              <p style={{ textAlign:"center", marginTop:"1.2rem", fontSize:13, color:"#6b7280" }}>Already have an account? <button onClick={()=>{ setError(""); setMode("signin"); }} style={{ background:"transparent", border:"none", color:"#4a6cf7", fontSize:13, cursor:"pointer", fontWeight:600 }}>Sign in</button></p>
+            </>
+          ) : (
+            <>
+              <h2 style={{ fontSize:"1.5rem", fontWeight:700, color:"#1a1f36", marginBottom:6 }}>Reset password</h2>
+              <p style={{ fontSize:14, color:"#6b7280", marginBottom:"1.5rem" }}>We'll send a reset link to your email</p>
+              {error && <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:8, padding:"10px 14px", fontSize:13, color:"#dc2626", marginBottom:12 }}>{error}</div>}
+              <form onSubmit={handleForgot} style={{ display:"flex", flexDirection:"column", gap:14 }}>
+                <div><label style={{ fontSize:12, fontWeight:500, color:"#374151", display:"block", marginBottom:5 }}>Email</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" required style={inp} onFocus={focus} onBlur={blur}/></div>
+                <button type="submit" disabled={loading} style={{ background:"linear-gradient(135deg,#4a6cf7,#0ea5a0)", border:"none", borderRadius:10, padding:"13px", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer", opacity:loading?0.7:1 }}>{loading?"Sending…":"Send Reset Link"}</button>
+              </form>
+              <p style={{ textAlign:"center", marginTop:"1.2rem" }}><button onClick={()=>{ setError(""); setMode("signin"); }} style={{ background:"transparent", border:"none", color:"#4a6cf7", fontSize:13, cursor:"pointer" }}>← Back to sign in</button></p>
+            </>
+          )}
+
+          <div style={{ marginTop:"1.5rem", padding:"0.9rem 1rem", background:"rgba(74,108,247,0.05)", border:"1px solid rgba(74,108,247,0.12)", borderRadius:10, display:"flex", gap:8 }}>
+            <span style={{ fontSize:14, flexShrink:0 }}>🔒</span>
+            <p style={{ fontSize:11, color:"#6b7280", lineHeight:1.6, margin:0 }}>Secure, encrypted connection. Your health information is protected in accordance with HIPAA privacy standards.</p>
+          </div>
+        </div>
+      </div>
+
+      <style>{`@media(max-width:767px){ .portal-auth-panel{ display:none !important } }`}</style>
+    </div>
+  );
+}
+
 const P = {
   bg:"#f7f8fc", bg2:"#ffffff", bg3:"#eef0f7",
   sidebar:"#1e2a4a", sidebarActive:"#3b4f82",
@@ -57,31 +192,9 @@ export default function Portal({ onExit }) {
     </div>
   );
 
-  // Not logged in — prompt them to sign in via the shared MindShift+ auth
+  // Not logged in — show inline auth form
   if (!session) return (
-    <div style={{ minHeight:"100vh", background:P.bg, display:"flex", alignItems:"center", justifyContent:"center", padding:"2rem", fontFamily:"'Inter',system-ui,sans-serif" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');*{box-sizing:border-box}`}</style>
-      <div style={{ background:"#fff", border:"1px solid #e5e7eb", borderRadius:20, padding:"2.5rem", maxWidth:420, width:"100%", textAlign:"center", boxShadow:"0 4px 24px rgba(74,108,247,0.08)" }}>
-        <div style={{ width:60, height:60, borderRadius:16, background:`linear-gradient(135deg,${P.accent},${P.teal})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:28, margin:"0 auto 1.2rem" }}>🏥</div>
-        <h2 style={{ fontSize:"1.3rem", fontWeight:700, color:P.text, marginBottom:8 }}>Patient Portal</h2>
-        <p style={{ fontSize:14, color:P.muted, lineHeight:1.7, marginBottom:"1.5rem" }}>
-          Sign in with your MindShift Wellness Clinic account to access your portal. One account works for both the portal and the MindShift+ app.
-        </p>
-        <button onClick={onExit} style={{
-          width:"100%", background:`linear-gradient(135deg,${P.accent},${P.teal})`,
-          border:"none", borderRadius:12, padding:"13px", color:"#fff",
-          fontSize:14, fontWeight:600, cursor:"pointer", marginBottom:10,
-        }}>
-          Sign In / Create Account
-        </button>
-        <p style={{ fontSize:11, color:P.muted2 }}>
-          You'll be taken to the sign in screen. Come back to the portal after logging in.
-        </p>
-        <div style={{ marginTop:"1.2rem", paddingTop:"1rem", borderTop:"1px solid #e5e7eb", fontSize:12, color:P.muted }}>
-          Need help? <a href="tel:5086191044" style={{ color:P.accent, textDecoration:"none" }}>(508) 619-1044</a>
-        </div>
-      </div>
-    </div>
+    <PortalAuthScreen onBack={onExit}/>
   );
 
   const user = session.user;
