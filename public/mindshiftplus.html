@@ -470,8 +470,16 @@ const observer = new IntersectionObserver(entries=>{
 },{threshold:.12});
 document.querySelectorAll('.reveal,.reveal-left,.reveal-right').forEach(el=>observer.observe(el));
 
-// Open app
 function openApp(page){
+  // Open the React app and trigger the auth modal
+  const target = window.opener || null;
+  // If embedded in iframe, message parent
+  if(window.parent && window.parent !== window){
+    window.parent.postMessage({type:'mindshift-plus:openAuth'},'*');
+    return false;
+  }
+  // Otherwise navigate to root and pass intent via sessionStorage
+  try{ sessionStorage.setItem('ms_intent', page); }catch{}
   window.location.href = '/';
   return false;
 }

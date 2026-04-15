@@ -1533,7 +1533,7 @@ export default function App(){
     }
   },[user, loading]);
 
-  // Listen for iframe navigation messages
+  // Listen for iframe navigation messages + sessionStorage intent from mindshiftplus.html
   useEffect(()=>{
     const onMsg=(e)=>{
       const data=e?.data;
@@ -1542,6 +1542,11 @@ export default function App(){
       if(data.type==="mindshift-plus:navigate") setPage(data.page);
     };
     window.addEventListener("message",onMsg);
+    // Check if user came from mindshiftplus.html with an intent
+    try{
+      const intent = sessionStorage.getItem('ms_intent');
+      if(intent){ sessionStorage.removeItem('ms_intent'); setShowAuth(true); }
+    }catch{}
     return()=>window.removeEventListener("message",onMsg);
   },[]);
 
