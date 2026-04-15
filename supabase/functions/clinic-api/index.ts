@@ -168,6 +168,51 @@ Deno.serve(async (req) => {
         break;
       }
 
+      // ── VISIT NOTES ─────────────────────────────────────────────────────────
+      case "get_visit_notes": {
+        const { rows } = await client.queryObject`
+          SELECT * FROM visit_notes WHERE patient_id = ${payload.patient_id}
+          ORDER BY note_date DESC`;
+        result = rows;
+        break;
+      }
+
+      case "add_visit_note": {
+        const { patient_id, appointment_id, note_date, chief_complaint, assessment, plan, follow_up } = payload;
+        const { rows } = await client.queryObject`
+          INSERT INTO visit_notes (patient_id, appointment_id, note_date, chief_complaint, assessment, plan, follow_up)
+          VALUES (${patient_id}, ${appointment_id}, ${note_date}, ${chief_complaint}, ${assessment}, ${plan}, ${follow_up})
+          RETURNING *`;
+        result = rows[0];
+        break;
+      }
+
+      // ── PRESCRIPTIONS ────────────────────────────────────────────────────────
+      case "get_prescriptions": {
+        const { rows } = await client.queryObject`
+          SELECT * FROM prescriptions WHERE patient_id = ${payload.patient_id}
+          ORDER BY prescribed_date DESC`;
+        result = rows;
+        break;
+      }
+
+      case "add_prescription": {
+        const { patient_id, medication, dosage, frequency, prescribed_date, refills_remaining, notes } = payload;
+        const { rows } = await client.queryObject`
+          INSERT INTO prescriptions (patient_id, medication, dosage, frequency, prescribed_date, refills_remaining, notes)
+          VALUES (${patient_id}, ${medication}, ${dosage}, ${frequency}, ${prescribed_date}, ${refills_remaining}, ${notes})
+          RETURNING *`;
+        result = rows[0];
+        break;
+      }
+
+      case "update_prescription_status": {
+        await client.queryObject`
+          UPDATE prescriptions SET status = ${payload.status} WHERE id = ${payload.id}`;
+        result = { success: true };
+        break;
+      }
+
       default:
         return new Response(JSON.stringify({ error: `Unknown action: ${action}` }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -90,3 +90,36 @@ create index if not exists idx_appointments_patient on appointments(patient_id);
 create index if not exists idx_availability_day on availability(day_of_week);
 create index if not exists idx_blocked_times_date on blocked_times(date);
 create index if not exists idx_messages_patient on portal_messages(patient_id);
+
+-- ── PHASE 2 TABLES ────────────────────────────────────────────────────────────
+
+-- Visit notes (clinician posts after each visit, patient reads only)
+create table if not exists visit_notes (
+  id uuid primary key default gen_random_uuid(),
+  patient_id text not null,
+  clinician_name text default 'Kenneth Mutegyeki, PMHNP',
+  appointment_id uuid references appointments(id) on delete set null,
+  note_date date not null default current_date,
+  chief_complaint text,
+  assessment text,
+  plan text,
+  follow_up text,
+  created_at timestamptz default now()
+);
+create index if not exists idx_visit_notes_patient on visit_notes(patient_id);
+
+-- Prescriptions
+create table if not exists prescriptions (
+  id uuid primary key default gen_random_uuid(),
+  patient_id text not null,
+  medication text not null,
+  dosage text,
+  frequency text,
+  prescribed_date date default current_date,
+  refills_remaining int default 0,
+  status text default 'active', -- active | discontinued | on_hold
+  prescriber text default 'Kenneth Mutegyeki, PMHNP',
+  notes text,
+  created_at timestamptz default now()
+);
+create index if not exists idx_prescriptions_patient on prescriptions(patient_id);

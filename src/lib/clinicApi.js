@@ -43,3 +43,12 @@ export const markMessageRead      = (id) => call("mark_message_read", { id });
 
 // ── Documents ──────────────────────────────────────────────────────────────────
 export const getDocuments         = (patient_id) => call("get_documents", { patient_id });
+
+// ── Visit Notes ────────────────────────────────────────────────────────────────
+export const getVisitNotes    = (patient_id) => call("get_visit_notes", { patient_id });
+export const addVisitNote     = (fields) => call("add_visit_note", fields);
+
+// ── Prescriptions ──────────────────────────────────────────────────────────────
+export const getPrescriptions         = (patient_id) => call("get_prescriptions", { patient_id });
+export const addPrescription          = (fields) => call("add_prescription", fields);
+export const updatePrescriptionStatus = (id, status) => call("update_prescription_status", { id, status });

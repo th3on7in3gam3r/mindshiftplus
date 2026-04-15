@@ -372,6 +372,137 @@ function BlockedTab({ userId }) {
   );
 }
 
+// ── Admin Visit Notes Tab ──────────────────────────────────────────────────────
+function AdminNotesTab({ adminUser }) {
+  const [patientId, setPatientId] = useState("");
+  const [form, setForm] = useState({ note_date: new Date().toISOString().slice(0,10), chief_complaint:"", assessment:"", plan:"", follow_up:"" });
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState("");
+  const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(""),3000); };
+  const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:8, border:`1.5px solid ${P.border}`, fontSize:14, color:P.text, background:P.bg2, outline:"none", fontFamily:"inherit" };
+  const taStyle = { ...inputStyle, resize:"vertical", minHeight:80 };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    if (!patientId.trim()) { showToast("Enter a patient ID."); return; }
+    setSaving(true);
+    try {
+      const { addVisitNote } = await import("../../lib/clinicApi");
+      await addVisitNote({ patient_id: patientId, ...form });
+      showToast("✓ Visit note saved.");
+      setForm({ note_date: new Date().toISOString().slice(0,10), chief_complaint:"", assessment:"", plan:"", follow_up:"" });
+    } catch { showToast("Failed. Try again."); }
+    setSaving(false);
+  };
+
+  return (
+    <div style={{ maxWidth:700 }}>
+      {toast&&<div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"#1a1f36", borderRadius:30, padding:"10px 20px", fontSize:13, color:"#fff", zIndex:9999, whiteSpace:"nowrap" }}>{toast}</div>}
+      <p style={{ fontSize:13, color:P.muted, marginBottom:"1.2rem" }}>Add a visit note for a patient. They can view it (read-only) in their portal.</p>
+      <Card>
+        <form onSubmit={handleSave} style={{ display:"flex", flexDirection:"column", gap:14 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+            <div>
+              <label style={{ fontSize:12, fontWeight:500, color:P.text, display:"block", marginBottom:5 }}>Patient ID (Supabase user ID) *</label>
+              <input value={patientId} onChange={e=>setPatientId(e.target.value)} placeholder="uuid..." required style={inputStyle}/>
+            </div>
+            <div>
+              <label style={{ fontSize:12, fontWeight:500, color:P.text, display:"block", marginBottom:5 }}>Visit Date</label>
+              <input type="date" value={form.note_date} onChange={e=>setForm(f=>({...f,note_date:e.target.value}))} style={inputStyle}/>
+            </div>
+          </div>
+          <div>
+            <label style={{ fontSize:12, fontWeight:500, color:P.text, display:"block", marginBottom:5 }}>Chief Complaint</label>
+            <input value={form.chief_complaint} onChange={e=>setForm(f=>({...f,chief_complaint:e.target.value}))} placeholder="Patient's main concern..." style={inputStyle}/>
+          </div>
+          <div>
+            <label style={{ fontSize:12, fontWeight:500, color:P.text, display:"block", marginBottom:5 }}>Assessment</label>
+            <textarea value={form.assessment} onChange={e=>setForm(f=>({...f,assessment:e.target.value}))} placeholder="Clinical assessment..." style={taStyle}/>
+          </div>
+          <div>
+            <label style={{ fontSize:12, fontWeight:500, color:P.text, display:"block", marginBottom:5 }}>Treatment Plan</label>
+            <textarea value={form.plan} onChange={e=>setForm(f=>({...f,plan:e.target.value}))} placeholder="Plan and next steps..." style={taStyle}/>
+          </div>
+          <div>
+            <label style={{ fontSize:12, fontWeight:500, color:P.text, display:"block", marginBottom:5 }}>Follow-up Instructions</label>
+            <input value={form.follow_up} onChange={e=>setForm(f=>({...f,follow_up:e.target.value}))} placeholder="e.g. Return in 4 weeks..." style={inputStyle}/>
+          </div>
+          <button type="submit" disabled={saving} style={{ background:`linear-gradient(135deg,${P.accent},${P.teal})`, border:"none", borderRadius:10, padding:"12px", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer" }}>
+            {saving?"Saving…":"Save Visit Note"}
+          </button>
+        </form>
+      </Card>
+    </div>
+  );
+}
+
+// ── Admin Prescriptions Tab ────────────────────────────────────────────────────
+function AdminRxTab({ adminUser }) {
+  const [patientId, setPatientId] = useState("");
+  const [form, setForm] = useState({ medication:"", dosage:"", frequency:"", prescribed_date: new Date().toISOString().slice(0,10), refills_remaining:0, notes:"" });
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState("");
+  const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(""),3000); };
+  const inputStyle = { width:"100%", padding:"10px 12px", borderRadius:8, border:`1.5px solid ${P.border}`, fontSize:14, color:P.text, background:P.bg2, outline:"none", fontFamily:"inherit" };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    if (!patientId.trim() || !form.medication.trim()) { showToast("Patient ID and medication are required."); return; }
+    setSaving(true);
+    try {
+      const { addPrescription } = await import("../../lib/clinicApi");
+      await addPrescription({ patient_id: patientId, ...form });
+      showToast("✓ Prescription saved.");
+      setForm({ medication:"", dosage:"", frequency:"", prescribed_date: new Date().toISOString().slice(0,10), refills_remaining:0, notes:"" });
+    } catch { showToast("Failed. Try again."); }
+    setSaving(false);
+  };
+
+  return (
+    <div style={{ maxWidth:700 }}>
+      {toast&&<div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"#1a1f36", borderRadius:30, padding:"10px 20px", fontSize:13, color:"#fff", zIndex:9999, whiteSpace:"nowrap" }}>{toast}</div>}
+      <p style={{ fontSize:13, color:P.muted, marginBottom:"1.2rem" }}>Add a prescription for a patient. They can view it in their portal.</p>
+      <Card>
+        <form onSubmit={handleSave} style={{ display:"flex", flexDirection:"column", gap:14 }}>
+          <div>
+            <label style={{ fontSize:12, fontWeight:500, color:P.text, display:"block", marginBottom:5 }}>Patient ID *</label>
+            <input value={patientId} onChange={e=>setPatientId(e.target.value)} placeholder="uuid..." required style={inputStyle}/>
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+            <div>
+              <label style={{ fontSize:12, fontWeight:500, color:P.text, display:"block", marginBottom:5 }}>Medication *</label>
+              <input value={form.medication} onChange={e=>setForm(f=>({...f,medication:e.target.value}))} placeholder="e.g. Sertraline" required style={inputStyle}/>
+            </div>
+            <div>
+              <label style={{ fontSize:12, fontWeight:500, color:P.text, display:"block", marginBottom:5 }}>Dosage</label>
+              <input value={form.dosage} onChange={e=>setForm(f=>({...f,dosage:e.target.value}))} placeholder="e.g. 50mg" style={inputStyle}/>
+            </div>
+            <div>
+              <label style={{ fontSize:12, fontWeight:500, color:P.text, display:"block", marginBottom:5 }}>Frequency</label>
+              <input value={form.frequency} onChange={e=>setForm(f=>({...f,frequency:e.target.value}))} placeholder="e.g. Once daily" style={inputStyle}/>
+            </div>
+            <div>
+              <label style={{ fontSize:12, fontWeight:500, color:P.text, display:"block", marginBottom:5 }}>Refills Remaining</label>
+              <input type="number" min="0" value={form.refills_remaining} onChange={e=>setForm(f=>({...f,refills_remaining:Number(e.target.value)}))} style={inputStyle}/>
+            </div>
+            <div>
+              <label style={{ fontSize:12, fontWeight:500, color:P.text, display:"block", marginBottom:5 }}>Prescribed Date</label>
+              <input type="date" value={form.prescribed_date} onChange={e=>setForm(f=>({...f,prescribed_date:e.target.value}))} style={inputStyle}/>
+            </div>
+          </div>
+          <div>
+            <label style={{ fontSize:12, fontWeight:500, color:P.text, display:"block", marginBottom:5 }}>Notes (optional)</label>
+            <input value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="Any additional instructions..." style={inputStyle}/>
+          </div>
+          <button type="submit" disabled={saving} style={{ background:`linear-gradient(135deg,${P.accent},${P.teal})`, border:"none", borderRadius:10, padding:"12px", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer" }}>
+            {saving?"Saving…":"Save Prescription"}
+          </button>
+        </form>
+      </Card>
+    </div>
+  );
+}
+
 // ── Main Admin Schedule ────────────────────────────────────────────────────────
 export default function AdminSchedule({ onBack }) {
   const [adminUser, setAdminUser] = useState(null);
@@ -389,6 +520,8 @@ export default function AdminSchedule({ onBack }) {
     { id:"appointments", label:"Appointments" },
     { id:"availability",  label:"Availability" },
     { id:"blocked",       label:"Blocked Times" },
+    { id:"notes",         label:"Visit Notes" },
+    { id:"rx",            label:"Prescriptions" },
   ];
 
   return (
@@ -430,6 +563,8 @@ export default function AdminSchedule({ onBack }) {
         {tab==="appointments" && <AppointmentsTab userId={adminUser?.id}/>}
         {tab==="availability"  && <AvailabilityTab userId={adminUser?.id}/>}
         {tab==="blocked"       && <BlockedTab userId={adminUser?.id}/>}
+        {tab==="notes"         && <AdminNotesTab adminUser={adminUser}/>}
+        {tab==="rx"            && <AdminRxTab adminUser={adminUser}/>}
       </div>
     </div>
   );
