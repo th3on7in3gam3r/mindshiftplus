@@ -133,7 +133,6 @@ const navItems=[
   {id:"insights",icon:"◐",label:"Insights"},
   {id:"premium",icon:"◆",label:"Premium"},
   {id:"portal",icon:"🏥",label:"Patient Portal"},
-  {id:"ehr-schedule",icon:"📋",label:"Admin Schedule"},
   {id:"settings",icon:"◎",label:"Settings"},
 ];
 
@@ -1537,8 +1536,7 @@ export default function App(){
       }catch{}
       setPage("dashboard");
       setShowAuth(false);
-    }
-    if(!user && !["landing"].includes(page)){
+    }    if(!user && !["landing"].includes(page)){
       setPage("landing");
     }
   },[user, loading]);
@@ -1564,9 +1562,9 @@ export default function App(){
       const intent = sessionStorage.getItem('ms_intent');
       if(intent){
         sessionStorage.removeItem('ms_intent');
-        if(intent === 'portal' && user) setPage('portal');
+        if(intent === 'portal') setPage('portal'); // Portal handles its own auth
         else if(intent === 'schedule') setPage('schedule');
-        else setShowAuth(true); // 'auth' or any other intent opens the modal
+        else setShowAuth(true);
       }
     }catch{}
     return()=>window.removeEventListener("message",onMsg);
