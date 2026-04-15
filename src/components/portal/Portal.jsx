@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
-import PortalLogin from "./PortalLogin";
 import PortalDashboard from "./PortalDashboard";
 import PortalAppointments from "./PortalAppointments";
 import PortalMessages from "./PortalMessages";
@@ -54,8 +53,32 @@ export default function Portal({ onExit }) {
     </div>
   );
 
-  // Not logged in — show portal login
-  if (!session) return <PortalLogin onBack={onExit}/>;
+  // Not logged in — prompt them to sign in via the shared MindShift+ auth
+  if (!session) return (
+    <div style={{ minHeight:"100vh", background:P.bg, display:"flex", alignItems:"center", justifyContent:"center", padding:"2rem", fontFamily:"'Inter',system-ui,sans-serif" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');*{box-sizing:border-box}`}</style>
+      <div style={{ background:"#fff", border:"1px solid #e5e7eb", borderRadius:20, padding:"2.5rem", maxWidth:420, width:"100%", textAlign:"center", boxShadow:"0 4px 24px rgba(74,108,247,0.08)" }}>
+        <div style={{ width:60, height:60, borderRadius:16, background:`linear-gradient(135deg,${P.accent},${P.teal})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:28, margin:"0 auto 1.2rem" }}>🏥</div>
+        <h2 style={{ fontSize:"1.3rem", fontWeight:700, color:P.text, marginBottom:8 }}>Patient Portal</h2>
+        <p style={{ fontSize:14, color:P.muted, lineHeight:1.7, marginBottom:"1.5rem" }}>
+          Sign in with your MindShift Wellness Clinic account to access your portal. One account works for both the portal and the MindShift+ app.
+        </p>
+        <button onClick={onExit} style={{
+          width:"100%", background:`linear-gradient(135deg,${P.accent},${P.teal})`,
+          border:"none", borderRadius:12, padding:"13px", color:"#fff",
+          fontSize:14, fontWeight:600, cursor:"pointer", marginBottom:10,
+        }}>
+          Sign In / Create Account
+        </button>
+        <p style={{ fontSize:11, color:P.muted2 }}>
+          You'll be taken to the sign in screen. Come back to the portal after logging in.
+        </p>
+        <div style={{ marginTop:"1.2rem", paddingTop:"1rem", borderTop:"1px solid #e5e7eb", fontSize:12, color:P.muted }}>
+          Need help? <a href="tel:5086191044" style={{ color:P.accent, textDecoration:"none" }}>(508) 619-1044</a>
+        </div>
+      </div>
+    </div>
+  );
 
   const user = session.user;
   const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Patient";

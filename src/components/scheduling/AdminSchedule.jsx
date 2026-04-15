@@ -4,7 +4,10 @@ import {
   getAvailability, upsertAvailability,
   getBlockedTimes, addBlockedTime, removeBlockedTime,
 } from "../../lib/clinicApi";
-import { useAuth } from "../../lib/AuthContext";
+import { supabase } from "../../lib/supabase";
+
+// Admin emails allowed to access this dashboard
+const ADMIN_EMAILS = ["info@mindshiftwellnessclinic.org"];
 
 const P = {
   bg:"#f7f8fc", bg2:"#fff", sidebar:"#1e2a4a",
@@ -13,6 +16,68 @@ const P = {
   text:"#1a1f36", muted:"#6b7280", muted2:"#9ca3af",
   border:"#e5e7eb",
 };
+
+// ── Admin Login ────────────────────────────────────────────────────────────────
+function AdminLogin({ onSuccess }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError(""); setLoading(true);
+    const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
+    if (err) { setError("Invalid credentials."); setLoading(false); return; }
+    if (!ADMIN_EMAILS.includes(data.user?.email)) {
+      await supabase.auth.signOut();
+      setError("Access denied. Admin accounts only.");
+      setLoading(false); return;
+    }
+    onSuccess(data.user);
+    setLoading(false);
+  };
+
+  const inputStyle = {
+    width:"100%", padding:"11px 14px", borderRadius:10,
+    border:"1.5px solid #e5e7eb", fontSize:14, color:"#1a1f36",
+    background:"#fff", outline:"none", fontFamily:"inherit",
+  };
+
+  return (
+    <div style={{ minHeight:"100vh", background:"#1e2a4a", display:"flex", alignItems:"center", justifyContent:"center", padding:"2rem", fontFamily:"'Inter',system-ui,sans-serif" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');*{box-sizing:border-box}`}</style>
+      <div style={{ background:"#fff", borderRadius:20, padding:"2.5rem", maxWidth:400, width:"100%", boxShadow:"0 20px 60px rgba(0,0,0,0.3)" }}>
+        <div style={{ textAlign:"center", marginBottom:"2rem" }}>
+          <div style={{ width:52, height:52, borderRadius:14, background:"linear-gradient(135deg,#4a6cf7,#0ea5a0)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, margin:"0 auto 1rem" }}>🏥</div>
+          <h2 style={{ fontSize:"1.3rem", fontWeight:700, color:"#1a1f36", marginBottom:4 }}>Admin Dashboard</h2>
+          <p style={{ fontSize:13, color:"#6b7280" }}>MindShift Wellness Clinic · Clinician Access</p>
+        </div>
+        {error && <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:8, padding:"10px 14px", fontSize:13, color:"#dc2626", marginBottom:14 }}>{error}</div>}
+        <form onSubmit={handleLogin} style={{ display:"flex", flexDirection:"column", gap:14 }}>
+          <div>
+            <label style={{ fontSize:12, fontWeight:500, color:"#374151", display:"block", marginBottom:5 }}>Admin Email</label>
+            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="admin@clinic.com" required style={inputStyle}
+              onFocus={e=>{ e.target.style.borderColor="#4a6cf7"; e.target.style.boxShadow="0 0 0 3px rgba(74,108,247,0.1)"; }}
+              onBlur={e=>{ e.target.style.borderColor="#e5e7eb"; e.target.style.boxShadow="none"; }}/>
+          </div>
+          <div>
+            <label style={{ fontSize:12, fontWeight:500, color:"#374151", display:"block", marginBottom:5 }}>Password</label>
+            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••" required style={inputStyle}
+              onFocus={e=>{ e.target.style.borderColor="#4a6cf7"; e.target.style.boxShadow="0 0 0 3px rgba(74,108,247,0.1)"; }}
+              onBlur={e=>{ e.target.style.borderColor="#e5e7eb"; e.target.style.boxShadow="none"; }}/>
+          </div>
+          <button type="submit" disabled={loading} style={{ background:"linear-gradient(135deg,#4a6cf7,#0ea5a0)", border:"none", borderRadius:10, padding:"13px", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer", opacity:loading?0.7:1 }}>
+            {loading ? "Signing in…" : "Sign In to Admin"}
+          </button>
+        </form>
+        <p style={{ fontSize:11, color:"#9ca3af", textAlign:"center", marginTop:"1.2rem" }}>
+          🔒 Restricted access · Clinic staff only
+        </p>
+      </div>
+    </div>
+  );
+}
 
 const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 const STATUS_COLORS = {
@@ -309,8 +374,16 @@ function BlockedTab({ userId }) {
 
 // ── Main Admin Schedule ────────────────────────────────────────────────────────
 export default function AdminSchedule({ onBack }) {
-  const { user } = useAuth();
+  const [adminUser, setAdminUser] = useState(null);
   const [tab, setTab] = useState("appointments");
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setAdminUser(null);
+  };
+
+  // Show admin login if not authenticated as admin
+  if (!adminUser) return <AdminLogin onSuccess={setAdminUser}/>;
 
   const tabs = [
     { id:"appointments", label:"Appointments" },
@@ -332,7 +405,8 @@ export default function AdminSchedule({ onBack }) {
           </div>
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-          <span style={{ fontSize:12, color:"rgba(255,255,255,0.5)" }}>{user?.email}</span>
+          <span style={{ fontSize:12, color:"rgba(255,255,255,0.5)" }}>{adminUser?.email}</span>
+          <button onClick={handleSignOut} style={{ background:"rgba(255,255,255,0.1)", border:"1px solid rgba(255,255,255,0.2)", borderRadius:20, padding:"6px 14px", fontSize:12, color:"rgba(255,255,255,0.7)", cursor:"pointer" }}>Sign Out</button>
           {onBack&&<button onClick={onBack} style={{ background:"rgba(255,255,255,0.1)", border:"1px solid rgba(255,255,255,0.2)", borderRadius:20, padding:"6px 14px", fontSize:12, color:"rgba(255,255,255,0.7)", cursor:"pointer" }}>← Exit</button>}
         </div>
       </div>
@@ -353,9 +427,9 @@ export default function AdminSchedule({ onBack }) {
           ))}
         </div>
 
-        {tab==="appointments" && <AppointmentsTab userId={user?.id}/>}
-        {tab==="availability"  && <AvailabilityTab userId={user?.id}/>}
-        {tab==="blocked"       && <BlockedTab userId={user?.id}/>}
+        {tab==="appointments" && <AppointmentsTab userId={adminUser?.id}/>}
+        {tab==="availability"  && <AvailabilityTab userId={adminUser?.id}/>}
+        {tab==="blocked"       && <BlockedTab userId={adminUser?.id}/>}
       </div>
     </div>
   );
