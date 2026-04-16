@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { bookAppointment } from "../../lib/clinicApi";
+import { emailAppointmentRequested } from "../../lib/emailService";
 
 // ── Design tokens matching site-main.html ──────────────────────────────────────
 const C = {
@@ -283,6 +284,12 @@ export default function PublicBooking({ onBack }) {
         duration_minutes: 60, location: "Milford", appointment_type: form.reason || "consultation",
         provider_name: form.clinician,
         is_public: true,
+      });
+      // Send email notifications (non-blocking)
+      emailAppointmentRequested({
+        name: form.name, email: form.email,
+        date: fmtDate(date), time, clinician: form.clinician,
+        reason: form.reason, location: "Milford, MA",
       });
     } catch {
       // Fallback to localStorage if API not yet deployed

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { getMessages, sendMessage, markMessageRead } from "../../lib/clinicApi";
+import { emailNewMessage } from "../../lib/emailService";
 import { PageHeader, Card, SectionDivider, EmptyState, Alert, Btn, Toast, Input, T } from "./PortalUI";
 
 export default function PortalMessages({ userId, P }) {

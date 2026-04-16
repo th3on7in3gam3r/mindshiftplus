@@ -4,6 +4,7 @@ import {
   getAvailability, upsertAvailability,
   getBlockedTimes, addBlockedTime, removeBlockedTime,
 } from "../../lib/clinicApi";
+import { emailAppointmentConfirmed, emailAppointmentCancelled } from "../../lib/emailService";
 import { supabase } from "../../lib/supabase";
 
 // Admin emails allowed to access this dashboard
@@ -134,6 +135,20 @@ function AppointmentsTab({ userId }) {
 
   const handleStatus = async (id, status) => {
     try { await updateAppointmentStatus(id, status); } catch {}
+    // Send email notification
+    const appt = appointments.find(a=>a.id===id);
+    if (appt) {
+      const emailData = {
+        name: appt.name || "Patient",
+        email: appt.email,
+        date: appt.scheduled_at ? new Date(appt.scheduled_at).toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"}) : "TBD",
+        time: appt.scheduled_at ? new Date(appt.scheduled_at).toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"}) : "TBD",
+        clinician: appt.provider_name || "Kenneth Mutegyeki, PMHNP-BC",
+        location: appt.location || "Milford, MA",
+      };
+      if (status === "confirmed") emailAppointmentConfirmed(emailData);
+      if (status === "cancelled") emailAppointmentCancelled(emailData);
+    }
     showToast(`✓ Appointment ${status}`);
     load();
   };
