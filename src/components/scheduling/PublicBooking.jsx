@@ -291,12 +291,13 @@ export default function PublicBooking({ onBack }) {
         date: fmtDate(date), time, clinician: form.clinician,
         reason: form.reason, location: "Milford, MA",
       });
-    } catch {
-      // Fallback to localStorage if API not yet deployed
-      saveAppointment({ date, time, ...form, status:"pending", provider:"Kenneth Mutegyeki, PMHNP-BC" });
+      setSubmitting(false);
+      setDone(true);
+    } catch(err) {
+      // Show the actual error so we know what's wrong
+      setError(`Booking failed: ${err.message}. Please call (508) 306-1128 to schedule.`);
+      setSubmitting(false);
     }
-    setSubmitting(false);
-    setDone(true);
   };
 
   // ── Confirmation screen ──────────────────────────────────────────────────────

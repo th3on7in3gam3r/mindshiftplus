@@ -625,32 +625,51 @@ function PatientLookupTab() {
     if (!search.trim()) return;
     setLoading(true);
     try {
-      // Search patient_profiles by name or email via appointments table
       const { supabase: sb } = await import("../../lib/supabase");
-      // Look up by email in auth — use appointments table which stores email
-      const { data: apptData } = await sb
+
+      // Search appointments table by email or name (works even without patient_profiles)
+      const { data: byEmail } = await sb
         .from("appointments")
         .select("patient_id, name, email")
         .ilike("email", `%${search.trim()}%`)
-        .not("patient_id", "is", null)
         .limit(20);
 
-      // Also search patient_profiles by name
+      const { data: byName } = await sb
+        .from("appointments")
+        .select("patient_id, name, email")
+        .ilike("name", `%${search.trim()}%`)
+        .limit(20);
+
+      // Also search patient_profiles
       const { data: profileData } = await sb
         .from("patient_profiles")
         .select("id, full_name, phone")
         .ilike("full_name", `%${search.trim()}%`)
         .limit(20);
 
-      // Merge results
+      // Merge all results
       const merged = new Map();
-      (apptData||[]).forEach(a => {
+      [...(byEmail||[]), ...(byName||[])].forEach(a => {
         if (a.patient_id) merged.set(a.patient_id, { id: a.patient_id, name: a.name, email: a.email });
       });
       (profileData||[]).forEach(p => {
         if (!merged.has(p.id)) merged.set(p.id, { id: p.id, name: p.full_name, email: "—" });
         else merged.get(p.id).name = p.full_name || merged.get(p.id).name;
       });
+
+      // If still empty, try to find by exact email in auth via a direct query
+      if (merged.size === 0) {
+        const { data: exactAppt } = await sb
+          .from("appointments")
+          .select("patient_id, name, email")
+          .eq("email", search.trim())
+          .limit(10);
+        (exactAppt||[]).forEach(a => {
+          if (a.patient_id) merged.set(a.patient_id, { id: a.patient_id, name: a.name, email: a.email });
+          else if (a.email) merged.set(a.email, { id: "Public booking (no account)", name: a.name, email: a.email });
+        });
+      }
+
       setResults([...merged.values()]);
     } catch (e) { showToast("Search failed: " + e.message); }
     setLoading(false);
