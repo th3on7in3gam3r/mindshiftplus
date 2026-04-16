@@ -55,23 +55,59 @@ function PortalAuthScreen({ onBack }) {
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');*{box-sizing:border-box}`}</style>
 
       {/* Left branding panel */}
-      <div style={{ width:"42%", background:"linear-gradient(160deg,#1e2a4a,#2d3f6e)", display:"flex", flexDirection:"column", justifyContent:"space-between", padding:"3rem", position:"relative", overflow:"hidden" }} className="portal-auth-panel">
-        <div style={{ position:"absolute", top:"-20%", right:"-20%", width:350, height:350, borderRadius:"50%", background:"rgba(74,108,247,0.15)", filter:"blur(60px)" }}/>
+      <div style={{ width:"42%", background:"linear-gradient(160deg,#1e2a4a 0%,#2d3f6e 50%,#1a3a5c 100%)", display:"flex", flexDirection:"column", justifyContent:"space-between", padding:"3rem", position:"relative", overflow:"hidden" }} className="portal-auth-panel">
+        {/* Background orbs */}
+        <div style={{ position:"absolute", top:"-15%", right:"-15%", width:320, height:320, borderRadius:"50%", background:"rgba(74,108,247,0.18)", filter:"blur(60px)", pointerEvents:"none" }}/>
+        <div style={{ position:"absolute", bottom:"-10%", left:"-10%", width:260, height:260, borderRadius:"50%", background:"rgba(14,165,160,0.14)", filter:"blur(50px)", pointerEvents:"none" }}/>
+
+        {/* Logo */}
         <div style={{ position:"relative", zIndex:1 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:"3rem" }}>
-            <div style={{ width:40, height:40, borderRadius:10, background:"linear-gradient(135deg,#4a6cf7,#0ea5a0)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>🏥</div>
+          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:"2.5rem" }}>
+            <div style={{ width:44, height:44, borderRadius:12, background:"linear-gradient(135deg,#4a6cf7,#0ea5a0)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>🏥</div>
             <div>
-              <div style={{ fontSize:14, fontWeight:700, color:"#fff" }}>MindShift Wellness Clinic</div>
-              <div style={{ fontSize:11, color:"rgba(255,255,255,0.45)" }}>Patient Portal</div>
+              <div style={{ fontSize:15, fontWeight:700, color:"#fff", lineHeight:1.2 }}>MindShift Wellness Clinic</div>
+              <div style={{ fontSize:11, color:"rgba(255,255,255,0.45)", lineHeight:1.2 }}>Patient Portal</div>
             </div>
           </div>
-          <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"clamp(1.6rem,3vw,2.4rem)", fontWeight:300, color:"#fff", lineHeight:1.2, marginBottom:"1rem" }}>
-            Your care,<br/><em style={{ fontStyle:"italic", color:"rgba(107,138,249,0.9)" }}>at your fingertips.</em>
+
+          <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"clamp(1.8rem,3vw,2.6rem)", fontWeight:300, color:"#fff", lineHeight:1.15, marginBottom:"1rem", letterSpacing:"-0.02em" }}>
+            Your care,<br/><em style={{ fontStyle:"italic", color:"rgba(107,138,249,0.95)" }}>at your fingertips.</em>
           </h2>
-          <p style={{ fontSize:13, color:"rgba(255,255,255,0.5)", lineHeight:1.75 }}>Manage appointments, messages, and health records securely.</p>
+          <p style={{ fontSize:13, color:"rgba(255,255,255,0.5)", lineHeight:1.75, marginBottom:"2rem" }}>
+            Securely manage your health journey — appointments, messages, records, and more.
+          </p>
+
+          {/* Feature list */}
+          <div style={{ display:"flex", flexDirection:"column", gap:14, marginBottom:"2rem" }}>
+            {[
+              ["📅","Appointments","View, book & manage visits"],
+              ["💬","Secure Messaging","Contact your care team directly"],
+              ["📄","Documents & Forms","Access records & intake forms"],
+              ["💊","Prescriptions","View medications & refill status"],
+              ["📋","Visit Notes","Review notes from your clinician"],
+            ].map(([icon, title, sub]) => (
+              <div key={title} style={{ display:"flex", alignItems:"center", gap:12 }}>
+                <div style={{ width:36, height:36, borderRadius:10, background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.1)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, flexShrink:0 }}>{icon}</div>
+                <div>
+                  <div style={{ fontSize:13, fontWeight:600, color:"rgba(255,255,255,0.85)", lineHeight:1.2 }}>{title}</div>
+                  <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", lineHeight:1.4 }}>{sub}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Accepting badge */}
+          <div style={{ display:"inline-flex", alignItems:"center", gap:6, background:"rgba(34,197,94,0.15)", border:"1px solid rgba(34,197,94,0.3)", borderRadius:20, padding:"5px 12px", marginBottom:"1.5rem" }}>
+            <span style={{ width:7, height:7, borderRadius:"50%", background:"#22c55e", display:"inline-block" }}/>
+            <span style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.7)", letterSpacing:"0.05em" }}>Now accepting new patients</span>
+          </div>
         </div>
-        <div style={{ position:"relative", zIndex:1, background:"rgba(255,255,255,0.06)", borderRadius:12, padding:"1rem", fontSize:12, color:"rgba(255,255,255,0.5)" }}>
-          Need help? <a href="tel:5086191044" style={{ color:"rgba(255,255,255,0.8)", textDecoration:"none" }}>(508) 619-1044</a>
+
+        {/* Bottom contact */}
+        <div style={{ position:"relative", zIndex:1, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:14, padding:"1rem 1.2rem" }}>
+          <div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.35)", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:8 }}>Need help?</div>
+          <a href="tel:5086191044" style={{ display:"flex", alignItems:"center", gap:6, fontSize:13, color:"rgba(255,255,255,0.7)", textDecoration:"none", marginBottom:5 }}>📞 (508) 619-1044</a>
+          <a href="mailto:info@mindshiftwellnessclinic.org" style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:"rgba(255,255,255,0.45)", textDecoration:"none" }}>✉️ info@mindshiftwellnessclinic.org</a>
         </div>
       </div>
 
