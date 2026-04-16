@@ -595,6 +595,78 @@ function AppointmentReviewTab() {
   );
 }
 
+// ── Patient Documents Tab ──────────────────────────────────────────────────────
+function PatientDocumentsTab() {
+  const [patientId, setPatientId] = useState("");
+  const [documents, setDocuments] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!patientId.trim()) return;
+    setLoading(true); setSearched(true);
+    try {
+      const { getAllPatientDocuments } = await import("../../lib/clinicApi");
+      const data = await getAllPatientDocuments(patientId.trim());
+      setDocuments(Array.isArray(data)?data:[]);
+    } catch { setDocuments([]); }
+    setLoading(false);
+  };
+
+  const fmt = (iso) => new Date(iso).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+  const TYPE_ICONS  = { intake_form:"📋", consent:"✍️", lab_result:"🧪", insurance:"🛡️", id_document:"🪪", other:"📄" };
+  const TYPE_LABELS = { intake_form:"Intake Form", consent:"Consent Form", lab_result:"Lab Result", insurance:"Insurance Card", id_document:"ID Document", other:"Document" };
+
+  return (
+    <div style={{ maxWidth:760 }}>
+      <p style={{ fontSize:13, color:P.muted, marginBottom:"1.2rem" }}>View documents uploaded by a patient. Enter their Supabase user ID to load their files.</p>
+      <Card style={{ marginBottom:"1.5rem" }}>
+        <form onSubmit={handleSearch} style={{ display:"flex", gap:10 }}>
+          <input value={patientId} onChange={e=>setPatientId(e.target.value)} placeholder="Patient Supabase user ID…"
+            style={{ flex:1, padding:"10px 12px", borderRadius:8, border:`1.5px solid ${P.border}`, fontSize:14, color:P.text, background:P.bg2, outline:"none", fontFamily:"inherit" }}/>
+          <button type="submit" style={{ background:`linear-gradient(135deg,${P.accent},${P.teal})`, border:"none", borderRadius:8, padding:"10px 20px", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer" }}>
+            Load Documents
+          </button>
+        </form>
+      </Card>
+
+      {loading && <div style={{color:P.muted,fontSize:13}}>Loading…</div>}
+
+      {searched && !loading && documents.length===0 && (
+        <Card style={{ textAlign:"center", padding:"2rem" }}>
+          <div style={{ fontSize:32, marginBottom:8 }}>📄</div>
+          <div style={{ color:P.muted, fontSize:13 }}>No documents found for this patient.</div>
+        </Card>
+      )}
+
+      {documents.map(doc=>(
+        <Card key={doc.id} style={{ marginBottom:"0.75rem" }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:10 }}>
+            <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+              <div style={{ width:40, height:40, borderRadius:10, background:"#f3f4f6", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>
+                {TYPE_ICONS[doc.type]||"📄"}
+              </div>
+              <div>
+                <div style={{ fontWeight:600, fontSize:14, color:P.text }}>{doc.name}</div>
+                <div style={{ fontSize:12, color:P.muted, marginTop:2 }}>
+                  {TYPE_LABELS[doc.type]||"Document"} · {fmt(doc.created_at)} · {doc.status}
+                </div>
+              </div>
+            </div>
+            {doc.file_url && (
+              <a href={doc.file_url} target="_blank" rel="noopener noreferrer"
+                style={{ background:`linear-gradient(135deg,${P.accent},${P.teal})`, color:"#fff", padding:"7px 16px", borderRadius:20, fontSize:12, fontWeight:600, textDecoration:"none" }}>
+                View / Download ↗
+              </a>
+            )}
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 // ── Main Admin Schedule ────────────────────────────────────────────────────────
 export default function AdminSchedule({ onBack }) {
   const [adminUser, setAdminUser] = useState(null);
@@ -615,6 +687,7 @@ export default function AdminSchedule({ onBack }) {
     { id:"notes",         label:"Visit Notes" },
     { id:"rx",            label:"Prescriptions" },
     { id:"review",        label:"📓 Appointment Review" },
+    { id:"docs",          label:"📄 Patient Documents" },
   ];
 
   return (
@@ -659,6 +732,7 @@ export default function AdminSchedule({ onBack }) {
         {tab==="notes"         && <AdminNotesTab adminUser={adminUser}/>}
         {tab==="rx"            && <AdminRxTab adminUser={adminUser}/>}
         {tab==="review"        && <AppointmentReviewTab/>}
+        {tab==="docs"          && <PatientDocumentsTab/>}
       </div>
     </div>
   );

@@ -166,3 +166,49 @@ export async function getPatientJournalForReview(patient_id) {
   if (error) throw new Error(error.message);
   return data || [];
 }
+
+// ── Document Upload ────────────────────────────────────────────────────────────
+export async function uploadPatientDocument(patient_id, file, docType) {
+  // Upload file to Supabase Storage
+  const ext = file.name.split(".").pop();
+  const path = `${patient_id}/${Date.now()}_${file.name.replace(/\s+/g,"-")}`;
+  const { data: storageData, error: storageError } = await supabase.storage
+    .from("patient-documents")
+    .upload(path, file, { upsert: false });
+  if (storageError) throw new Error(storageError.message);
+
+  // Get public URL
+  const { data: { publicUrl } } = supabase.storage
+    .from("patient-documents")
+    .getPublicUrl(path);
+
+  // Save record to DB
+  const { data, error } = await supabase.from("portal_documents").insert({
+    patient_id,
+    name: file.name,
+    type: docType || "other",
+    file_url: publicUrl,
+    status: "uploaded",
+  }).select().single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function deletePatientDocument(id, file_url) {
+  // Remove from storage
+  if (file_url) {
+    const path = file_url.split("/patient-documents/")[1];
+    if (path) await supabase.storage.from("patient-documents").remove([path]);
+  }
+  const { error } = await supabase.from("portal_documents").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  return { success: true };
+}
+
+// Clinician: get all documents for a patient
+export async function getAllPatientDocuments(patient_id) {
+  const { data, error } = await supabase.from("portal_documents")
+    .select("*").eq("patient_id", patient_id).order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data || [];
+}
