@@ -1,13 +1,10 @@
 // ── Clinic API — proxies through Supabase Edge Function to Neon ───────────────
-const BASE = import.meta.env.VITE_CLINIC_API_URL;
+const SUPABASE_PROJECT = "dhuswldjuuhtxejnmfla";
+const BASE = import.meta.env.VITE_CLINIC_API_URL
+  || `https://${SUPABASE_PROJECT}.supabase.co/functions/v1/clinic-api`;
 const KEY  = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 async function call(action, payload = {}) {
-  // If the Edge Function URL isn't configured, fail gracefully
-  if (!BASE || BASE === "undefined") {
-    console.warn(`clinicApi: VITE_CLINIC_API_URL not set. Action "${action}" skipped.`);
-    return null;
-  }
   const res = await fetch(BASE, {
     method: "POST",
     headers: {
