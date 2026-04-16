@@ -1,56 +1,133 @@
-// ── Clinic API — proxies through Supabase Edge Function to Neon ───────────────
-const SUPABASE_PROJECT = "dhuswldjuuhtxejnmfla";
-const BASE = import.meta.env.VITE_CLINIC_API_URL
-  || `https://${SUPABASE_PROJECT}.supabase.co/functions/v1/clinic-api`;
-const KEY  = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-async function call(action, payload = {}) {
-  const res = await fetch(BASE, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "apikey": KEY,
-      "Authorization": `Bearer ${KEY}`,
-    },
-    body: JSON.stringify({ action, payload }),
-  });
-  const json = await res.json();
-  if (json.error) throw new Error(json.error);
-  return json.data;
-}
+// ── Clinic API — uses Supabase directly (Neon via Edge Function coming later) ──
+import { supabase } from "./supabase";
 
 // ── Appointments ───────────────────────────────────────────────────────────────
-export const bookAppointment      = (details) => call("book_appointment", details);
-export const getAppointments      = (from, to, patient_id) => call("get_appointments", { from, to, patient_id });
-export const updateApptStatus     = (id, status) => call("update_appointment_status", { id, status });
-export const cancelAppointment    = (id) => call("cancel_appointment", { id });
+export async function bookAppointment(details) {
+  const { data, error } = await supabase.from("appointments").insert(details).select().single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function getAppointments(from, to, patient_id) {
+  let q = supabase.from("appointments").select("*").gte("scheduled_at", from).lte("scheduled_at", to).order("scheduled_at");
+  if (patient_id) q = q.eq("patient_id", patient_id);
+  const { data, error } = await q;
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+export async function updateApptStatus(id, status) {
+  const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
+  if (error) throw new Error(error.message);
+  return { success: true };
+}
+
+export async function cancelAppointment(id) {
+  return updateApptStatus(id, "cancelled");
+}
 
 // ── Availability ───────────────────────────────────────────────────────────────
-export const getAvailability      = () => call("get_availability");
-export const upsertAvailability   = (clinician_id, slots) => call("upsert_availability", { clinician_id, slots });
+export async function getAvailability() {
+  const { data, error } = await supabase.from("availability").select("*").eq("is_active", true).order("day_of_week");
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+export async function upsertAvailability(clinician_id, slots) {
+  await supabase.from("availability").delete().eq("clinician_id", clinician_id);
+  if (!slots.length) return { success: true };
+  const { error } = await supabase.from("availability").insert(slots.map(s => ({ ...s, clinician_id })));
+  if (error) throw new Error(error.message);
+  return { success: true };
+}
 
 // ── Blocked Times ──────────────────────────────────────────────────────────────
-export const getBlockedTimes      = (from, to) => call("get_blocked_times", { from, to });
-export const addBlockedTime       = (clinician_id, block) => call("add_blocked_time", { clinician_id, ...block });
-export const removeBlockedTime    = (id) => call("remove_blocked_time", { id });
+export async function getBlockedTimes(from, to) {
+  const { data, error } = await supabase.from("blocked_times").select("*").gte("date", from).lte("date", to).order("date");
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+export async function addBlockedTime(clinician_id, block) {
+  const { data, error } = await supabase.from("blocked_times").insert({ clinician_id, ...block }).select().single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function removeBlockedTime(id) {
+  const { error } = await supabase.from("blocked_times").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  return { success: true };
+}
 
 // ── Patient Profile ────────────────────────────────────────────────────────────
-export const getPatientProfile    = (user_id) => call("get_patient_profile", { user_id });
-export const upsertPatientProfile = (user_id, fields) => call("upsert_patient_profile", { user_id, ...fields });
+export async function getPatientProfile(user_id) {
+  const { data, error } = await supabase.from("patient_profiles").select("*").eq("id", user_id).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function upsertPatientProfile(user_id, fields) {
+  const { error } = await supabase.from("patient_profiles").upsert({ id: user_id, ...fields, updated_at: new Date().toISOString() });
+  if (error) throw new Error(error.message);
+  return { success: true };
+}
 
 // ── Messages ───────────────────────────────────────────────────────────────────
-export const getMessages          = (patient_id) => call("get_messages", { patient_id });
-export const sendMessage          = (patient_id, subject, body, thread_id) => call("send_message", { patient_id, subject, body, thread_id });
-export const markMessageRead      = (id) => call("mark_message_read", { id });
+export async function getMessages(patient_id) {
+  const { data, error } = await supabase.from("portal_messages").select("*").eq("patient_id", patient_id).order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+export async function sendMessage(patient_id, subject, body, thread_id) {
+  const tid = thread_id || crypto.randomUUID();
+  const { data, error } = await supabase.from("portal_messages").insert({ patient_id, sender_role: "patient", subject, body, thread_id: tid }).select().single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function markMessageRead(id) {
+  const { error } = await supabase.from("portal_messages").update({ read: true }).eq("id", id);
+  if (error) throw new Error(error.message);
+  return { success: true };
+}
 
 // ── Documents ──────────────────────────────────────────────────────────────────
-export const getDocuments         = (patient_id) => call("get_documents", { patient_id });
+export async function getDocuments(patient_id) {
+  const { data, error } = await supabase.from("portal_documents").select("*").eq("patient_id", patient_id).order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data || [];
+}
 
 // ── Visit Notes ────────────────────────────────────────────────────────────────
-export const getVisitNotes    = (patient_id) => call("get_visit_notes", { patient_id });
-export const addVisitNote     = (fields) => call("add_visit_note", fields);
+export async function getVisitNotes(patient_id) {
+  const { data, error } = await supabase.from("visit_notes").select("*").eq("patient_id", patient_id).order("note_date", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+export async function addVisitNote(fields) {
+  const { data, error } = await supabase.from("visit_notes").insert(fields).select().single();
+  if (error) throw new Error(error.message);
+  return data;
+}
 
 // ── Prescriptions ──────────────────────────────────────────────────────────────
-export const getPrescriptions         = (patient_id) => call("get_prescriptions", { patient_id });
-export const addPrescription          = (fields) => call("add_prescription", fields);
-export const updatePrescriptionStatus = (id, status) => call("update_prescription_status", { id, status });
+export async function getPrescriptions(patient_id) {
+  const { data, error } = await supabase.from("prescriptions").select("*").eq("patient_id", patient_id).order("prescribed_date", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+export async function addPrescription(fields) {
+  const { data, error } = await supabase.from("prescriptions").insert(fields).select().single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function updatePrescriptionStatus(id, status) {
+  const { error } = await supabase.from("prescriptions").update({ status }).eq("id", id);
+  if (error) throw new Error(error.message);
+  return { success: true };
+}
