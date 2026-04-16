@@ -1,9 +1,6 @@
 import { useState, useEffect } from "react";
 import { getVisitNotes } from "../../lib/clinicApi";
-
-function Card({ children, style={} }) {
-  return <div style={{ background:"#fff", border:"1px solid #e5e7eb", borderRadius:16, padding:"1.4rem", boxShadow:"0 1px 3px rgba(0,0,0,0.06)", ...style }}>{children}</div>;
-}
+import { PageHeader, Card, SectionDivider, EmptyState, T } from "./PortalUI";
 
 export default function PortalVisitNotes({ userId, P }) {
   const [notes, setNotes] = useState([]);
@@ -11,59 +8,61 @@ export default function PortalVisitNotes({ userId, P }) {
   const [expanded, setExpanded] = useState(null);
 
   useEffect(() => {
-    if (!userId) return;
-    getVisitNotes(userId)
-      .then(data => setNotes(Array.isArray(data) ? data : []))
-      .catch(() => setNotes([]))
-      .finally(() => setLoading(false));
+    if(!userId) return;
+    getVisitNotes(userId).then(data=>setNotes(Array.isArray(data)?data:[])).catch(()=>setNotes([])).finally(()=>setLoading(false));
   }, [userId]);
 
-  const fmt = (d) => d ? new Date(d+"T12:00:00").toLocaleDateString("en-US", { weekday:"long", month:"long", day:"numeric", year:"numeric" }) : "—";
+  const fmt = (d) => d ? new Date(d+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"}) : "—";
 
   return (
     <div style={{ padding:"2rem", maxWidth:860, margin:"0 auto" }}>
-      <div style={{ marginBottom:"1.8rem" }}>
-        <div style={{ fontSize:12, color:P.muted2, fontWeight:500, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:4 }}>Visit Notes</div>
-        <h1 style={{ fontSize:"1.6rem", fontWeight:700, color:P.text }}>Your Visit Notes</h1>
-        <p style={{ fontSize:13, color:P.muted, marginTop:4 }}>Notes from your appointments with Kenneth Mutegyeki, PMHNP. Read-only.</p>
-      </div>
+      <PageHeader
+        icon="📋" label="Visit Notes"
+        title="Your Visit Notes"
+        subtitle="Notes from your appointments — read only"
+        gradient={`linear-gradient(135deg,${T.teal}15,#f0fdfa)`}
+      />
 
-      {loading ? <div style={{ color:P.muted, fontSize:13 }}>Loading…</div>
-      : notes.length === 0 ? (
-        <Card style={{ textAlign:"center", padding:"2.5rem" }}>
-          <div style={{ fontSize:36, marginBottom:10 }}>📋</div>
-          <div style={{ fontWeight:600, color:P.text, marginBottom:6 }}>No visit notes yet</div>
-          <div style={{ color:P.muted, fontSize:13 }}>Notes from your appointments will appear here after each visit.</div>
-        </Card>
-      ) : notes.map(n => (
-        <Card key={n.id} style={{ marginBottom:"0.75rem" }}>
+      {loading ? <div style={{color:T.muted,fontSize:13,padding:"1rem 0"}}>Loading…</div>
+      : notes.length===0 ? (
+        <EmptyState icon="📋" title="No visit notes yet" subtitle="Notes from your appointments will appear here after each visit."/>
+      ) : notes.map(n=>(
+        <Card key={n.id} style={{ marginBottom:"0.75rem" }} accent={expanded===n.id?T.teal:undefined}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", cursor:"pointer" }} onClick={()=>setExpanded(expanded===n.id?null:n.id)}>
-            <div>
-              <div style={{ fontWeight:700, fontSize:14, color:P.text, marginBottom:3 }}>{fmt(n.note_date)}</div>
-              <div style={{ fontSize:12, color:P.muted }}>👨‍⚕️ {n.clinician_name}</div>
-              {n.chief_complaint && <div style={{ fontSize:12, color:P.muted, marginTop:2 }}>Chief complaint: {n.chief_complaint}</div>}
+            <div style={{ flex:1 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
+                <div style={{ width:36, height:36, borderRadius:10, background:`${T.teal}15`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>📋</div>
+                <div>
+                  <div style={{ fontWeight:700, fontSize:14, color:T.text }}>{fmt(n.note_date)}</div>
+                  <div style={{ fontSize:12, color:T.muted }}>👨‍⚕️ {n.clinician_name}</div>
+                </div>
+              </div>
+              {n.chief_complaint&&<div style={{ fontSize:12, color:T.muted, marginLeft:46 }}>Chief complaint: <em>{n.chief_complaint}</em></div>}
             </div>
-            <span style={{ color:P.accent, fontSize:18, flexShrink:0 }}>{expanded===n.id?"▲":"▼"}</span>
+            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+              <span style={{ fontSize:11, color:T.accent, fontWeight:500 }}>{expanded===n.id?"Hide":"View"}</span>
+              <span style={{ color:T.accent, fontSize:16, transition:"transform .2s", transform:expanded===n.id?"rotate(180deg)":"none", display:"inline-block" }}>▼</span>
+            </div>
           </div>
 
-          {expanded === n.id && (
-            <div style={{ marginTop:"1rem", paddingTop:"1rem", borderTop:`1px solid ${P.border}`, display:"flex", flexDirection:"column", gap:12 }}>
-              {n.assessment && (
+          {expanded===n.id&&(
+            <div style={{ marginTop:"1rem", paddingTop:"1rem", borderTop:`1px solid ${T.border}`, display:"flex", flexDirection:"column", gap:14 }}>
+              {n.assessment&&(
                 <div>
-                  <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:P.muted2, marginBottom:4 }}>Assessment</div>
-                  <p style={{ fontSize:13, color:P.text, lineHeight:1.7 }}>{n.assessment}</p>
+                  <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:T.muted2, marginBottom:6 }}>Assessment</div>
+                  <p style={{ fontSize:13, color:T.text, lineHeight:1.75, margin:0, padding:"10px 14px", background:"#f9fafb", borderRadius:10 }}>{n.assessment}</p>
                 </div>
               )}
-              {n.plan && (
+              {n.plan&&(
                 <div>
-                  <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:P.muted2, marginBottom:4 }}>Treatment Plan</div>
-                  <p style={{ fontSize:13, color:P.text, lineHeight:1.7 }}>{n.plan}</p>
+                  <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:T.muted2, marginBottom:6 }}>Treatment Plan</div>
+                  <p style={{ fontSize:13, color:T.text, lineHeight:1.75, margin:0, padding:"10px 14px", background:"#f9fafb", borderRadius:10 }}>{n.plan}</p>
                 </div>
               )}
-              {n.follow_up && (
-                <div style={{ background:"#eff6ff", border:"1px solid #bfdbfe", borderRadius:10, padding:"0.75rem 1rem" }}>
-                  <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#1d4ed8", marginBottom:4 }}>Follow-up</div>
-                  <p style={{ fontSize:13, color:"#1e40af", lineHeight:1.7 }}>{n.follow_up}</p>
+              {n.follow_up&&(
+                <div style={{ background:"#eff6ff", border:"1px solid #bfdbfe", borderRadius:12, padding:"12px 14px" }}>
+                  <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#1d4ed8", marginBottom:6 }}>Follow-up Instructions</div>
+                  <p style={{ fontSize:13, color:"#1e40af", lineHeight:1.75, margin:0 }}>{n.follow_up}</p>
                 </div>
               )}
             </div>
@@ -71,9 +70,9 @@ export default function PortalVisitNotes({ userId, P }) {
         </Card>
       ))}
 
-      <Card style={{ marginTop:"1rem", background:"#f0fdfa", border:"1px solid #99f6e4" }}>
-        <div style={{ fontSize:13, color:P.muted, lineHeight:1.7 }}>
-          Questions about your visit notes? Contact us at <a href="mailto:info@mindshiftwellnessclinic.org" style={{ color:P.teal }}>info@mindshiftwellnessclinic.org</a> or call <a href="tel:5083061128" style={{ color:P.teal }}>(508) 306-1128</a>.
+      <Card style={{ marginTop:"1rem", background:"#f0fdfa", border:`1px solid ${T.teal}30` }}>
+        <div style={{ fontSize:13, color:T.muted, lineHeight:1.7 }}>
+          Questions about your visit notes? Contact us at <a href="mailto:info@mindshiftwellnessclinic.org" style={{ color:T.teal }}>info@mindshiftwellnessclinic.org</a> or call <a href="tel:5083061128" style={{ color:T.teal }}>(508) 306-1128</a>.
         </div>
       </Card>
     </div>
