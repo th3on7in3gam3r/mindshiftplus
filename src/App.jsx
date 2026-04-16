@@ -1599,10 +1599,11 @@ export default function App(){
   useEffect(()=>{
     if(loading) return; // wait — don't act until session is resolved
     if(user && (page==="landing" || page==="onboarding")){
-      // Check if there was a portal intent stored before login
+      // Check if there was an intent stored before login
       try{
         const intent = sessionStorage.getItem('ms_intent');
         if(intent==='portal'){ sessionStorage.removeItem('ms_intent'); setPage('portal'); return; }
+        if(intent==='schedule'){ sessionStorage.removeItem('ms_intent'); setPage('schedule'); return; }
       }catch{}
       setPage("dashboard");
       setShowAuth(false);

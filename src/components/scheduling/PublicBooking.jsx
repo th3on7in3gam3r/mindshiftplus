@@ -272,12 +272,11 @@ export default function PublicBooking({ onBack }) {
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
 
-  // Check auth on mount
+  // Check auth on mount and listen for changes
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user || null);
       if (session?.user) {
-        // Pre-fill form with user data
         setForm(f => ({
           ...f,
           name: session.user.user_metadata?.full_name || "",
@@ -285,6 +284,18 @@ export default function PublicBooking({ onBack }) {
         }));
       }
     });
+    // Listen for auth state changes (e.g. user signs in)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      setUser(session?.user || null);
+      if (session?.user) {
+        setForm(f => ({
+          ...f,
+          name: f.name || session.user.user_metadata?.full_name || "",
+          email: f.email || session.user.email || "",
+        }));
+      }
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
   const fmtDate = (d) => d ? new Date(d+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"}) : "";
