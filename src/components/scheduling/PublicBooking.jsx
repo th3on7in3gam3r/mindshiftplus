@@ -203,7 +203,7 @@ function TimeSlots({ date, selected, onSelect }) {
   const dow = date ? new Date(date+"T12:00:00").getDay() : 1;
   const times = SLOTS_BY_DOW[dow] || [];
   return (
-    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(100px,1fr))", gap:8 }}>
+    <div className="slot-grid" style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(100px,1fr))", gap:8 }}>
       {times.map(t => {
         const isBooked = booked.includes(t);
         const isSel = selected === t;
@@ -230,7 +230,7 @@ function TimeSlots({ date, selected, onSelect }) {
 function Steps({ current }) {
   const steps = ["Date","Time","Details","Confirm"];
   return (
-    <div style={{ display:"flex", alignItems:"center", marginBottom:"2rem" }}>
+    <div className="steps-bar" style={{ display:"flex", alignItems:"center", marginBottom:"2rem" }}>
       {steps.map((s,i) => {
         const n = i+1;
         const done = current > n;
@@ -238,7 +238,7 @@ function Steps({ current }) {
         return (
           <div key={s} style={{ display:"flex", alignItems:"center", flex: i<steps.length-1 ? 1 : "none" }}>
             <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
-              <div style={{
+              <div className="step-dot" style={{
                 width:30, height:30, borderRadius:"50%",
                 background: done ? C.teal : active ? C.violet : C.cream,
                 border: `2px solid ${done ? C.teal : active ? C.violet : C.border}`,
@@ -319,7 +319,23 @@ export default function PublicBooking({ onBack }) {
   // ── Main booking UI ──────────────────────────────────────────────────────────
   return (
     <div style={{ minHeight:"100vh", background:C.pearl, fontFamily:C.sans }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');*{box-sizing:border-box}`}</style>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
+        *{box-sizing:border-box}
+        @media(max-width:767px){
+          .booking-grid{grid-template-columns:1fr !important}
+          .booking-summary{display:none !important}
+          .booking-step3{max-width:100% !important; margin:0 !important}
+          .booking-form-grid{grid-template-columns:1fr !important}
+          .clinician-grid{grid-template-columns:1fr !important}
+          .slot-grid{grid-template-columns:repeat(3,1fr) !important}
+          .steps-bar span{display:none}
+          .steps-bar .step-dot{width:24px !important; height:24px !important; font-size:10px !important}
+        }
+        @media(max-width:480px){
+          .slot-grid{grid-template-columns:repeat(2,1fr) !important}
+        }
+      `}</style>
 
       {/* Header */}
       <div style={{ background:"#fff", borderBottom:`1px solid ${C.border}`, padding:"1rem 5%", display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:100 }}>
@@ -335,7 +351,7 @@ export default function PublicBooking({ onBack }) {
         )}
       </div>
 
-      <div style={{ maxWidth:960, margin:"0 auto", padding:"2rem 5% 4rem" }}>
+      <div style={{ maxWidth:960, margin:"0 auto", padding:"clamp(1rem,4vw,2rem) 5% 4rem" }}>
 
         {/* Page title */}
         <div style={{ textAlign:"center", marginBottom:"2rem" }}>
@@ -350,7 +366,7 @@ export default function PublicBooking({ onBack }) {
 
         <Steps current={step}/>
 
-        <div style={{ display:"grid", gridTemplateColumns: step <= 2 ? "1.2fr 1fr" : "1fr", gap:"1.5rem" }}>
+        <div className="booking-grid" style={{ display:"grid", gridTemplateColumns: step <= 2 ? "1.2fr 1fr" : "1fr", gap:"1.5rem" }}>
 
           {/* ── Left / Main ── */}
           <div>
@@ -387,7 +403,7 @@ export default function PublicBooking({ onBack }) {
                 <form onSubmit={handleSubmit} style={{ display:"flex", flexDirection:"column", gap:14 }}>
                   <div>
                     <label style={{ fontSize:12, fontWeight:500, color:C.txt, display:"block", marginBottom:8 }}>Select Your Clinician *</label>
-                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:4 }}>
+                    <div className="clinician-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:4 }}>
                       {CLINICIANS.map(c=>(
                         <button key={c.name} type="button" onClick={()=>setForm(f=>({...f,clinician:c.name}))} style={{
                           padding:"10px 12px", borderRadius:12, border:`2px solid ${form.clinician===c.name?C.violet:C.border}`,
@@ -401,7 +417,7 @@ export default function PublicBooking({ onBack }) {
                       ))}
                     </div>
                   </div>
-                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                  <div className="booking-form-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
                     <Input label="Full Name" value={form.name} onChange={set("name")} placeholder="Your full name" required/>
                     <Input label="Email Address" type="email" value={form.email} onChange={set("email")} placeholder="you@example.com" required/>
                   </div>
@@ -424,7 +440,7 @@ export default function PublicBooking({ onBack }) {
 
           {/* ── Right: Summary (steps 1–2) ── */}
           {step <= 2 && (
-            <div style={{ display:"flex", flexDirection:"column", gap:"1rem" }}>
+            <div className="booking-summary" style={{ display:"flex", flexDirection:"column", gap:"1rem" }}>
               <Card style={{ background:`linear-gradient(135deg,rgba(107,95,207,0.06),rgba(42,157,143,0.04))`, border:`1px solid rgba(107,95,207,0.15)` }}>
                 <SectionLabel>Your Appointment</SectionLabel>
                 <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
