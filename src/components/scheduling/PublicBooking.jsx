@@ -3,6 +3,104 @@ import { bookAppointment } from "../../lib/clinicApi";
 import { emailAppointmentRequested } from "../../lib/emailService";
 import { supabase } from "../../lib/supabase";
 
+// ── Inline auth form for booking ──────────────────────────────────────────────
+function BookingAuthForm({ onBack, onSuccess }) {
+  const [mode, setMode] = useState("signin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [sent, setSent] = useState(false);
+
+  const inp = { width:"100%", padding:"11px 14px", borderRadius:10, border:"1.5px solid #e5e7eb", fontSize:14, color:"#1a1f36", background:"#fff", outline:"none", fontFamily:"inherit", transition:"border-color .2s" };
+  const focus = (e) => { e.target.style.borderColor="#6b5fcf"; e.target.style.boxShadow="0 0 0 3px rgba(107,95,207,0.1)"; };
+  const blur  = (e) => { e.target.style.borderColor="#e5e7eb"; e.target.style.boxShadow="none"; };
+
+  const handleSignIn = async (e) => {
+    e.preventDefault(); setError(""); setLoading(true);
+    const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
+    if (err) { setError(err.message.includes("Invalid") ? "Incorrect email or password." : err.message); }
+    else { onSuccess(data.user); }
+    setLoading(false);
+  };
+
+  const handleSignUp = async (e) => {
+    e.preventDefault(); setError(""); setLoading(true);
+    if (!name.trim()) { setError("Please enter your name."); setLoading(false); return; }
+    const { data, error: err } = await supabase.auth.signUp({ email, password, options:{ data:{ full_name: name.trim() } } });
+    if (err) setError(err.message);
+    else if (data.user?.confirmed_at || data.session) { onSuccess(data.user); }
+    else setSent(true);
+    setLoading(false);
+  };
+
+  const handleForgot = async (e) => {
+    e.preventDefault(); setError(""); setLoading(true);
+    const { error: err } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+    if (err) setError(err.message); else setSent(true);
+    setLoading(false);
+  };
+
+  if (sent) return (
+    <div style={{ maxWidth:380, width:"100%", textAlign:"center" }}>
+      <div style={{ fontSize:48, marginBottom:"1rem" }}>📬</div>
+      <h2 style={{ fontSize:"1.3rem", fontWeight:700, color:"#1a1f36", marginBottom:8 }}>Check your email</h2>
+      <p style={{ fontSize:14, color:"#6b7280", lineHeight:1.7, marginBottom:"1.5rem" }}>We sent a link to <strong>{email}</strong>. Click it to continue, then come back to book.</p>
+      <button onClick={()=>{ setSent(false); setMode("signin"); }} style={{ background:"transparent", border:"none", color:"#6b5fcf", fontSize:14, cursor:"pointer" }}>← Back to sign in</button>
+    </div>
+  );
+
+  return (
+    <div style={{ maxWidth:380, width:"100%" }}>
+      {onBack && <button onClick={onBack} style={{ background:"transparent", border:"none", color:"#6b7280", fontSize:13, cursor:"pointer", marginBottom:"2rem", padding:0, display:"flex", alignItems:"center", gap:5 }}>← Back to clinic site</button>}
+
+      {mode === "signin" ? (
+        <>
+          <h2 style={{ fontSize:"1.5rem", fontWeight:700, color:"#1a1f36", marginBottom:6 }}>Sign in to book</h2>
+          <p style={{ fontSize:14, color:"#6b7280", marginBottom:"1.5rem" }}>Sign in to your MindShift Wellness Clinic account</p>
+          {error && <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:8, padding:"10px 14px", fontSize:13, color:"#dc2626", marginBottom:12 }}>{error}</div>}
+          <form onSubmit={handleSignIn} style={{ display:"flex", flexDirection:"column", gap:14 }}>
+            <div><label style={{ fontSize:12, fontWeight:500, color:"#374151", display:"block", marginBottom:5 }}>Email</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" required style={inp} onFocus={focus} onBlur={blur}/></div>
+            <div>
+              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}>
+                <label style={{ fontSize:12, fontWeight:500, color:"#374151" }}>Password</label>
+                <button type="button" onClick={()=>{ setError(""); setMode("forgot"); }} style={{ background:"transparent", border:"none", color:"#6b5fcf", fontSize:12, cursor:"pointer", padding:0 }}>Forgot?</button>
+              </div>
+              <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••" required style={inp} onFocus={focus} onBlur={blur}/>
+            </div>
+            <button type="submit" disabled={loading} style={{ background:`linear-gradient(135deg,#6b5fcf,#2a9d8f)`, border:"none", borderRadius:10, padding:"13px", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer", opacity:loading?0.7:1 }}>{loading?"Signing in…":"Sign In & Continue to Booking"}</button>
+          </form>
+          <p style={{ textAlign:"center", marginTop:"1.2rem", fontSize:13, color:"#6b7280" }}>New patient? <button onClick={()=>{ setError(""); setMode("signup"); }} style={{ background:"transparent", border:"none", color:"#6b5fcf", fontSize:13, cursor:"pointer", fontWeight:600 }}>Create account</button></p>
+        </>
+      ) : mode === "signup" ? (
+        <>
+          <h2 style={{ fontSize:"1.5rem", fontWeight:700, color:"#1a1f36", marginBottom:6 }}>Create your account</h2>
+          <p style={{ fontSize:14, color:"#6b7280", marginBottom:"1.5rem" }}>Join as a patient of MindShift Wellness Clinic</p>
+          {error && <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:8, padding:"10px 14px", fontSize:13, color:"#dc2626", marginBottom:12 }}>{error}</div>}
+          <form onSubmit={handleSignUp} style={{ display:"flex", flexDirection:"column", gap:14 }}>
+            <div><label style={{ fontSize:12, fontWeight:500, color:"#374151", display:"block", marginBottom:5 }}>Full Name</label><input value={name} onChange={e=>setName(e.target.value)} placeholder="Your full name" required style={inp} onFocus={focus} onBlur={blur}/></div>
+            <div><label style={{ fontSize:12, fontWeight:500, color:"#374151", display:"block", marginBottom:5 }}>Email</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" required style={inp} onFocus={focus} onBlur={blur}/></div>
+            <div><label style={{ fontSize:12, fontWeight:500, color:"#374151", display:"block", marginBottom:5 }}>Password</label><input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="At least 6 characters" required minLength={6} style={inp} onFocus={focus} onBlur={blur}/></div>
+            <button type="submit" disabled={loading} style={{ background:`linear-gradient(135deg,#6b5fcf,#2a9d8f)`, border:"none", borderRadius:10, padding:"13px", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer", opacity:loading?0.7:1 }}>{loading?"Creating…":"Create Account & Continue"}</button>
+          </form>
+          <p style={{ textAlign:"center", marginTop:"1.2rem", fontSize:13, color:"#6b7280" }}>Already have an account? <button onClick={()=>{ setError(""); setMode("signin"); }} style={{ background:"transparent", border:"none", color:"#6b5fcf", fontSize:13, cursor:"pointer", fontWeight:600 }}>Sign in</button></p>
+        </>
+      ) : (
+        <>
+          <h2 style={{ fontSize:"1.5rem", fontWeight:700, color:"#1a1f36", marginBottom:6 }}>Reset password</h2>
+          {error && <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:8, padding:"10px 14px", fontSize:13, color:"#dc2626", marginBottom:12 }}>{error}</div>}
+          <form onSubmit={handleForgot} style={{ display:"flex", flexDirection:"column", gap:14 }}>
+            <div><label style={{ fontSize:12, fontWeight:500, color:"#374151", display:"block", marginBottom:5 }}>Email</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" required style={inp} onFocus={focus} onBlur={blur}/></div>
+            <button type="submit" disabled={loading} style={{ background:`linear-gradient(135deg,#6b5fcf,#2a9d8f)`, border:"none", borderRadius:10, padding:"13px", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer", opacity:loading?0.7:1 }}>{loading?"Sending…":"Send Reset Link"}</button>
+          </form>
+          <p style={{ textAlign:"center", marginTop:"1.2rem" }}><button onClick={()=>{ setError(""); setMode("signin"); }} style={{ background:"transparent", border:"none", color:"#6b5fcf", fontSize:13, cursor:"pointer" }}>← Back to sign in</button></p>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── Design tokens matching site-main.html ──────────────────────────────────────
 const C = {
   pearl:   "#f5f0ee",
@@ -311,28 +409,44 @@ export default function PublicBooking({ onBack }) {
     </div>
   );
 
-  // Not logged in — prompt to sign in
+  // Not logged in — show inline login form
   if (!user) return (
-    <div style={{ minHeight:"100vh", background:C.pearl, display:"flex", alignItems:"center", justifyContent:"center", padding:"2rem", fontFamily:C.sans }}>
+    <div style={{ minHeight:"100vh", background:C.pearl, display:"flex", fontFamily:C.sans }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');*{box-sizing:border-box}`}</style>
-      <div style={{ background:"#fff", border:`1px solid ${C.border}`, borderRadius:20, padding:"2.5rem", maxWidth:420, width:"100%", textAlign:"center", boxShadow:"0 4px 24px rgba(74,108,247,0.08)" }}>
-        <div style={{ width:60, height:60, borderRadius:16, background:`linear-gradient(135deg,${C.violet},${C.teal})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:28, margin:"0 auto 1.2rem" }}>🏥</div>
-        <h2 style={{ fontFamily:C.serif, fontSize:"1.3rem", fontWeight:700, color:C.txt, marginBottom:8 }}>Sign In to Book</h2>
-        <p style={{ fontSize:14, color:C.muted, lineHeight:1.7, marginBottom:"1.5rem" }}>
-          To book an appointment, please sign in or create a free account. This helps us keep your appointment history and send you reminders.
-        </p>
-        <button onClick={()=>{ try{ sessionStorage.setItem('ms_intent','schedule'); }catch{} window.location.href='/'; }} style={{
-          width:"100%", background:`linear-gradient(135deg,${C.violet},${C.teal})`,
-          border:"none", borderRadius:12, padding:"13px", color:"#fff",
-          fontSize:14, fontWeight:600, cursor:"pointer", marginBottom:10,
-        }}>
-          Sign In / Create Account
-        </button>
-        {onBack && <button onClick={onBack} style={{ background:"transparent", border:"none", color:C.muted, fontSize:13, cursor:"pointer" }}>← Back to clinic site</button>}
-        <div style={{ marginTop:"1.2rem", paddingTop:"1rem", borderTop:`1px solid ${C.border}`, fontSize:12, color:C.muted }}>
-          Need help? <a href="tel:5083061128" style={{ color:C.violet, textDecoration:"none" }}>(508) 306-1128</a>
+
+      {/* Left branding */}
+      <div style={{ width:"42%", background:`linear-gradient(160deg,#1e2a4a,#2d3f6e)`, display:"flex", flexDirection:"column", justifyContent:"space-between", padding:"3rem", position:"relative", overflow:"hidden" }} className="booking-auth-panel">
+        <div style={{ position:"absolute", top:"-20%", right:"-20%", width:350, height:350, borderRadius:"50%", background:"rgba(107,95,207,0.15)", filter:"blur(60px)" }}/>
+        <div style={{ position:"relative", zIndex:1 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:"2.5rem" }}>
+            <div style={{ width:40, height:40, borderRadius:10, background:`linear-gradient(135deg,${C.violet},${C.teal})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>🏥</div>
+            <div>
+              <div style={{ fontSize:14, fontWeight:700, color:"#fff" }}>MindShift Wellness Clinic</div>
+              <div style={{ fontSize:11, color:"rgba(255,255,255,0.45)" }}>Appointment Booking</div>
+            </div>
+          </div>
+          <h2 style={{ fontFamily:C.serif, fontSize:"clamp(1.6rem,3vw,2.4rem)", fontWeight:300, color:"#fff", lineHeight:1.2, marginBottom:"1rem" }}>
+            Book your<br/><em style={{ fontStyle:"italic", color:"rgba(168,156,245,0.9)" }}>appointment.</em>
+          </h2>
+          <p style={{ fontSize:13, color:"rgba(255,255,255,0.5)", lineHeight:1.75, marginBottom:"1.5rem" }}>Sign in or create a free account to book your appointment and manage your care.</p>
+          {[["📅","View & manage appointments"],["💬","Secure messaging with your care team"],["💊","Track your medications"],["📓","Private wellness journal"]].map(([icon,text])=>(
+            <div key={text} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
+              <div style={{ width:28, height:28, borderRadius:7, background:"rgba(255,255,255,0.08)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, flexShrink:0 }}>{icon}</div>
+              <span style={{ fontSize:12, color:"rgba(255,255,255,0.6)" }}>{text}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ position:"relative", zIndex:1, background:"rgba(255,255,255,0.06)", borderRadius:12, padding:"1rem", fontSize:12, color:"rgba(255,255,255,0.5)" }}>
+          Need help? <a href="tel:5083061128" style={{ color:"rgba(255,255,255,0.8)", textDecoration:"none" }}>(508) 306-1128</a>
         </div>
       </div>
+
+      {/* Right: inline auth form */}
+      <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", padding:"3rem 2rem" }}>
+        <BookingAuthForm onBack={onBack} onSuccess={(u)=>{ setUser(u); setForm(f=>({...f, name:u.user_metadata?.full_name||"", email:u.email||""})); }}/>
+      </div>
+
+      <style>{`@media(max-width:767px){ .booking-auth-panel{ display:none !important } }`}</style>
     </div>
   );
 
