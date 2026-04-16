@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { bookAppointment } from "../../lib/clinicApi";
 import { emailAppointmentRequested } from "../../lib/emailService";
+import { supabase } from "../../lib/supabase";
 
 // ── Design tokens matching site-main.html ──────────────────────────────────────
 const C = {
@@ -262,6 +263,7 @@ function Steps({ current }) {
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 export default function PublicBooking({ onBack }) {
+  const [user, setUser] = useState(undefined); // undefined = loading
   const [step, setStep] = useState(1);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
@@ -270,8 +272,58 @@ export default function PublicBooking({ onBack }) {
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
 
+  // Check auth on mount
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user || null);
+      if (session?.user) {
+        // Pre-fill form with user data
+        setForm(f => ({
+          ...f,
+          name: session.user.user_metadata?.full_name || "",
+          email: session.user.email || "",
+        }));
+      }
+    });
+  }, []);
+
   const fmtDate = (d) => d ? new Date(d+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"}) : "";
   const set = (k) => (v) => setForm(f=>({...f,[k]:v}));
+
+  // Loading auth check
+  if (user === undefined) return (
+    <div style={{ minHeight:"100vh", background:C.pearl, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:C.sans }}>
+      <div style={{ textAlign:"center" }}>
+        <div style={{ fontSize:32, marginBottom:8 }}>🏥</div>
+        <div style={{ fontSize:13, color:C.muted }}>Loading…</div>
+      </div>
+    </div>
+  );
+
+  // Not logged in — prompt to sign in
+  if (!user) return (
+    <div style={{ minHeight:"100vh", background:C.pearl, display:"flex", alignItems:"center", justifyContent:"center", padding:"2rem", fontFamily:C.sans }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');*{box-sizing:border-box}`}</style>
+      <div style={{ background:"#fff", border:`1px solid ${C.border}`, borderRadius:20, padding:"2.5rem", maxWidth:420, width:"100%", textAlign:"center", boxShadow:"0 4px 24px rgba(74,108,247,0.08)" }}>
+        <div style={{ width:60, height:60, borderRadius:16, background:`linear-gradient(135deg,${C.violet},${C.teal})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:28, margin:"0 auto 1.2rem" }}>🏥</div>
+        <h2 style={{ fontFamily:C.serif, fontSize:"1.3rem", fontWeight:700, color:C.txt, marginBottom:8 }}>Sign In to Book</h2>
+        <p style={{ fontSize:14, color:C.muted, lineHeight:1.7, marginBottom:"1.5rem" }}>
+          To book an appointment, please sign in or create a free account. This helps us keep your appointment history and send you reminders.
+        </p>
+        <button onClick={()=>{ try{ sessionStorage.setItem('ms_intent','schedule'); }catch{} window.location.href='/'; }} style={{
+          width:"100%", background:`linear-gradient(135deg,${C.violet},${C.teal})`,
+          border:"none", borderRadius:12, padding:"13px", color:"#fff",
+          fontSize:14, fontWeight:600, cursor:"pointer", marginBottom:10,
+        }}>
+          Sign In / Create Account
+        </button>
+        {onBack && <button onClick={onBack} style={{ background:"transparent", border:"none", color:C.muted, fontSize:13, cursor:"pointer" }}>← Back to clinic site</button>}
+        <div style={{ marginTop:"1.2rem", paddingTop:"1rem", borderTop:`1px solid ${C.border}`, fontSize:12, color:C.muted }}>
+          Need help? <a href="tel:5083061128" style={{ color:C.violet, textDecoration:"none" }}>(508) 306-1128</a>
+        </div>
+      </div>
+    </div>
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -283,7 +335,8 @@ export default function PublicBooking({ onBack }) {
         reason: form.reason, scheduled_at: `${date}T${time.replace(" AM","").replace(" PM","")}:00`,
         duration_minutes: 60, location: "Milford", appointment_type: form.reason || "consultation",
         provider_name: form.clinician,
-        is_public: true,
+        patient_id: user?.id || null,
+        is_public: !user,
       });
       // Send email notifications (non-blocking)
       emailAppointmentRequested({
