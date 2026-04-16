@@ -46,9 +46,9 @@ function AdminLogin({ onSuccess }) {
   };
 
   return (
-    <div style={{ minHeight:"100vh", background:"#1e2a4a", display:"flex", alignItems:"center", justifyContent:"center", padding:"2rem", fontFamily:"'Inter',system-ui,sans-serif" }}>
+    <div style={{ minHeight:"100vh", background:"#1e2a4a", display:"flex", alignItems:"center", justifyContent:"center", padding:"1.5rem", fontFamily:"'Inter',system-ui,sans-serif" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');*{box-sizing:border-box}`}</style>
-      <div style={{ background:"#fff", borderRadius:20, padding:"2.5rem", maxWidth:400, width:"100%", boxShadow:"0 20px 60px rgba(0,0,0,0.3)" }}>
+      <div style={{ background:"#fff", borderRadius:20, padding:"2rem", maxWidth:400, width:"100%", boxShadow:"0 20px 60px rgba(0,0,0,0.3)" }}>
         <div style={{ textAlign:"center", marginBottom:"2rem" }}>
           <div style={{ width:52, height:52, borderRadius:14, background:"linear-gradient(135deg,#4a6cf7,#0ea5a0)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, margin:"0 auto 1rem" }}>🏥</div>
           <h2 style={{ fontSize:"1.3rem", fontWeight:700, color:"#1a1f36", marginBottom:4 }}>Admin Dashboard</h2>
@@ -196,7 +196,7 @@ function AppointmentsTab({ userId }) {
               {a.notes&&<div style={{ color:P.muted2, fontSize:11, marginTop:2, fontStyle:"italic" }}>Notes: {a.notes}</div>}
             </div>
             {["pending","requested","upcoming"].includes(a.status)&&(
-              <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+              <div className="admin-appt-actions" style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                 <button onClick={()=>handleStatus(a.id,"confirmed")} style={{ background:"#dcfce7", border:"none", borderRadius:20, padding:"6px 14px", color:"#166534", fontSize:12, fontWeight:600, cursor:"pointer" }}>✓ Confirm</button>
                 <button onClick={()=>handleStatus(a.id,"cancelled")} style={{ background:"#fee2e2", border:"none", borderRadius:20, padding:"6px 14px", color:"#991b1b", fontSize:12, fontWeight:600, cursor:"pointer" }}>✕ Cancel</button>
                 {a.status==="confirmed"&&<button onClick={()=>handleStatus(a.id,"completed")} style={{ background:"#dbeafe", border:"none", borderRadius:20, padding:"6px 14px", color:"#1e40af", fontSize:12, fontWeight:600, cursor:"pointer" }}>✓ Complete</button>}
@@ -267,7 +267,7 @@ function AvailabilityTab({ userId }) {
       <div style={{ display:"flex", flexDirection:"column", gap:"0.75rem", marginBottom:"1.2rem" }}>
         {slots.map((s,i)=>(
           <Card key={i} style={{ padding:"1rem" }}>
-            <div style={{ display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
+            <div className="admin-avail-row" style={{ display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
               <select value={s.day_of_week} onChange={e=>update(i,"day_of_week",Number(e.target.value))} style={{...inputStyle,minWidth:110}}>
                 {DAYS.map((d,idx)=><option key={d} value={idx}>{d}</option>)}
               </select>
@@ -336,7 +336,7 @@ function BlockedTab({ userId }) {
   const inputStyle = { padding:"10px 12px", borderRadius:8, border:`1.5px solid ${P.border}`, fontSize:14, color:P.text, background:P.bg2, outline:"none", fontFamily:"inherit", width:"100%" };
 
   return (
-    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"1.5rem" }}>
+    <div className="admin-blocked-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"1.5rem" }}>
       {toast&&<div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"#1a1f36", borderRadius:30, padding:"10px 20px", fontSize:13, color:"#fff", zIndex:9999, whiteSpace:"nowrap" }}>{toast}</div>}
 
       <Card>
@@ -839,36 +839,50 @@ export default function AdminSchedule({ onBack }) {
 
   return (
     <div style={{ minHeight:"100vh", background:P.bg, fontFamily:"'Inter',system-ui,sans-serif" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap'); *{box-sizing:border-box}`}</style>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        *{box-sizing:border-box}
+        @media(max-width:767px){
+          .admin-header-email{display:none !important}
+          .admin-tabs{overflow-x:auto !important; width:100% !important; flex-wrap:nowrap !important}
+          .admin-tabs button{white-space:nowrap; padding:8px 12px !important; font-size:12px !important}
+          .admin-blocked-grid{grid-template-columns:1fr !important}
+          .admin-avail-row{flex-wrap:wrap !important}
+          .admin-avail-row select, .admin-avail-row input{min-width:0 !important; width:100% !important}
+          .admin-appt-actions{flex-direction:column !important; align-items:flex-start !important}
+          .admin-form-grid{grid-template-columns:1fr !important}
+        }
+      `}</style>
 
       {/* Header */}
-      <div style={{ background:P.sidebar, padding:"1rem 5%", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-          <div style={{ width:36, height:36, borderRadius:10, background:`linear-gradient(135deg,${P.accent},${P.teal})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>🏥</div>
+      <div style={{ background:P.sidebar, padding:"0.9rem 4%", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          <div style={{ width:34, height:34, borderRadius:9, background:`linear-gradient(135deg,${P.accent},${P.teal})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, flexShrink:0 }}>🏥</div>
           <div>
             <div style={{ fontSize:13, fontWeight:700, color:"#fff" }}>MindShift Wellness Clinic</div>
             <div style={{ fontSize:11, color:"rgba(255,255,255,0.5)" }}>Scheduling Dashboard · Admin</div>
           </div>
         </div>
-        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-          <span style={{ fontSize:12, color:"rgba(255,255,255,0.5)" }}>{adminUser?.email}</span>
-          <button onClick={handleSignOut} style={{ background:"rgba(255,255,255,0.1)", border:"1px solid rgba(255,255,255,0.2)", borderRadius:20, padding:"6px 14px", fontSize:12, color:"rgba(255,255,255,0.7)", cursor:"pointer" }}>Sign Out</button>
-          {onBack&&<button onClick={onBack} style={{ background:"rgba(255,255,255,0.1)", border:"1px solid rgba(255,255,255,0.2)", borderRadius:20, padding:"6px 14px", fontSize:12, color:"rgba(255,255,255,0.7)", cursor:"pointer" }}>← Exit</button>}
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          <span className="admin-header-email" style={{ fontSize:11, color:"rgba(255,255,255,0.5)" }}>{adminUser?.email}</span>
+          <button onClick={handleSignOut} style={{ background:"rgba(255,255,255,0.1)", border:"1px solid rgba(255,255,255,0.2)", borderRadius:20, padding:"5px 12px", fontSize:11, color:"rgba(255,255,255,0.7)", cursor:"pointer" }}>Sign Out</button>
+          {onBack&&<button onClick={onBack} style={{ background:"rgba(255,255,255,0.1)", border:"1px solid rgba(255,255,255,0.2)", borderRadius:20, padding:"5px 12px", fontSize:11, color:"rgba(255,255,255,0.7)", cursor:"pointer" }}>← Exit</button>}
         </div>
       </div>
 
-      <div style={{ maxWidth:1100, margin:"0 auto", padding:"2rem 5%" }}>
-        <div style={{ marginBottom:"1.5rem" }}>
-          <h1 style={{ fontSize:"1.6rem", fontWeight:700, color:P.text }}>Scheduling Dashboard</h1>
+      <div style={{ maxWidth:1100, margin:"0 auto", padding:"1.5rem 4%" }}>
+        <div style={{ marginBottom:"1.2rem" }}>
+          <h1 style={{ fontSize:"clamp(1.2rem,4vw,1.6rem)", fontWeight:700, color:P.text }}>Scheduling Dashboard</h1>
           <p style={{ fontSize:13, color:P.muted, marginTop:4 }}>Manage appointments, availability, and blocked times.</p>
         </div>
 
-        {/* Tabs */}
-        <div style={{ display:"flex", gap:4, marginBottom:"1.5rem", background:P.bg2, padding:4, borderRadius:12, border:`1px solid ${P.border}`, width:"fit-content" }}>
+        {/* Tabs — scrollable on mobile */}
+        <div className="admin-tabs" style={{ display:"flex", gap:4, marginBottom:"1.5rem", background:P.bg2, padding:4, borderRadius:12, border:`1px solid ${P.border}`, overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
           {tabs.map(t=>(
             <button key={t.id} onClick={()=>setTab(t.id)} style={{
-              padding:"8px 18px", borderRadius:9, border:"none", fontSize:13, fontWeight:tab===t.id?600:400,
+              padding:"8px 14px", borderRadius:9, border:"none", fontSize:13, fontWeight:tab===t.id?600:400,
               background:tab===t.id?P.accent:"transparent", color:tab===t.id?"#fff":P.muted, cursor:"pointer",
+              whiteSpace:"nowrap", flexShrink:0,
             }}>{t.label}</button>
           ))}
         </div>
