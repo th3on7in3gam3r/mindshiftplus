@@ -106,7 +106,7 @@ function PortalAuthScreen({ onBack }) {
         {/* Bottom contact */}
         <div style={{ position:"relative", zIndex:1, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:14, padding:"1rem 1.2rem" }}>
           <div style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.35)", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:8 }}>Need help?</div>
-          <a href="tel:5086191044" style={{ display:"flex", alignItems:"center", gap:6, fontSize:13, color:"rgba(255,255,255,0.7)", textDecoration:"none", marginBottom:5 }}>📞 (508) 619-1044</a>
+          <a href="tel:5083061128" style={{ display:"flex", alignItems:"center", gap:6, fontSize:13, color:"rgba(255,255,255,0.7)", textDecoration:"none", marginBottom:5 }}>📞 (508) 306-1128</a>
           <a href="mailto:info@mindshiftwellnessclinic.org" style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:"rgba(255,255,255,0.45)", textDecoration:"none" }}>✉️ info@mindshiftwellnessclinic.org</a>
         </div>
       </div>
@@ -368,7 +368,7 @@ export default function Portal({ onExit }) {
         <div style={{ padding:"1rem 1.5rem", borderTop:`1px solid ${P.border}`, display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:8, background:P.bg2 }}>
           <span style={{ fontSize:11, color:P.muted2 }}>© 2026 MindShift Wellness Clinic · Secure Patient Portal</span>
           <div style={{ display:"flex", gap:"1rem" }}>
-            <a href="tel:5086191044" style={{ fontSize:11, color:P.muted, textDecoration:"none" }}>📞 (508) 619-1044</a>
+            <a href="tel:5083061128" style={{ fontSize:11, color:P.muted, textDecoration:"none" }}>📞 (508) 306-1128</a>
             <a href="mailto:info@mindshiftwellnessclinic.org" style={{ fontSize:11, color:P.muted, textDecoration:"none" }}>✉️ Email Us</a>
           </div>
         </div>

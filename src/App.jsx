@@ -1342,7 +1342,7 @@ function About(){
     {icon:"📋",label:"License",value:"Psychiatric Nurse Practitioner · MA License RN2267715 · Exp. 2028-02"},
     {icon:"🏥",label:"Role",value:"Psychiatric Nurse Practitioner, BC, BSN, MSN"},
     {icon:"📍",label:"Locations",value:"31 Granite St. Suite #2, Milford, MA 01757 · 100 Cambridge St. 14th Fl, Boston, MA 02114"},
-    {icon:"📞",label:"Phone",value:"(508) 619-1044"},
+    {icon:"📞",label:"Phone",value:"(508) 306-1128"},
     {icon:"✉️",label:"Email",value:"info@mindshiftwellnessclinic.org"},
     {icon:"💳",label:"Session Fee",value:"$150 per session · Initial: $400"},
   ];

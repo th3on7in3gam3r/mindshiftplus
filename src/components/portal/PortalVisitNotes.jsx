@@ -73,7 +73,7 @@ export default function PortalVisitNotes({ userId, P }) {
 
       <Card style={{ marginTop:"1rem", background:"#f0fdfa", border:"1px solid #99f6e4" }}>
         <div style={{ fontSize:13, color:P.muted, lineHeight:1.7 }}>
-          Questions about your visit notes? Contact us at <a href="mailto:info@mindshiftwellnessclinic.org" style={{ color:P.teal }}>info@mindshiftwellnessclinic.org</a> or call <a href="tel:5086191044" style={{ color:P.teal }}>(508) 619-1044</a>.
+          Questions about your visit notes? Contact us at <a href="mailto:info@mindshiftwellnessclinic.org" style={{ color:P.teal }}>info@mindshiftwellnessclinic.org</a> or call <a href="tel:5083061128" style={{ color:P.teal }}>(508) 306-1128</a>.
         </div>
       </Card>
     </div>

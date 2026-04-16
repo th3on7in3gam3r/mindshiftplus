@@ -147,7 +147,7 @@ export default function PortalLogin({ onBack }) {
           ))}
           <div style={{ marginTop:"2rem", padding:"1rem", background:"rgba(255,255,255,0.06)", borderRadius:12, border:"1px solid rgba(255,255,255,0.1)" }}>
             <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", marginBottom:4 }}>Need help? Contact us directly</div>
-            <a href="tel:5086191044" style={{ fontSize:13, color:"rgba(255,255,255,0.7)", textDecoration:"none", display:"block" }}>📞 (508) 619-1044</a>
+            <a href="tel:5083061128" style={{ fontSize:13, color:"rgba(255,255,255,0.7)", textDecoration:"none", display:"block" }}>📞 (508) 306-1128</a>
             <a href="mailto:info@mindshiftwellnessclinic.org" style={{ fontSize:12, color:"rgba(255,255,255,0.5)", textDecoration:"none", display:"block", marginTop:3 }}>✉️ info@mindshiftwellnessclinic.org</a>
           </div>
         </div>

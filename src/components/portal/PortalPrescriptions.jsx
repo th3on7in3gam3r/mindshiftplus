@@ -115,7 +115,7 @@ export default function PortalPrescriptions({ userId, P }) {
 
       <Card style={{ marginTop:"1rem", background:"#eff6ff", border:"1px solid #bfdbfe" }}>
         <div style={{ fontSize:13, color:"#1e40af", lineHeight:1.7 }}>
-          💊 Need a refill or have questions about your medications? Call us at <a href="tel:5086191044" style={{ color:"#1d4ed8", fontWeight:600 }}>(508) 619-1044</a> or message us through the portal.
+          💊 Need a refill or have questions about your medications? Call us at <a href="tel:5083061128" style={{ color:"#1d4ed8", fontWeight:600 }}>(508) 306-1128</a> or message us through the portal.
         </div>
       </Card>
     </div>

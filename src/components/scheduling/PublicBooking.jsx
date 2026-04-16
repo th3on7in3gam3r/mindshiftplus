@@ -292,7 +292,7 @@ export default function PublicBooking({ onBack }) {
         <div style={{ background:"rgba(82,183,136,0.08)", border:`1px solid rgba(82,183,136,0.25)`, borderRadius:12, padding:"1rem", marginBottom:"1.5rem", fontSize:13, color:"#166534", lineHeight:1.7 }}>
           We'll confirm your appointment via email at <strong>{form.email}</strong> within 1 business day.
         </div>
-        <p style={{ fontSize:12, color:C.muted2, marginBottom:"1.5rem" }}>Questions? Call us at (508) 619-1044</p>
+        <p style={{ fontSize:12, color:C.muted2, marginBottom:"1.5rem" }}>Questions? Call us at (508) 306-1128</p>
         {onBack && (
           <button onClick={onBack} style={{ background:C.violet, border:"none", borderRadius:30, padding:"11px 28px", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer" }}>
             ← Back to Clinic Site
@@ -428,7 +428,7 @@ export default function PublicBooking({ onBack }) {
 
               <Card>
                 <SectionLabel>Need Help?</SectionLabel>
-                <a href="tel:5086191044" style={{ display:"flex", gap:8, alignItems:"center", fontSize:13, color:C.muted, textDecoration:"none", marginBottom:8 }}>📞 (508) 619-1044</a>
+                <a href="tel:5083061128" style={{ display:"flex", gap:8, alignItems:"center", fontSize:13, color:C.muted, textDecoration:"none", marginBottom:8 }}>📞 (508) 306-1128</a>
                 <a href="mailto:info@mindshiftwellnessclinic.org" style={{ display:"flex", gap:8, alignItems:"center", fontSize:12, color:C.muted, textDecoration:"none" }}>✉️ info@mindshiftwellnessclinic.org</a>
               </Card>
 

@@ -49,7 +49,7 @@ export default function PortalAppointments({ userId, P }) {
       await bookAppointment({ patient_id: userId, appointment_type:form.appointment_type.toLowerCase().replace(/ /g,"_"), location:form.location, notes:form.notes, status:"requested" });
       showToast("✓ Request sent! We'll confirm within 1 business day.");
       setShowForm(false); setForm({appointment_type:"",location:"",notes:""}); load();
-    } catch { showToast("Something went wrong. Please call (508) 619-1044."); }
+    } catch { showToast("Something went wrong. Please call (508) 306-1128."); }
     setSubmitting(false);
   };
 
@@ -104,7 +104,7 @@ export default function PortalAppointments({ userId, P }) {
                 <label style={{ fontSize:12, fontWeight:500, color:P.text, display:"block", marginBottom:5 }}>Notes (optional)</label>
                 <textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} rows={3} placeholder="Any specific concerns…" style={{...inputStyle,resize:"vertical"}}/>
               </div>
-              <p style={{ fontSize:11, color:P.muted, lineHeight:1.6 }}>We'll contact you within 1 business day to confirm. For urgent needs, call (508) 619-1044.</p>
+              <p style={{ fontSize:11, color:P.muted, lineHeight:1.6 }}>We'll contact you within 1 business day to confirm. For urgent needs, call (508) 306-1128.</p>
               <div style={{ display:"flex", gap:10 }}>
                 <button type="submit" disabled={submitting} style={{ flex:1, background:P.accent, border:"none", borderRadius:20, padding:"11px", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer" }}>{submitting?"Sending…":"Submit Request"}</button>
                 <button type="button" onClick={()=>setShowForm(false)} style={{ flex:1, background:"#f3f4f6", border:"none", borderRadius:20, padding:"11px", color:P.muted, fontSize:14, cursor:"pointer" }}>Cancel</button>
@@ -122,7 +122,7 @@ export default function PortalAppointments({ userId, P }) {
           <Card style={{ textAlign:"center", padding:"2.5rem" }}>
             <div style={{ fontSize:36, marginBottom:10 }}>📅</div>
             <div style={{ fontWeight:600, color:P.text, marginBottom:6 }}>No upcoming appointments</div>
-            <div style={{ color:P.muted, fontSize:13 }}>Request one above or call us at (508) 619-1044.</div>
+            <div style={{ color:P.muted, fontSize:13 }}>Request one above or call us at (508) 306-1128.</div>
           </Card>
         ) : upcoming.map(a=>(
           <Card key={a.id} style={{ marginBottom:"0.75rem" }}>

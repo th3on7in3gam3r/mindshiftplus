@@ -82,7 +82,7 @@ export default function PortalMessages({ userId, P }) {
                 <textarea value={body} onChange={e=>setBody(e.target.value)} rows={5} required placeholder="Write your message here…" style={{...inputStyle,resize:"vertical"}}/>
               </div>
               <div style={{ background:"#fff7ed", border:"1px solid #fed7aa", borderRadius:8, padding:"10px 12px", fontSize:11, color:"#92400e", lineHeight:1.6 }}>
-                ⚠️ For medical emergencies, call 911. For urgent needs, call (508) 619-1044 directly.
+                ⚠️ For medical emergencies, call 911. For urgent needs, call (508) 306-1128 directly.
               </div>
               <div style={{ display:"flex", gap:10 }}>
                 <button type="submit" disabled={sending} style={{ flex:1, background:P.accent, border:"none", borderRadius:20, padding:"11px", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer" }}>{sending?"Sending…":"Send Message"}</button>

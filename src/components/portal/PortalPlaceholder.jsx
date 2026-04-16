@@ -86,7 +86,7 @@ export default function PortalPlaceholder({ onExit }) {
           }}>
             <div style={{ fontSize:12, fontWeight:600, color:"#4a6cf7", marginBottom:8 }}>In the meantime, reach us directly</div>
             <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-              <a href="tel:5086191044" style={{ fontSize:13, color:"#6b7280", textDecoration:"none", display:"flex", alignItems:"center", gap:6 }}>📞 (508) 619-1044</a>
+              <a href="tel:5083061128" style={{ fontSize:13, color:"#6b7280", textDecoration:"none", display:"flex", alignItems:"center", gap:6 }}>📞 (508) 306-1128</a>
               <a href="mailto:info@mindshiftwellnessclinic.org" style={{ fontSize:13, color:"#6b7280", textDecoration:"none", display:"flex", alignItems:"center", gap:6 }}>✉️ info@mindshiftwellnessclinic.org</a>
             </div>
           </div>
