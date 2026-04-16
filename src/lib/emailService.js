@@ -4,6 +4,8 @@ const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 async function send(type, data) {
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000); // 5s timeout
     await fetch(EMAIL_FN, {
       method: "POST",
       headers: {
@@ -12,8 +14,11 @@ async function send(type, data) {
         "Authorization": `Bearer ${KEY}`,
       },
       body: JSON.stringify({ type, data }),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
   } catch (e) {
+    // Non-blocking — email failure never stops the main action
     console.warn("Email send failed (non-blocking):", e.message);
   }
 }
