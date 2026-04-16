@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import { getClinicianRole, isAdminEmail } from "../../lib/ehrDb";
+import { getPendingIntakes } from "../../lib/intakeDb";
 import EHRLogin from "./EHRLogin";
 import EHRDashboard from "./EHRDashboard";
 import EHRPatientChart from "./EHRPatientChart";
+import EHRIntakes from "./EHRIntakes";
 import { C, Spinner, EhrStyles } from "./EHRUI";
 
 // ── Main EHR module entry point ───────────────────────────────────────────────
@@ -16,6 +18,7 @@ export default function EHR({ onBack }) {
   const [view, setView]             = useState("dashboard");
   const [activeChartId, setActiveChartId] = useState(null);
   const [newPatientId, setNewPatientId]   = useState(null);
+  const [pendingIntakes, setPendingIntakes] = useState(0);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session: s } }) => {
@@ -44,6 +47,8 @@ export default function EHR({ onBack }) {
         is_admin:  true,
         email:     user.email,
       });
+      // Load pending intake count
+      getPendingIntakes().then(({ data }) => setPendingIntakes(data?.length ?? 0));
       setAuthLoading(false);
       return;
     }
@@ -51,6 +56,7 @@ export default function EHR({ onBack }) {
     const { data } = await getClinicianRole(user.id);
     if (data) {
       setClinician({ ...data, email: user.email });
+      getPendingIntakes().then(({ data: d }) => setPendingIntakes(d?.length ?? 0));
     } else {
       // Not authorized — sign out silently
       await supabase.auth.signOut();
@@ -113,6 +119,20 @@ export default function EHR({ onBack }) {
             fontWeight: view === "dashboard" ? 600 : 400,
             fontFamily: "inherit", fontSize: 13, transition: "all .15s",
           }}>Patients</button>
+          <button onClick={() => setView("intakes")} style={{
+            background: view === "intakes" ? "rgba(245,200,66,0.12)" : "transparent",
+            border: view === "intakes" ? "1px solid rgba(245,200,66,0.25)" : "1px solid transparent",
+            borderRadius: 8, padding: "5px 12px",
+            cursor: "pointer", color: view === "intakes" ? C.gold : C.muted,
+            fontWeight: view === "intakes" ? 600 : 400,
+            fontFamily: "inherit", fontSize: 13, transition: "all .15s",
+            display: "flex", alignItems: "center", gap: 6,
+          }}>
+            Intakes
+            {pendingIntakes > 0 && (
+              <span style={{ background: C.gold, color: "#000", fontSize: 10, fontWeight: 800, borderRadius: 20, padding: "1px 7px" }}>{pendingIntakes}</span>
+            )}
+          </button>
           {(view === "chart" || view === "new-chart") && (
             <>
               <span style={{ color: C.muted2, fontSize: 16 }}>›</span>
@@ -145,6 +165,12 @@ export default function EHR({ onBack }) {
             clinician={clinician}
             onOpenChart={(id) => { setActiveChartId(id); setView("chart"); }}
             onNewChart={() => { setNewPatientId(null); setView("new-chart"); }}
+          />
+        )}
+        {view === "intakes" && (
+          <EHRIntakes
+            clinician={clinician}
+            onOpenChart={(id) => { setActiveChartId(id); setView("chart"); setPendingIntakes(n => Math.max(0, n - 1)); }}
           />
         )}
         {view === "chart" && activeChartId && (

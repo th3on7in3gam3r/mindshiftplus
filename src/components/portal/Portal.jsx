@@ -8,6 +8,8 @@ import PortalPrescriptions from "./PortalPrescriptions";
 import PortalVisitNotes from "./PortalVisitNotes";
 import PortalProfile from "./PortalProfile";
 import PortalJournal from "./PortalJournal";
+import PortalIntake from "./PortalIntake";
+import { getMyIntake } from "../../lib/intakeDb";
 
 // ── Inline auth screen — stays on portal, no redirect ─────────────────────────
 function PortalAuthScreen({ onBack }) {
@@ -190,6 +192,7 @@ const P = {
 
 const NAV = [
   { id:"dashboard",     icon:"🏠", label:"Dashboard" },
+  { id:"intake",        icon:"📋", label:"Patient Intake", highlight: true },
   { id:"appointments",  icon:"📅", label:"Appointments" },
   { id:"messages",      icon:"💬", label:"Messages" },
   { id:"journal",       icon:"📓", label:"My Journal" },
@@ -212,6 +215,7 @@ export default function Portal({ onExit }) {
   const [session, setSession] = useState(undefined); // undefined = loading
   const [page, setPage] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [intakeStatus, setIntakeStatus] = useState(null); // null | "pending" | "reviewed" | "chart_created"
 
   // Portal has its own independent auth session check
   useEffect(() => {
@@ -237,6 +241,16 @@ export default function Portal({ onExit }) {
 
   const user = session.user;
   const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Patient";
+
+  // Load intake status when user is known
+  useEffect(() => {
+    if (!user?.id) return;
+    getMyIntake(user.id).then(({ data }) => {
+      setIntakeStatus(data?.status ?? "none");
+    });
+  }, [user?.id]);
+
+  const intakeComplete = intakeStatus === "pending" || intakeStatus === "reviewed" || intakeStatus === "chart_created";
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -291,18 +305,28 @@ export default function Portal({ onExit }) {
         <nav style={{ flex:1, padding:"1rem 0.8rem", display:"flex", flexDirection:"column", gap:2, overflowY:"auto" }}>
           {NAV.map(n => {
             const active = page === n.id;
+            const showBadge = n.id === "intake" && !intakeComplete;
             return (
               <button key={n.id} className="pnav-btn" onClick={()=>{ setPage(n.id); setSidebarOpen(false); }} style={{
                 display:"flex", alignItems:"center", gap:10, padding:"10px 12px", borderRadius:10,
-                background: active ? P.sidebarActive : "transparent", border:"none",
-                color: active ? "#fff" : "rgba(255,255,255,0.55)",
-                fontSize:13.5, fontWeight: active ? 600 : 400,
+                background: active ? P.sidebarActive : showBadge ? "rgba(74,108,247,0.12)" : "transparent",
+                border: showBadge && !active ? "1px solid rgba(74,108,247,0.25)" : "none",
+                color: active ? "#fff" : showBadge ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.55)",
+                fontSize:13.5, fontWeight: active || showBadge ? 600 : 400,
                 cursor:"pointer", textAlign:"left", width:"100%",
-                borderLeft: active ? `3px solid ${P.accent}` : "3px solid transparent",
+                borderLeft: active ? `3px solid ${P.accent}` : showBadge ? `3px solid ${P.accent}` : "3px solid transparent",
                 transition:"all .15s",
               }}>
                 <span style={{ fontSize:16, width:20, textAlign:"center" }}>{n.icon}</span>
                 {n.label}
+                {showBadge && (
+                  <span style={{ marginLeft:"auto", background:P.accent, color:"#fff", fontSize:10, fontWeight:700, borderRadius:20, padding:"2px 7px" }}>
+                    Action Required
+                  </span>
+                )}
+                {n.id === "intake" && intakeComplete && (
+                  <span style={{ marginLeft:"auto", fontSize:13 }}>✓</span>
+                )}
               </button>
             );
           })}
@@ -372,7 +396,33 @@ export default function Portal({ onExit }) {
               Use of this portal does not establish a provider-patient relationship on its own.
             </span>
           </div>
+          {/* Intake banner — shown until intake is submitted */}
+          {!intakeComplete && page === "dashboard" && (
+            <div style={{
+              margin:"1rem 1.5rem 0",
+              background:"linear-gradient(135deg,#4a6cf7,#0ea5a0)",
+              borderRadius:16, padding:"1rem 1.4rem",
+              display:"flex", alignItems:"center", justifyContent:"space-between",
+              gap:12, flexWrap:"wrap",
+              boxShadow:"0 4px 20px rgba(74,108,247,0.3)",
+            }}>
+              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                <span style={{ fontSize:26 }}>📋</span>
+                <div>
+                  <div style={{ fontSize:14, fontWeight:700, color:"#fff" }}>Complete Your Patient Intake</div>
+                  <div style={{ fontSize:12, color:"rgba(255,255,255,0.75)", marginTop:2 }}>Required before your first appointment. Takes about 5–10 minutes.</div>
+                </div>
+              </div>
+              <button onClick={() => setPage("intake")} style={{
+                background:"rgba(255,255,255,0.2)", border:"1px solid rgba(255,255,255,0.35)",
+                borderRadius:10, padding:"9px 18px", color:"#fff", fontSize:13,
+                fontWeight:700, cursor:"pointer", fontFamily:"inherit", whiteSpace:"nowrap",
+                backdropFilter:"blur(8px)",
+              }}>Start Intake →</button>
+            </div>
+          )}
           {page==="dashboard"     && <PortalDashboard user={user} displayName={displayName} setPage={setPage} P={P}/>}
+          {page==="intake"        && <PortalIntake userId={user?.id} displayName={displayName} onComplete={() => { setIntakeStatus("pending"); setPage("dashboard"); }} />}
           {page==="appointments"  && <PortalAppointments userId={user?.id} P={P}/>}
           {page==="messages"      && <PortalMessages userId={user?.id} P={P}/>}
           {page==="journal"       && <PortalJournal userId={user?.id} P={P}/>}
