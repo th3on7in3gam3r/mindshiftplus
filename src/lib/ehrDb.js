@@ -1,0 +1,210 @@
+import { supabase } from "./supabase";
+
+// ── AUTH HELPERS ───────────────────────────────────────────────────────────────
+const ADMIN_EMAILS = [
+  "info@mindshiftwellnessclinic.org",
+  "jerlessm@gmail.com",
+  "kmutegyeki@mindshiftwellnessclinic.org",
+  "rnakkazi@mindshiftwellnessclinic.org",
+];
+
+export async function getClinicianRole(userId) {
+  const { data, error } = await supabase
+    .from("clinician_roles")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return { data, error };
+}
+
+export function isAdminEmail(email) {
+  return ADMIN_EMAILS.includes(email?.toLowerCase());
+}
+
+// ── PATIENT CHARTS ─────────────────────────────────────────────────────────────
+export async function getAllCharts() {
+  const { data, error } = await supabase
+    .from("ehr_charts")
+    .select(`
+      *,
+      patient:patient_id (
+        id,
+        email,
+        raw_user_meta_data
+      )
+    `)
+    .order("updated_at", { ascending: false });
+  return { data, error };
+}
+
+export async function getChart(chartId) {
+  const { data, error } = await supabase
+    .from("ehr_charts")
+    .select("*")
+    .eq("id", chartId)
+    .single();
+  return { data, error };
+}
+
+export async function getChartByPatient(patientId) {
+  const { data, error } = await supabase
+    .from("ehr_charts")
+    .select("*")
+    .eq("patient_id", patientId)
+    .maybeSingle();
+  return { data, error };
+}
+
+export async function upsertChart(chartData) {
+  const { data, error } = await supabase
+    .from("ehr_charts")
+    .upsert({ ...chartData, updated_at: new Date().toISOString() })
+    .select()
+    .single();
+  return { data, error };
+}
+
+// Generate simple sequential MRN
+export function generateMRN() {
+  const now = Date.now().toString(36).toUpperCase();
+  return `MSW-${now}`;
+}
+
+// ── ENCOUNTER NOTES ────────────────────────────────────────────────────────────
+export async function getNotes(chartId) {
+  const { data, error } = await supabase
+    .from("ehr_notes")
+    .select("*")
+    .eq("chart_id", chartId)
+    .order("note_date", { ascending: false });
+  return { data, error };
+}
+
+export async function getNote(noteId) {
+  const { data, error } = await supabase
+    .from("ehr_notes")
+    .select("*")
+    .eq("id", noteId)
+    .single();
+  return { data, error };
+}
+
+export async function upsertNote(noteData) {
+  const { data, error } = await supabase
+    .from("ehr_notes")
+    .upsert({ ...noteData, updated_at: new Date().toISOString() })
+    .select()
+    .single();
+  return { data, error };
+}
+
+export async function signNote(noteId) {
+  const { data, error } = await supabase
+    .from("ehr_notes")
+    .update({ is_signed: true, signed_at: new Date().toISOString() })
+    .eq("id", noteId)
+    .select()
+    .single();
+  return { data, error };
+}
+
+export async function deleteNote(noteId) {
+  const { error } = await supabase
+    .from("ehr_notes")
+    .delete()
+    .eq("id", noteId);
+  return { error };
+}
+
+// ── MEDICATIONS ────────────────────────────────────────────────────────────────
+export async function getMedications(chartId) {
+  const { data, error } = await supabase
+    .from("ehr_medications")
+    .select("*")
+    .eq("chart_id", chartId)
+    .order("created_at", { ascending: false });
+  return { data, error };
+}
+
+export async function upsertMedication(medData) {
+  const { data, error } = await supabase
+    .from("ehr_medications")
+    .upsert(medData)
+    .select()
+    .single();
+  return { data, error };
+}
+
+export async function deleteMedication(medId) {
+  const { error } = await supabase
+    .from("ehr_medications")
+    .delete()
+    .eq("id", medId);
+  return { error };
+}
+
+// ── DOCUMENTS ─────────────────────────────────────────────────────────────────
+export async function getEhrDocuments(chartId) {
+  const { data, error } = await supabase
+    .from("ehr_documents")
+    .select("*")
+    .eq("chart_id", chartId)
+    .order("created_at", { ascending: false });
+  return { data, error };
+}
+
+// ── APPOINTMENTS (patient-linked) ─────────────────────────────────────────────
+export async function getPatientAppointments(patientId) {
+  const { data, error } = await supabase
+    .from("appointments")
+    .select("*")
+    .eq("patient_id", patientId)
+    .order("scheduled_at", { ascending: false });
+  return { data, error };
+}
+
+// ── MESSAGES (read from portal_messages as clinician) ─────────────────────────
+export async function getPatientMessages(patientId) {
+  const { data, error } = await supabase
+    .from("portal_messages")
+    .select("*")
+    .eq("patient_id", patientId)
+    .order("created_at", { ascending: false });
+  return { data, error };
+}
+
+export async function sendClinicianMessage(patientId, subject, body, threadId = null) {
+  const id = threadId || crypto.randomUUID();
+  const { data, error } = await supabase
+    .from("portal_messages")
+    .insert({
+      patient_id: patientId,
+      sender_role: "clinic",
+      subject,
+      body,
+      thread_id: id,
+    })
+    .select()
+    .single();
+  return { data, error };
+}
+
+// ── DASHBOARD STATS ────────────────────────────────────────────────────────────
+export async function getDashboardStats() {
+  const [charts, appts] = await Promise.all([
+    supabase.from("ehr_charts").select("id, status", { count: "exact" }),
+    supabase
+      .from("appointments")
+      .select("id, status, scheduled_at")
+      .gte("scheduled_at", new Date().toISOString())
+      .order("scheduled_at", { ascending: true })
+      .limit(10),
+  ]);
+
+  return {
+    totalPatients: charts.count ?? 0,
+    activePatients: (charts.data ?? []).filter((c) => c.status === "active").length,
+    upcomingAppointments: appts.data ?? [],
+    error: charts.error || appts.error,
+  };
+}

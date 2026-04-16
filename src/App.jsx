@@ -5,6 +5,7 @@ import Portal from "./components/portal/Portal";
 import PublicBooking from "./components/scheduling/PublicBooking";
 import AdminSchedule from "./components/scheduling/AdminSchedule";
 import DisclaimerModal, { hasAcceptedDisclaimer } from "./components/DisclaimerModal";
+import EHR from "./components/ehr/EHR";
 
 // ── Fonts ──────────────────────────────────────────────────────────────────────
 const GlobalStyles = () => (
@@ -142,6 +143,7 @@ const navItems=[
 // Admin-only nav items — only shown to admin emails
 const adminNavItems=[
   {id:"ehr-schedule",icon:"📋",label:"Admin Schedule"},
+  {id:"ehr",        icon:"🏥",label:"EHR"},
 ];
 
 function Sidebar({page,setPage,user,onSignOut,open,onClose}){
@@ -1678,6 +1680,16 @@ export default function App(){
       <>
         <GlobalStyles/>
         <AdminSchedule onBack={()=>setPage("dashboard")}/>
+      </>
+    );
+  }
+
+  // EHR — clinician-only Electronic Health Records
+  if(page==="ehr"){
+    return(
+      <>
+        <GlobalStyles/>
+        <EHR onBack={()=>setPage("dashboard")}/>
       </>
     );
   }
