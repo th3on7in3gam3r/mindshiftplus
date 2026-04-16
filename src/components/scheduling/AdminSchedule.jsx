@@ -610,6 +610,118 @@ function AppointmentReviewTab() {
   );
 }
 
+// ── Patient Lookup Tab ────────────────────────────────────────────────────────
+function PatientLookupTab() {
+  const [search, setSearch] = useState("");
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState("");
+  const [toast, setToast] = useState("");
+
+  const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(""),3000); };
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!search.trim()) return;
+    setLoading(true);
+    try {
+      // Search patient_profiles by name or email via appointments table
+      const { supabase: sb } = await import("../../lib/supabase");
+      // Look up by email in auth — use appointments table which stores email
+      const { data: apptData } = await sb
+        .from("appointments")
+        .select("patient_id, name, email")
+        .ilike("email", `%${search.trim()}%`)
+        .not("patient_id", "is", null)
+        .limit(20);
+
+      // Also search patient_profiles by name
+      const { data: profileData } = await sb
+        .from("patient_profiles")
+        .select("id, full_name, phone")
+        .ilike("full_name", `%${search.trim()}%`)
+        .limit(20);
+
+      // Merge results
+      const merged = new Map();
+      (apptData||[]).forEach(a => {
+        if (a.patient_id) merged.set(a.patient_id, { id: a.patient_id, name: a.name, email: a.email });
+      });
+      (profileData||[]).forEach(p => {
+        if (!merged.has(p.id)) merged.set(p.id, { id: p.id, name: p.full_name, email: "—" });
+        else merged.get(p.id).name = p.full_name || merged.get(p.id).name;
+      });
+      setResults([...merged.values()]);
+    } catch (e) { showToast("Search failed: " + e.message); }
+    setLoading(false);
+  };
+
+  const copyId = (id) => {
+    navigator.clipboard.writeText(id).then(()=>{ setCopied(id); showToast("✓ Patient ID copied!"); setTimeout(()=>setCopied(""),2000); });
+  };
+
+  const inputStyle = { flex:1, padding:"10px 12px", borderRadius:8, border:`1.5px solid ${P.border}`, fontSize:14, color:P.text, background:P.bg2, outline:"none", fontFamily:"inherit" };
+
+  return (
+    <div style={{ maxWidth:760 }}>
+      {toast&&<div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"#1a1f36", borderRadius:30, padding:"10px 20px", fontSize:13, color:"#fff", zIndex:9999, whiteSpace:"nowrap" }}>{toast}</div>}
+
+      <p style={{ fontSize:13, color:P.muted, marginBottom:"1.2rem" }}>
+        Search for a patient by name or email to find their Patient ID. Use this ID in Visit Notes, Prescriptions, Appointment Review, and Patient Documents tabs.
+      </p>
+
+      <Card style={{ marginBottom:"1.5rem" }}>
+        <form onSubmit={handleSearch} style={{ display:"flex", gap:10 }}>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search by name or email…" style={inputStyle}/>
+          <button type="submit" style={{ background:`linear-gradient(135deg,${P.accent},${P.teal})`, border:"none", borderRadius:8, padding:"10px 20px", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer" }}>
+            Search
+          </button>
+        </form>
+      </Card>
+
+      {loading && <div style={{color:P.muted,fontSize:13}}>Searching…</div>}
+
+      {results.length === 0 && !loading && search && (
+        <Card style={{ textAlign:"center", padding:"2rem" }}>
+          <div style={{ color:P.muted, fontSize:13 }}>No patients found. Try a different name or email.</div>
+        </Card>
+      )}
+
+      {results.map(p=>(
+        <Card key={p.id} style={{ marginBottom:"0.75rem" }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:12 }}>
+            <div>
+              <div style={{ fontWeight:700, fontSize:14, color:P.text, marginBottom:3 }}>{p.name || "Unknown Patient"}</div>
+              <div style={{ fontSize:12, color:P.muted, marginBottom:4 }}>✉️ {p.email}</div>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <code style={{ fontSize:11, background:"#f3f4f6", padding:"3px 8px", borderRadius:6, color:P.muted, fontFamily:"monospace", wordBreak:"break-all" }}>{p.id}</code>
+              </div>
+            </div>
+            <button
+              onClick={()=>copyId(p.id)}
+              style={{
+                background: copied===p.id ? "#dcfce7" : `linear-gradient(135deg,${P.accent},${P.teal})`,
+                border:"none", borderRadius:20, padding:"8px 16px",
+                color: copied===p.id ? "#166534" : "#fff",
+                fontSize:12, fontWeight:600, cursor:"pointer", flexShrink:0,
+                transition:"all .2s",
+              }}
+            >
+              {copied===p.id ? "✓ Copied!" : "Copy ID"}
+            </button>
+          </div>
+        </Card>
+      ))}
+
+      <Card style={{ background:"#eff6ff", border:"1px solid #bfdbfe", marginTop:"1rem" }}>
+        <div style={{ fontSize:12, color:"#1e40af", lineHeight:1.7 }}>
+          💡 <strong>How to use:</strong> Copy a patient's ID, then paste it into the Visit Notes, Prescriptions, Appointment Review, or Patient Documents tab to access their records.
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 // ── Patient Documents Tab ──────────────────────────────────────────────────────
 function PatientDocumentsTab() {
   const [patientId, setPatientId] = useState("");
@@ -697,6 +809,7 @@ export default function AdminSchedule({ onBack }) {
 
   const tabs = [
     { id:"appointments", label:"Appointments" },
+    { id:"patients",     label:"👤 Patient Lookup" },
     { id:"availability",  label:"Availability" },
     { id:"blocked",       label:"Blocked Times" },
     { id:"notes",         label:"Visit Notes" },
@@ -742,6 +855,7 @@ export default function AdminSchedule({ onBack }) {
         </div>
 
         {tab==="appointments" && <AppointmentsTab userId={adminUser?.id}/>}
+        {tab==="patients"     && <PatientLookupTab/>}
         {tab==="availability"  && <AvailabilityTab userId={adminUser?.id}/>}
         {tab==="blocked"       && <BlockedTab userId={adminUser?.id}/>}
         {tab==="notes"         && <AdminNotesTab adminUser={adminUser}/>}
