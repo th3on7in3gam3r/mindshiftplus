@@ -162,9 +162,9 @@ export default function PortalAppointments({ userId, P }) {
 
       <Card style={{ marginTop:"1rem", background:"#f0fdfa", border:"1px solid #99f6e4", textAlign:"center" }}>
         <div style={{ fontSize:13, color:P.muted, marginBottom:10 }}>Book directly through our scheduling partner:</div>
-        <a href="https://care.headway.co/providers/kenneth-mutegyeki" target="_blank" rel="noopener noreferrer"
+        <a href="#" onClick={(e)=>{ e.preventDefault(); window.dispatchEvent(new CustomEvent('navigate-schedule')); }}
           style={{ display:"inline-flex", alignItems:"center", gap:6, background:P.teal, color:"#fff", padding:"9px 20px", borderRadius:20, fontSize:13, fontWeight:600, textDecoration:"none" }}>
-          Book via Headway ↗
+          Book via Our Scheduler ↗
         </a>
       </Card>
     </div>

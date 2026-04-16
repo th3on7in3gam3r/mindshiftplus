@@ -1390,7 +1390,7 @@ function About(){
           </div>
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:8,alignItems:"flex-end"}}>
-          <Btn small onClick={()=>window.open("https://care.headway.co/providers/kenneth-mutegyeki","_blank")}>Book a Session →</Btn>
+          <Btn small onClick={()=>setPage("schedule")}>Book a Session →</Btn>
           <div style={{color:"var(--teal)",fontSize:12}}>✓ Accepting new clients</div>
           <div style={{color:"var(--muted)",fontSize:11}}>Free 15-min intro call available</div>
         </div>
@@ -1504,7 +1504,7 @@ function About(){
           Reach out today to schedule your free 15-minute intro call. Your journey toward lasting emotional wellness starts here.
         </p>
         <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
-          <Btn onClick={()=>window.open("https://care.headway.co/providers/kenneth-mutegyeki","_blank")}>Book a Session →</Btn>
+          <Btn onClick={()=>setPage("schedule")}>Book a Session →</Btn>
           <Btn variant="secondary" onClick={()=>window.location.href="mailto:info@mindshiftwellnessclinic.org"}>Send an Email</Btn>
         </div>
       </GlassCard>
