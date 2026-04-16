@@ -5,11 +5,13 @@ import {
   C, EhrCard, EhrBtn, EhrBadge, EhrStyles,
   Divider, Spinner, formatDate, formatDateTime, age,
 } from "./EHRUI";
+import { useTokens } from "../../lib/ThemeContext";
 
 const STATUS_COLOR = { pending: "gold", reviewed: "teal", chart_created: "green" };
 const STATUS_LABEL = { pending: "Awaiting Review", reviewed: "Reviewed", chart_created: "Chart Created" };
 
 export default function EHRIntakes({ clinician, onOpenChart }) {
+  const t = useTokens();
   const [intakes, setIntakes]   = useState([]);
   const [loading, setLoading]   = useState(true);
   const [selected, setSelected] = useState(null);
@@ -160,9 +162,10 @@ export default function EHRIntakes({ clinician, onOpenChart }) {
 
 // ── Full intake detail view ───────────────────────────────────────────────────
 function IntakeDetail({ intake, clinician, working, onBack, onReview, onCreateChart }) {
+  const t = useTokens();
   const patientAge = age(intake.date_of_birth);
 
-  const Section = ({ title, color = C.lavender, children }) => (
+  const Section = ({ title, color = t.accent2, children }) => (
     <EhrCard style={{ marginBottom: 14 }}>
       <div style={{ fontSize: 11, fontWeight: 700, color, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.9rem", display: "flex", alignItems: "center", gap: 6 }}>
         <div style={{ width: 3, height: 14, borderRadius: 2, background: color }} />

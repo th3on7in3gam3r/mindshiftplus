@@ -9,6 +9,7 @@ import {
   C, EhrCard, EhrBtn, EhrBadge, EhrInput, EhrSelect, ICD10Picker,
   StatusBadge, SectionHeader, Divider, Spinner, EhrStyles, formatDate, formatDateTime, age,
 } from "./EHRUI";
+import { useTokens } from "../../lib/ThemeContext";
 
 const TABS = [
   { id: "overview",     label: "Overview",      icon: "🏠" },
@@ -20,6 +21,7 @@ const TABS = [
 ];
 
 export default function EHRPatientChart({ chartId, clinician, onBack, isNew = false, newPatientId = null }) {
+  const t = useTokens();
   const [tab, setTab]         = useState("overview");
   const [chart, setChart]     = useState(null);
   const [notes, setNotes]     = useState([]);
@@ -197,7 +199,7 @@ export default function EHRPatientChart({ chartId, clinician, onBack, isNew = fa
 
 // ── Chart Edit Form ────────────────────────────────────────────────────────────
 function ChartEditForm({ chart, clinician, saving, onSave, onCancel }) {
-  const [form, setForm] = useState({
+  const t = useTokens();
     id:                       chart?.id,
     patient_id:               chart?.patient_id,
     mrn:                      chart?.mrn              ?? "",
@@ -323,7 +325,7 @@ function ChartEditForm({ chart, clinician, saving, onSave, onCancel }) {
 
 // ── Overview Tab ──────────────────────────────────────────────────────────────
 function OverviewTab({ chart, notes, meds, appts }) {
-  const patientAge = age(chart?.date_of_birth);
+  const t = useTokens();
   const activeMeds = meds.filter(m => m.status === "active");
   const recentNote = notes[0];
   const nextAppt   = appts.find(a => a.status === "upcoming" && a.scheduled_at > new Date().toISOString());
@@ -442,7 +444,7 @@ function NotesTab({ notes, chart, clinician, showForm, editingNote, onNew, onEdi
 }
 
 function NoteCard({ note, onEdit, onSign, onDelete }) {
-  const [expanded, setExpanded] = useState(false);
+  const t = useTokens();
   const TYPE_LABEL = { intake: "Intake Eval", progress: "Progress Note", discharge: "Discharge", phone: "Phone Contact" };
   return (
     <EhrCard style={{ marginBottom: 10 }}>
@@ -510,7 +512,7 @@ function NoteCard({ note, onEdit, onSign, onDelete }) {
 }
 
 function NoteForm({ note, chart, clinician, onSaved, onCancel }) {
-  const blank = {
+  const t = useTokens();
     id: note?.id, note_date: note?.note_date ?? new Date().toISOString().slice(0, 10),
     note_type: note?.note_type ?? "progress",
     presenting_concerns: note?.presenting_concerns ?? "",
@@ -648,8 +650,7 @@ function MedicationsTab({ meds, chart, clinician, showForm, editingMed, onNew, o
 }
 
 function MedRow({ med, onEdit, onDelete }) {
-  return (
-    <EhrCard style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 14 }}>
+  const t = useTokens();
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{med.medication}</div>
         <div style={{ fontSize: 12, color: C.muted2, marginTop: 3, display: "flex", gap: 10 }}>
@@ -673,8 +674,7 @@ function MedRow({ med, onEdit, onDelete }) {
 }
 
 function MedForm({ med, chart, clinician, onSaved, onCancel }) {
-  const [form, setForm] = useState({
-    id:              med?.id,
+  const t = useTokens();
     medication:      med?.medication      ?? "",
     dosage:          med?.dosage          ?? "",
     frequency:       med?.frequency       ?? "",
@@ -735,9 +735,7 @@ function MedForm({ med, chart, clinician, onSaved, onCancel }) {
 
 // ── Appointments Tab ──────────────────────────────────────────────────────────
 function AppointmentsTab({ appts }) {
-  return (
-    <div>
-      <SectionHeader title={`Appointment History (${appts.length})`} />
+  const t = useTokens(); (${appts.length})`} />
       {appts.length === 0 ? (
         <EhrCard style={{ textAlign: "center", padding: "3rem" }}>
           <div style={{ fontSize: 32, marginBottom: 10 }}>📅</div>
@@ -766,7 +764,7 @@ function AppointmentsTab({ appts }) {
 
 // ── Messages Tab ──────────────────────────────────────────────────────────────
 function MessagesTab({ messages, chart, clinician, showForm, onNew, onSent, onClose }) {
-  const [subj, setSubj] = useState("");
+  const t = useTokens();
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
 
@@ -825,9 +823,7 @@ function MessagesTab({ messages, chart, clinician, showForm, onNew, onSent, onCl
 
 // ── Documents Tab ─────────────────────────────────────────────────────────────
 function DocumentsTab({ docs }) {
-  return (
-    <div>
-      <SectionHeader title={`Documents (${docs.length})`} />
+  const t = useTokens(); (${docs.length})`} />
       {docs.length === 0 ? (
         <EhrCard style={{ textAlign: "center", padding: "3rem" }}>
           <div style={{ fontSize: 32, marginBottom: 10 }}>📄</div>

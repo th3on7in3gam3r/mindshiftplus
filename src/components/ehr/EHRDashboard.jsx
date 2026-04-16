@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { getAllCharts, getDashboardStats } from "../../lib/ehrDb";
 import {
-  C, EhrCard, EhrBtn, EhrBadge, StatusBadge,
+  EhrCard, EhrBtn, EhrBadge, StatusBadge,
   Spinner, EhrStyles, formatDate, formatDateTime, age,
 } from "./EHRUI";
+import { useTokens } from "../../lib/ThemeContext";
 
 export default function EHRDashboard({ clinician, onOpenChart, onNewChart }) {
+  const t = useTokens();
   const [charts, setCharts]   = useState([]);
   const [stats, setStats]     = useState(null);
   const [loading, setLoading] = useState(true);
@@ -210,6 +212,7 @@ export default function EHRDashboard({ clinician, onOpenChart, onNewChart }) {
 }
 
 function PatientRow({ chart, onClick }) {
+  const t = useTokens();
   const name = chart.full_name || chart.patient?.raw_user_meta_data?.full_name || "Unknown Patient";
   const email = chart.patient?.email ?? "";
   const patientAge = age(chart.date_of_birth);
