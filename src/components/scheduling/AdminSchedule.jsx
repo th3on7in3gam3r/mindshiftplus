@@ -513,6 +513,88 @@ function AdminRxTab({ adminUser }) {
   );
 }
 
+// ── Appointment Review Tab (journal entries — for use during sessions only) ────
+function AppointmentReviewTab() {
+  const [patientId, setPatientId] = useState("");
+  const [entries, setEntries] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const [expanded, setExpanded] = useState(null);
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!patientId.trim()) return;
+    setLoading(true); setSearched(true);
+    try {
+      const { getPatientJournalForReview } = await import("../../lib/clinicApi");
+      const data = await getPatientJournalForReview(patientId.trim());
+      setEntries(Array.isArray(data)?data:[]);
+    } catch { setEntries([]); }
+    setLoading(false);
+  };
+
+  const fmt = (iso) => new Date(iso).toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric",year:"numeric",hour:"2-digit",minute:"2-digit"});
+
+  return (
+    <div style={{ maxWidth:760 }}>
+      <div style={{ background:"#fff7ed", border:"1px solid #fed7aa", borderRadius:12, padding:"0.9rem 1.2rem", marginBottom:"1.5rem", display:"flex", gap:8 }}>
+        <span style={{ fontSize:16, flexShrink:0 }}>⚠️</span>
+        <p style={{ fontSize:12, color:"#92400e", lineHeight:1.65, margin:0 }}>
+          <strong>For use during scheduled appointments only.</strong> Journal entries are private patient content reviewed solely in the context of clinical care. Do not access outside of a scheduled session.
+        </p>
+      </div>
+
+      <Card style={{ marginBottom:"1.5rem" }}>
+        <h3 style={{ fontSize:"1rem", fontWeight:700, color:P.text, marginBottom:"1rem" }}>Patient Journal Review</h3>
+        <form onSubmit={handleSearch} style={{ display:"flex", gap:10 }}>
+          <input
+            value={patientId} onChange={e=>setPatientId(e.target.value)}
+            placeholder="Enter patient's Supabase user ID…"
+            style={{ flex:1, padding:"10px 12px", borderRadius:8, border:`1.5px solid ${P.border}`, fontSize:14, color:P.text, background:P.bg2, outline:"none", fontFamily:"inherit" }}
+          />
+          <button type="submit" style={{ background:`linear-gradient(135deg,${P.accent},${P.teal})`, border:"none", borderRadius:8, padding:"10px 20px", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer" }}>
+            Load Entries
+          </button>
+        </form>
+      </Card>
+
+      {loading && <div style={{color:P.muted,fontSize:13}}>Loading…</div>}
+
+      {searched && !loading && entries.length===0 && (
+        <Card style={{ textAlign:"center", padding:"2rem" }}>
+          <div style={{ fontSize:32, marginBottom:8 }}>📓</div>
+          <div style={{ color:P.muted, fontSize:13 }}>No journal entries found for this patient.</div>
+        </Card>
+      )}
+
+      {entries.map(e=>(
+        <Card key={e.id} style={{ marginBottom:"0.75rem" }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", cursor:"pointer" }} onClick={()=>setExpanded(expanded===e.id?null:e.id)}>
+            <div>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:3 }}>
+                <span style={{ fontSize:18 }}>{e.mood||"🙂"}</span>
+                <div style={{ fontWeight:600, fontSize:14, color:P.text }}>{e.title||"Journal Entry"}</div>
+              </div>
+              <div style={{ fontSize:11, color:P.muted2 }}>{fmt(e.created_at)}</div>
+              {e.tags?.length>0 && (
+                <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginTop:4 }}>
+                  {e.tags.map(t=><span key={t} style={{ fontSize:10, padding:"2px 8px", borderRadius:20, background:"rgba(14,165,160,0.1)", color:P.teal }}>{t}</span>)}
+                </div>
+              )}
+            </div>
+            <span style={{ color:P.accent, fontSize:14, flexShrink:0 }}>{expanded===e.id?"▲":"▼"}</span>
+          </div>
+          {expanded===e.id && (
+            <div style={{ marginTop:"1rem", paddingTop:"1rem", borderTop:`1px solid ${P.border}` }}>
+              <p style={{ fontSize:13, color:P.text, lineHeight:1.8, whiteSpace:"pre-wrap" }}>{e.body}</p>
+            </div>
+          )}
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 // ── Main Admin Schedule ────────────────────────────────────────────────────────
 export default function AdminSchedule({ onBack }) {
   const [adminUser, setAdminUser] = useState(null);
@@ -532,6 +614,7 @@ export default function AdminSchedule({ onBack }) {
     { id:"blocked",       label:"Blocked Times" },
     { id:"notes",         label:"Visit Notes" },
     { id:"rx",            label:"Prescriptions" },
+    { id:"review",        label:"📓 Appointment Review" },
   ];
 
   return (
@@ -575,6 +658,7 @@ export default function AdminSchedule({ onBack }) {
         {tab==="blocked"       && <BlockedTab userId={adminUser?.id}/>}
         {tab==="notes"         && <AdminNotesTab adminUser={adminUser}/>}
         {tab==="rx"            && <AdminRxTab adminUser={adminUser}/>}
+        {tab==="review"        && <AppointmentReviewTab/>}
       </div>
     </div>
   );

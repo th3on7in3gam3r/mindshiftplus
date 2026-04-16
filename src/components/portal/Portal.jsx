@@ -7,6 +7,7 @@ import PortalDocuments from "./PortalDocuments";
 import PortalPrescriptions from "./PortalPrescriptions";
 import PortalVisitNotes from "./PortalVisitNotes";
 import PortalProfile from "./PortalProfile";
+import PortalJournal from "./PortalJournal";
 
 // ── Inline auth screen — stays on portal, no redirect ─────────────────────────
 function PortalAuthScreen({ onBack }) {
@@ -191,6 +192,7 @@ const NAV = [
   { id:"dashboard",     icon:"🏠", label:"Dashboard" },
   { id:"appointments",  icon:"📅", label:"Appointments" },
   { id:"messages",      icon:"💬", label:"Messages" },
+  { id:"journal",       icon:"📓", label:"My Journal" },
   { id:"documents",     icon:"📄", label:"Documents" },
   { id:"prescriptions", icon:"💊", label:"Medications" },
   { id:"visit-notes",   icon:"📋", label:"Visit Notes" },
@@ -373,6 +375,7 @@ export default function Portal({ onExit }) {
           {page==="dashboard"     && <PortalDashboard user={user} displayName={displayName} setPage={setPage} P={P}/>}
           {page==="appointments"  && <PortalAppointments userId={user?.id} P={P}/>}
           {page==="messages"      && <PortalMessages userId={user?.id} P={P}/>}
+          {page==="journal"       && <PortalJournal userId={user?.id} P={P}/>}
           {page==="documents"     && <PortalDocuments userId={user?.id} P={P}/>}
           {page==="prescriptions" && <PortalPrescriptions userId={user?.id} P={P}/>}
           {page==="visit-notes"   && <PortalVisitNotes userId={user?.id} P={P}/>}

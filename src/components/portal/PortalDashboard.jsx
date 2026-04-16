@@ -96,6 +96,7 @@ export default function PortalDashboard({ user, displayName, setPage, P }) {
         {[
           { icon:"📅", label:"Appointments", sub:"View & book", color:T.accent,  page:"appointments" },
           { icon:"💬", label:"Messages",     sub:"Contact clinic", color:T.teal,  page:"messages" },
+          { icon:"📓", label:"My Journal",   sub:"Write & reflect", color:"#7c3aed", page:"journal" },
           { icon:"📄", label:"Documents",    sub:"Forms & records", color:T.gold, page:"documents" },
           { icon:"💊", label:"Medications",  sub:"Your prescriptions", color:"#8b5cf6", page:"prescriptions" },
           { icon:"📋", label:"Visit Notes",  sub:"Clinician notes", color:"#0ea5a0", page:"visit-notes" },

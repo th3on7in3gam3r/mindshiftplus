@@ -131,3 +131,38 @@ export async function updatePrescriptionStatus(id, status) {
   if (error) throw new Error(error.message);
   return { success: true };
 }
+
+// ── Patient Journal (portal) ───────────────────────────────────────────────────
+export async function getPatientJournal(patient_id) {
+  const { data, error } = await supabase.from("patient_journal_entries")
+    .select("*").eq("patient_id", patient_id).order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+export async function savePatientJournalEntry(patient_id, entry) {
+  if (entry.id) {
+    const { data, error } = await supabase.from("patient_journal_entries")
+      .update({ ...entry, updated_at: new Date().toISOString() }).eq("id", entry.id).select().single();
+    if (error) throw new Error(error.message);
+    return data;
+  }
+  const { data, error } = await supabase.from("patient_journal_entries")
+    .insert({ patient_id, ...entry }).select().single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function deletePatientJournalEntry(id) {
+  const { error } = await supabase.from("patient_journal_entries").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  return { success: true };
+}
+
+// Clinician: get a specific patient's journal for appointment review
+export async function getPatientJournalForReview(patient_id) {
+  const { data, error } = await supabase.from("patient_journal_entries")
+    .select("*").eq("patient_id", patient_id).order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data || [];
+}

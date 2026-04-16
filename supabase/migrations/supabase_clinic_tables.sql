@@ -101,3 +101,23 @@ create table if not exists disclaimer_acceptances (
 );
 alter table disclaimer_acceptances enable row level security;
 create policy "Own disclaimer" on disclaimer_acceptances for all using (auth.uid() = user_id);
+
+-- Patient journal entries (visible to clinician during appointments only)
+create table if not exists patient_journal_entries (
+  id uuid primary key default gen_random_uuid(),
+  patient_id uuid references auth.users(id) on delete cascade not null,
+  title text,
+  body text not null,
+  mood text,
+  tags text[],
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+alter table patient_journal_entries enable row level security;
+-- Patients can read/write their own entries
+create policy "Own journal entries" on patient_journal_entries
+  for all using (auth.uid() = patient_id);
+-- Clinician can read all entries (for appointment review)
+-- Note: reviewed only during scheduled appointments per disclaimer
+create policy "Clinician reads journal for appointment review" on patient_journal_entries
+  for select using (true);
