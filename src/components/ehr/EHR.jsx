@@ -4,7 +4,7 @@ import { getClinicianRole, isAdminEmail } from "../../lib/ehrDb";
 import EHRLogin from "./EHRLogin";
 import EHRDashboard from "./EHRDashboard";
 import EHRPatientChart from "./EHRPatientChart";
-import { C, Spinner } from "./EHRUI";
+import { C, Spinner, EhrStyles } from "./EHRUI";
 
 // ── Main EHR module entry point ───────────────────────────────────────────────
 export default function EHR({ onBack }) {
@@ -81,56 +81,58 @@ export default function EHR({ onBack }) {
 
   // ── Authenticated — render EHR shell ──
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, fontFamily: "'Inter', system-ui, sans-serif", color: C.text }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');*{box-sizing:border-box}`}</style>
+    <div className="ehr-root" style={{ minHeight: "100vh", background: C.bg, color: C.text }}>
+      <EhrStyles />
 
       {/* Top navigation bar */}
       <div style={{
         position: "sticky", top: 0, zIndex: 50,
         display: "flex", alignItems: "center", gap: 12,
-        padding: "0 2rem", height: 56,
-        background: C.surface, borderBottom: `1px solid ${C.border}`,
+        padding: "0 2rem", height: 58,
+        background: "rgba(8,12,24,0.92)",
+        backdropFilter: "blur(20px)",
+        borderBottom: "1px solid rgba(124,111,247,0.15)",
+        boxShadow: "0 1px 0 rgba(124,111,247,0.08), 0 4px 24px rgba(0,0,0,0.3)",
       }}>
-        {/* Logo + title */}
+        {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg,#7c6ff7,#4ecdc4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>🏥</div>
+          <div style={{ width: 34, height: 34, borderRadius: 9, background: "linear-gradient(135deg,#7c6ff7,#4ecdc4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0, boxShadow: "0 4px 12px rgba(124,111,247,0.4)" }}>🏥</div>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.text, lineHeight: 1.2 }}>MindShift Wellness Clinic</div>
-            <div style={{ fontSize: 10, color: C.muted2, lineHeight: 1.2 }}>Electronic Health Records</div>
+            <div style={{ fontSize: 13, fontWeight: 700, background: "linear-gradient(135deg,#a89cf5,#4ecdc4)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", lineHeight: 1.2 }}>MindShift Wellness Clinic</div>
+            <div style={{ fontSize: 10, color: C.muted2, lineHeight: 1.2, letterSpacing: "0.04em" }}>ELECTRONIC HEALTH RECORDS</div>
           </div>
         </div>
 
         {/* Breadcrumb */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
           <button onClick={() => setView("dashboard")} style={{
-            background: "transparent", border: "none", cursor: "pointer",
-            color: view === "dashboard" ? C.lavender : C.muted, fontWeight: view === "dashboard" ? 600 : 400,
-            fontFamily: "inherit", fontSize: 13,
+            background: view === "dashboard" ? "rgba(124,111,247,0.12)" : "transparent",
+            border: view === "dashboard" ? "1px solid rgba(124,111,247,0.25)" : "1px solid transparent",
+            borderRadius: 8, padding: "5px 12px",
+            cursor: "pointer", color: view === "dashboard" ? C.lavender : C.muted,
+            fontWeight: view === "dashboard" ? 600 : 400,
+            fontFamily: "inherit", fontSize: 13, transition: "all .15s",
           }}>Patients</button>
-          {view === "chart" && (
+          {(view === "chart" || view === "new-chart") && (
             <>
-              <span style={{ color: C.muted2 }}>›</span>
-              <span style={{ color: C.lavender, fontWeight: 600 }}>Chart</span>
-            </>
-          )}
-          {view === "new-chart" && (
-            <>
-              <span style={{ color: C.muted2 }}>›</span>
-              <span style={{ color: C.lavender, fontWeight: 600 }}>New Patient</span>
+              <span style={{ color: C.muted2, fontSize: 16 }}>›</span>
+              <span style={{ background: "rgba(78,205,196,0.12)", border: "1px solid rgba(78,205,196,0.25)", borderRadius: 8, padding: "5px 12px", color: C.teal, fontSize: 13, fontWeight: 600 }}>
+                {view === "new-chart" ? "New Patient" : "Chart"}
+              </span>
             </>
           )}
         </div>
 
-        {/* User info + sign out */}
+        {/* Clinician + sign out */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ textAlign: "right" }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{clinician.full_name}</div>
-            <div style={{ fontSize: 11, color: C.muted2 }}>{clinician.title}</div>
+            <div style={{ fontSize: 10, color: C.muted2, letterSpacing: "0.03em" }}>{clinician.title}</div>
           </div>
-          <div style={{ width: 34, height: 34, borderRadius: "50%", background: "linear-gradient(135deg,#7c6ff7,#4ecdc4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: "#fff" }}>
+          <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#7c6ff7,#4ecdc4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "#fff", boxShadow: "0 4px 12px rgba(124,111,247,0.35)" }}>
             {clinician.full_name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2)}
           </div>
-          <button onClick={signOut} style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${C.border}`, borderRadius: 8, padding: "6px 12px", color: C.muted, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+          <button onClick={signOut} style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${C.border}`, borderRadius: 8, padding: "7px 14px", color: C.muted, fontSize: 12, cursor: "pointer", fontFamily: "inherit", transition: "all .15s" }}>
             Sign Out
           </button>
         </div>

@@ -7,7 +7,7 @@ import {
 } from "../../lib/ehrDb";
 import {
   C, EhrCard, EhrBtn, EhrBadge, EhrInput, EhrSelect, ICD10Picker,
-  StatusBadge, SectionHeader, Divider, Spinner, formatDate, formatDateTime, age,
+  StatusBadge, SectionHeader, Divider, Spinner, EhrStyles, formatDate, formatDateTime, age,
 } from "./EHRUI";
 
 const TABS = [
@@ -73,33 +73,45 @@ export default function EHRPatientChart({ chartId, clinician, onBack, isNew = fa
   if (loading) return <Spinner />;
 
   return (
-    <div style={{ fontFamily: "inherit", minHeight: "100vh" }}>
-      {/* Top bar */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "1rem 2rem", borderBottom: `1px solid ${C.border}`, background: C.surface, flexWrap: "wrap" }}>
-        <button onClick={onBack} style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", gap: 4 }}>← Patients</button>
-        <div style={{ width: 1, height: 20, background: C.border }} />
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: C.text }}>{patientName}</div>
-          <div style={{ fontSize: 12, color: C.muted2, marginTop: 1, display: "flex", gap: 8 }}>
-            {chart?.mrn && <span>MRN: {chart.mrn}</span>}
+    <div className="ehr-root" style={{ fontFamily: "inherit", minHeight: "100vh" }}>
+      <EhrStyles />
+      {/* Patient header bar */}
+      <div style={{
+        background: "linear-gradient(135deg, rgba(124,111,247,0.1) 0%, rgba(78,205,196,0.05) 100%)",
+        borderBottom: `1px solid rgba(124,111,247,0.15)`,
+        padding: "1.2rem 2rem",
+        display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap",
+        position: "relative", overflow: "hidden",
+      }}>
+        <div style={{ position:"absolute", top:"-40px", right:"5%", width:180, height:180, borderRadius:"50%", background:"rgba(124,111,247,0.07)", filter:"blur(40px)", pointerEvents:"none" }} />
+        <button onClick={onBack} style={{ background:"rgba(255,255,255,0.05)", border:`1px solid ${C.border2}`, borderRadius:8, padding:"6px 12px", color: C.muted, cursor:"pointer", fontSize:13, display:"flex", alignItems:"center", gap:5, fontFamily:"inherit", flexShrink:0 }}>← Patients</button>
+        <div style={{ width:1, height:24, background: C.border }} />
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:18, fontWeight:800, color: C.text, letterSpacing:"-0.02em" }}>{patientName}</div>
+          <div style={{ fontSize:12, color: C.muted2, marginTop:2, display:"flex", gap:10, flexWrap:"wrap" }}>
+            {chart?.mrn && <span style={{ color: C.lavender, fontWeight:500 }}>MRN: {chart.mrn}</span>}
             {patientAge && <span>{patientAge} yrs</span>}
             {chart?.gender && <span>{chart.gender}</span>}
-            {chart?.primary_diagnosis && <span style={{ color: C.lavender }}>{chart.primary_diagnosis}</span>}
+            {chart?.primary_diagnosis && <span style={{ color: C.teal }}>{chart.primary_diagnosis} — {chart.primary_diagnosis_label}</span>}
           </div>
         </div>
         <StatusBadge status={chart?.status ?? "active"} />
-        {!editChart && <EhrBtn variant="secondary" small onClick={() => setEditChart(true)}>Edit Chart</EhrBtn>}
+        {!editChart && <EhrBtn variant="secondary" small onClick={() => setEditChart(true)}>✏️ Edit Chart</EhrBtn>}
       </div>
 
       {/* Tabs */}
-      <div style={{ display: "flex", gap: 4, padding: "0.75rem 2rem", borderBottom: `1px solid ${C.border}`, background: C.surface, overflowX: "auto" }}>
+      <div style={{ display:"flex", gap:4, padding:"0.6rem 2rem", borderBottom:`1px solid ${C.border}`, background:"rgba(8,12,24,0.6)", backdropFilter:"blur(10px)", overflowX:"auto" }}>
         {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
-            background: tab === t.id ? "rgba(124,111,247,0.15)" : "transparent",
-            border: tab === t.id ? "1px solid rgba(124,111,247,0.3)" : "1px solid transparent",
-            borderRadius: 8, padding: "7px 14px", color: tab === t.id ? C.lavender : C.muted,
-            fontSize: 13, fontWeight: tab === t.id ? 600 : 400, cursor: "pointer", whiteSpace: "nowrap",
-            display: "flex", alignItems: "center", gap: 6,
+          <button key={t.id} onClick={() => setTab(t.id)} className="ehr-tab-btn" style={{
+            background: tab===t.id ? "rgba(124,111,247,0.15)" : "transparent",
+            border: tab===t.id ? "1px solid rgba(124,111,247,0.3)" : "1px solid transparent",
+            borderRadius:10, padding:"8px 16px",
+            color: tab===t.id ? C.lavender : C.muted,
+            fontSize:13, fontWeight: tab===t.id ? 700 : 400,
+            cursor:"pointer", whiteSpace:"nowrap",
+            display:"flex", alignItems:"center", gap:6,
+            fontFamily:"inherit",
+            boxShadow: tab===t.id ? "0 2px 10px rgba(124,111,247,0.2)" : "none",
           }}>
             <span>{t.icon}</span>{t.label}
           </button>
@@ -107,7 +119,7 @@ export default function EHRPatientChart({ chartId, clinician, onBack, isNew = fa
       </div>
 
       {/* Content */}
-      <div style={{ padding: "1.5rem 2rem", maxWidth: 1100 }}>
+      <div style={{ padding: "1.8rem 2.5rem", maxWidth: 1100 }}>
         {editChart ? (
           <ChartEditForm
             chart={chart}
@@ -231,8 +243,8 @@ function ChartEditForm({ chart, clinician, saving, onSave, onCancel }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         {/* Demographics */}
-        <EhrCard style={{ gridColumn: "1 / -1" }}>
-          <h3 style={{ fontSize: 14, fontWeight: 700, color: C.lavender, marginBottom: "1rem" }}>Demographics</h3>
+        <EhrCard style={{ gridColumn: "1 / -1" }} glow="#7c6ff7">
+          <h3 style={{ fontSize: 13, fontWeight: 700, color: C.lavender, marginBottom: "1rem", textTransform:"uppercase", letterSpacing:"0.06em" }}>Demographics</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
             <EhrInput label="Full Name" value={form.full_name} onChange={set("full_name")} required />
             <EhrInput label="Date of Birth" type="date" value={form.date_of_birth} onChange={set("date_of_birth")} />
