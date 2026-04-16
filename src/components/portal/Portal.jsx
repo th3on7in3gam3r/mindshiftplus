@@ -3,7 +3,9 @@ import { supabase } from "../../lib/supabase";
 import PortalDashboard from "./PortalDashboard";
 import PortalAppointments from "./PortalAppointments";
 import PortalMessages from "./PortalMessages";
+import PortalDocuments from "./PortalDocuments";
 import PortalPrescriptions from "./PortalPrescriptions";
+import PortalVisitNotes from "./PortalVisitNotes";
 import PortalProfile from "./PortalProfile";
 
 // ── Inline auth screen — stays on portal, no redirect ─────────────────────────
@@ -189,7 +191,9 @@ const NAV = [
   { id:"dashboard",     icon:"🏠", label:"Dashboard" },
   { id:"appointments",  icon:"📅", label:"Appointments" },
   { id:"messages",      icon:"💬", label:"Messages" },
+  { id:"documents",     icon:"📄", label:"Documents" },
   { id:"prescriptions", icon:"💊", label:"Medications" },
+  { id:"visit-notes",   icon:"📋", label:"Visit Notes" },
   { id:"profile",       icon:"👤", label:"My Profile" },
 ];
 
@@ -351,10 +355,27 @@ export default function Portal({ onExit }) {
 
         {/* Pages */}
         <div style={{ flex:1 }}>
+          {/* HIPAA Disclaimer Banner — always visible */}
+          <div style={{
+            background:"#fffbeb", borderBottom:"1px solid #fde68a",
+            padding:"8px 1.5rem", display:"flex", alignItems:"flex-start",
+            gap:8, fontSize:12, color:"#92400e", lineHeight:1.6,
+          }}>
+            <span style={{ flexShrink:0, fontSize:14 }}>⚠️</span>
+            <span>
+              <strong>Important:</strong> This portal is not monitored in real time. It is not for emergencies.
+              If you are experiencing a crisis or emergency, call <strong>911</strong> or the{" "}
+              <strong>988 Suicide &amp; Crisis Lifeline (call or text 988)</strong>.
+              Portal content is reviewed only during scheduled appointments.
+              Use of this portal does not establish a provider-patient relationship on its own.
+            </span>
+          </div>
           {page==="dashboard"     && <PortalDashboard user={user} displayName={displayName} setPage={setPage} P={P}/>}
           {page==="appointments"  && <PortalAppointments userId={user?.id} P={P}/>}
           {page==="messages"      && <PortalMessages userId={user?.id} P={P}/>}
+          {page==="documents"     && <PortalDocuments userId={user?.id} P={P}/>}
           {page==="prescriptions" && <PortalPrescriptions userId={user?.id} P={P}/>}
+          {page==="visit-notes"   && <PortalVisitNotes userId={user?.id} P={P}/>}
           {page==="profile"       && <PortalProfile userId={user?.id} displayName={displayName} P={P}/>}
         </div>
 

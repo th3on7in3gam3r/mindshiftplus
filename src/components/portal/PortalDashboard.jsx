@@ -96,7 +96,9 @@ export default function PortalDashboard({ user, displayName, setPage, P }) {
         {[
           { icon:"📅", label:"Appointments", sub:"View & book", color:T.accent,  page:"appointments" },
           { icon:"💬", label:"Messages",     sub:"Contact clinic", color:T.teal,  page:"messages" },
+          { icon:"📄", label:"Documents",    sub:"Forms & records", color:T.gold, page:"documents" },
           { icon:"💊", label:"Medications",  sub:"Your prescriptions", color:"#8b5cf6", page:"prescriptions" },
+          { icon:"📋", label:"Visit Notes",  sub:"Clinician notes", color:"#0ea5a0", page:"visit-notes" },
           { icon:"👤", label:"My Profile",   sub:"Update info", color:T.rose,    page:"profile" },
         ].map(a=>(
           <Card key={a.label} onClick={()=>setPage(a.page)} style={{ cursor:"pointer", padding:"1.2rem", textAlign:"center" }}>
