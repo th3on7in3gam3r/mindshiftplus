@@ -123,6 +123,8 @@ function Avatar({name="U",size=38}){
 }
 
 // ── Nav ────────────────────────────────────────────────────────────────────────
+const ADMIN_EMAILS = ["info@mindshiftwellnessclinic.org", "jerlessm@gmail.com"];
+
 const navItems=[
   {id:"dashboard",icon:"⊞",label:"Dashboard"},
   {id:"mia",icon:"◎",label:"Mia"},
@@ -135,6 +137,11 @@ const navItems=[
   {id:"premium",icon:"◆",label:"Premium"},
   {id:"portal",icon:"🏥",label:"Patient Portal"},
   {id:"settings",icon:"◎",label:"Settings"},
+];
+
+// Admin-only nav items — only shown to admin emails
+const adminNavItems=[
+  {id:"ehr-schedule",icon:"📋",label:"Admin Schedule"},
 ];
 
 function Sidebar({page,setPage,user,onSignOut,open,onClose}){
@@ -174,6 +181,24 @@ function Sidebar({page,setPage,user,onSignOut,open,onClose}){
               {n.id==="premium"&&<span style={{marginLeft:"auto",fontSize:10,background:"var(--grad1)",padding:"2px 7px",borderRadius:99,color:"#fff"}}>PRO</span>}
             </button>
           ))}
+          {/* Admin-only items — only visible to admin emails */}
+          {user && ADMIN_EMAILS.includes(user.email) && (
+            <>
+              <div style={{height:1,background:"var(--border)",margin:"6px 0"}}/>
+              <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"var(--muted2)",padding:"0 14px",marginBottom:2}}>Admin</div>
+              {adminNavItems.map(n=>(
+                <button key={n.id} onClick={()=>{setPage(n.id);onClose();}} style={{
+                  display:"flex",alignItems:"center",gap:10,padding:"9px 14px",borderRadius:12,
+                  background:page===n.id?"rgba(124,111,247,0.2)":"transparent",
+                  border:page===n.id?"1px solid rgba(124,111,247,0.3)":"1px solid transparent",
+                  color:page===n.id?"var(--lavender)":"var(--muted)",fontSize:14,fontWeight:page===n.id?600:400,
+                  cursor:"pointer",textAlign:"left",transition:"all .15s"
+                }}>
+                  <span style={{fontSize:15}}>{n.icon}</span>{n.label}
+                </button>
+              ))}
+            </>
+          )}
         </nav>
         {user&&(
           <div style={{padding:"1rem 1.2rem",borderTop:"1px solid var(--border)"}}>
