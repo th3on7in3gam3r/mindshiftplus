@@ -210,9 +210,19 @@ function AvailabilityTab({ userId }) {
     getAvailability()
       .then(data => {
         if (Array.isArray(data) && data.length) setSlots(data);
-        else setSlots(DAYS.slice(1,6).map((_,i) => ({ day_of_week:i+1, start_time:"09:00", end_time:"17:00", slot_duration_minutes:60, location:"Milford", is_active:true })));
+        else setSlots([
+          { day_of_week:1, start_time:"18:00", end_time:"20:00", slot_duration_minutes:60, location:"Milford", is_active:true }, // Monday
+          { day_of_week:4, start_time:"18:00", end_time:"20:00", slot_duration_minutes:60, location:"Milford", is_active:true }, // Thursday
+          { day_of_week:5, start_time:"08:00", end_time:"17:00", slot_duration_minutes:60, location:"Milford", is_active:true }, // Friday
+          { day_of_week:6, start_time:"08:00", end_time:"17:00", slot_duration_minutes:60, location:"Milford", is_active:true }, // Saturday
+        ]);
       })
-      .catch(() => setSlots(DAYS.slice(1,6).map((_,i) => ({ day_of_week:i+1, start_time:"09:00", end_time:"17:00", slot_duration_minutes:60, location:"Milford", is_active:true }))));
+      .catch(() => setSlots([
+          { day_of_week:1, start_time:"18:00", end_time:"20:00", slot_duration_minutes:60, location:"Milford", is_active:true },
+          { day_of_week:4, start_time:"18:00", end_time:"20:00", slot_duration_minutes:60, location:"Milford", is_active:true },
+          { day_of_week:5, start_time:"08:00", end_time:"17:00", slot_duration_minutes:60, location:"Milford", is_active:true },
+          { day_of_week:6, start_time:"08:00", end_time:"17:00", slot_duration_minutes:60, location:"Milford", is_active:true },
+        ]));
   }, []);
 
   const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(""),3000); };

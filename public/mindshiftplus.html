@@ -185,6 +185,20 @@ footer{background:var(--bg2);border-top:1px solid rgba(107,95,207,.1);padding:2.
 </head>
 <body>
 
+<!-- ⚠️ MANDATORY SAFETY DISCLAIMER — DO NOT REMOVE -->
+<div id="safety-banner" style="background:#1e2a4a;border-bottom:2px solid #4a6cf7;padding:.75rem 5%;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;font-family:'DM Sans',system-ui,sans-serif">
+  <div style="display:flex;align-items:flex-start;gap:10;flex:1;min-width:0">
+    <span style="font-size:1.1rem;flex-shrink:0">⚠️</span>
+    <p style="font-size:.78rem;color:rgba(245,240,238,.75);line-height:1.6;margin:0">
+      <strong style="color:#fff">MindShift+ is not monitored continuously.</strong> Journal entries and app activity are reviewed only during scheduled appointments. This app is a wellness support tool — not a crisis service.
+      If you are experiencing a mental health crisis, thoughts of self-harm, or a medical emergency:
+      <strong style="color:#f0a500">Call 911</strong> or the
+      <strong style="color:#f0a500">988 Suicide &amp; Crisis Lifeline (call or text 988)</strong>.
+    </p>
+  </div>
+  <button onclick="document.getElementById('safety-banner').style.display='none'" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:4px 12px;color:rgba(255,255,255,.5);font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0">Dismiss</button>
+</div>
+
 <!-- Nav -->
 <nav>
   <a href="site-main.html" class="nav-back">
@@ -209,7 +223,7 @@ footer{background:var(--bg2);border-top:1px solid rgba(107,95,207,.1);padding:2.
       </h1>
       <p style="font-size:1.05rem;color:var(--muted);line-height:1.75;max-width:480px;margin-bottom:2rem">MindShift+ is a secure AI-powered wellness platform offered by MindShift Wellness Clinic — designed to keep you supported, grounded, and growing between your appointments.</p>
       <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem">
-        <a href="#" class="btn-primary" onclick="return showComingSoon()">
+        <a href="#" class="btn-primary" onclick="return openApp('onboarding')">
           Start for Free
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
@@ -279,7 +293,7 @@ footer{background:var(--bg2);border-top:1px solid rgba(107,95,207,.1);padding:2.
         <div class="feat-num">02</div>
         <span class="feat-icon">◈</span>
         <div class="feat-title">Guided Journaling</div>
-        <div class="feat-desc">Beautiful journaling with mood tracking, reflection prompts, and AI-powered pattern detection. Understand your emotional landscape and share insights with your clinician.</div>
+        <div class="feat-desc">Beautiful journaling with mood tracking and reflection prompts. Your entries are private and for your personal growth — they are not monitored by your provider between appointments.</div>
         <span class="feat-tag">AI Pattern Detection</span>
       </div>
       <div class="feat-cell">
@@ -300,7 +314,7 @@ footer{background:var(--bg2);border-top:1px solid rgba(107,95,207,.1);padding:2.
         <div class="feat-num">05</div>
         <span class="feat-icon">◐</span>
         <div class="feat-title">Emotional Insights</div>
-        <div class="feat-desc">See your mood trends, identify patterns, and celebrate progress. Visual data that empowers — and helps you have more informed conversations with your provider.</div>
+        <div class="feat-desc">See your mood trends, identify patterns, and celebrate progress. Visual data that empowers your personal wellness journey — not monitored in real time by your provider.</div>
         <span class="feat-tag">Weekly summaries</span>
       </div>
       <div class="feat-cell">
@@ -327,7 +341,7 @@ footer{background:var(--bg2);border-top:1px solid rgba(107,95,207,.1);padding:2.
         <div style="display:flex;align-items:center;gap:.75rem;font-size:.875rem;color:var(--txt)"><span style="width:6px;height:6px;border-radius:50%;background:var(--violet);flex-shrink:0"></span>Guides breathing, reflection, and reframing</div>
         <div style="display:flex;align-items:center;gap:.75rem;font-size:.875rem;color:var(--txt)"><span style="width:6px;height:6px;border-radius:50%;background:var(--violet);flex-shrink:0"></span>Available every day — no appointment needed</div>
       </div>
-      <a href="#" class="btn-primary" onclick="return showComingSoon()">Start talking to Mia →</a>
+      <a href="#" class="btn-primary" onclick="return openApp('mia')">Start talking to Mia →</a>
     </div>
     <div class="reveal-right">
       <div class="chat-demo">
@@ -386,7 +400,7 @@ footer{background:var(--bg2);border-top:1px solid rgba(107,95,207,.1);padding:2.
         <div>
           <div class="step-tag">Track Progress</div>
           <div class="step-h">See your growth over time</div>
-          <p class="step-p">Your mood trends, journal patterns, and streak momentum build a picture of real progress — insights you can share with your clinician at your next appointment.</p>
+          <p class="step-p">Your mood trends, journal patterns, and streak momentum build a picture of real progress — insights you can choose to discuss with your clinician at your next scheduled appointment.</p>
         </div>
       </div>
     </div>
@@ -412,7 +426,7 @@ footer{background:var(--bg2);border-top:1px solid rgba(107,95,207,.1);padding:2.
           <li class="price-feat"><span class="price-check">✓</span>1 wellness program</li>
           <li class="price-feat"><span class="price-check no">–</span><span style="opacity:.4">Advanced insights</span></li>
         </ul>
-        <button class="price-btn" onclick="return showComingSoon()">Get started free</button>
+        <button class="price-btn" onclick="return openApp('onboarding')">Get started free</button>
       </div>
       <div class="price-card featured reveal" data-delay="2">
         <div class="price-tier">Premium</div>
@@ -426,7 +440,7 @@ footer{background:var(--bg2);border-top:1px solid rgba(107,95,207,.1);padding:2.
           <li class="price-feat"><span class="price-check">✓</span>All breathing modes</li>
           <li class="price-feat"><span class="price-check">✓</span>All wellness programs</li>
         </ul>
-        <button class="price-btn" onclick="return showComingSoon()">Start 7-day free trial</button>
+        <button class="price-btn" onclick="return openApp('premium')">Start 7-day free trial</button>
       </div>
     </div>
   </div>
@@ -438,7 +452,7 @@ footer{background:var(--bg2);border-top:1px solid rgba(107,95,207,.1);padding:2.
     <h2 style="font-family:var(--serif);font-size:clamp(2.2rem,4vw,3.2rem);font-weight:300;color:#fff;line-height:1.1;letter-spacing:-.03em;margin-bottom:1rem">Start your wellness<br><em style="color:var(--lilac)">journey today.</em></h2>
     <p style="font-size:.95rem;color:rgba(245,240,238,.55);line-height:1.75;margin-bottom:2rem">Free to start. Available to all MindShift Wellness Clinic patients and anyone seeking daily mental wellness support.</p>
     <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
-      <a href="#" class="btn-primary" onclick="return showComingSoon()" style="background:#fff;color:var(--violet)">
+      <a href="#" class="btn-primary" onclick="return openApp('onboarding')" style="background:#fff;color:var(--violet)">
         Get Started Free
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </a>
@@ -470,7 +484,16 @@ const observer = new IntersectionObserver(entries=>{
 },{threshold:.12});
 document.querySelectorAll('.reveal,.reveal-left,.reveal-right').forEach(el=>observer.observe(el));
 
-function openApp(page){ return showComingSoon(); }
+function openApp(page){
+  // Navigate to the React app and open the auth modal
+  if(window.parent && window.parent !== window){
+    window.parent.postMessage({type:'mindshift-plus:openAuth'},'*');
+    return false;
+  }
+  try{ sessionStorage.setItem('ms_intent', page || 'auth'); }catch{}
+  window.location.href = '/';
+  return false;
+}
 
 function openAuthModal(){
   // If inside the React app iframe, message parent to open auth

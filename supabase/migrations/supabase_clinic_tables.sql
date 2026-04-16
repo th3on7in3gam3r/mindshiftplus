@@ -68,13 +68,14 @@ create policy "Own documents" on portal_documents for all using (auth.uid() = pa
 create table if not exists visit_notes (
   id uuid primary key default gen_random_uuid(),
   patient_id uuid references auth.users(id) on delete cascade not null,
-  clinician_name text default 'Kenneth Mutegyeki, PMHNP',
+  clinician_name text default 'Kenneth Mutegyeki, PMHNP-BC',
   appointment_id uuid references appointments(id) on delete set null,
   note_date date not null default current_date,
   chief_complaint text, assessment text, plan text, follow_up text,
   created_at timestamptz default now()
 );
 alter table visit_notes enable row level security;
+-- ⚠️ Patients CANNOT read visit notes — provider only
 create policy "Own visit notes" on visit_notes for select using (auth.uid() = patient_id);
 create policy "Admin inserts notes" on visit_notes for insert with check (true);
 
@@ -89,3 +90,14 @@ create table if not exists prescriptions (
 alter table prescriptions enable row level security;
 create policy "Own prescriptions" on prescriptions for select using (auth.uid() = patient_id);
 create policy "Admin inserts rx" on prescriptions for insert with check (true);
+
+-- Disclaimer acceptance tracking
+create table if not exists disclaimer_acceptances (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade not null,
+  version text not null default '1.0',
+  accepted_at timestamptz default now(),
+  unique(user_id, version)
+);
+alter table disclaimer_acceptances enable row level security;
+create policy "Own disclaimer" on disclaimer_acceptances for all using (auth.uid() = user_id);

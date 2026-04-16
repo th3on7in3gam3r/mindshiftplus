@@ -4,6 +4,7 @@ import AuthModal from "./components/AuthModal";
 import Portal from "./components/portal/Portal";
 import PublicBooking from "./components/scheduling/PublicBooking";
 import AdminSchedule from "./components/scheduling/AdminSchedule";
+import DisclaimerModal, { hasAcceptedDisclaimer } from "./components/DisclaimerModal";
 
 // ── Fonts ──────────────────────────────────────────────────────────────────────
 const GlobalStyles = () => (
@@ -554,6 +555,10 @@ function Mia(){
 
   return(
     <div style={{height:"100vh",display:"flex",flexDirection:"column",padding:"1.5rem",maxWidth:750,margin:"0 auto"}}>
+      {/* ⚠️ Crisis disclaimer — always visible */}
+      <div style={{background:"rgba(240,165,0,0.08)",border:"1px solid rgba(240,165,0,0.25)",borderRadius:10,padding:"8px 12px",marginBottom:"0.75rem",fontSize:11,color:"var(--gold)",lineHeight:1.6}}>
+        ⚠️ <strong>Mia is an AI wellness tool — not a crisis service.</strong> Conversations are not monitored in real time. If you are in crisis, call <strong>911</strong> or text/call <strong>988</strong>.
+      </div>
       {/* Header */}
       <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:"1.2rem",paddingBottom:"1rem",borderBottom:"1px solid var(--border)"}}>
         <div style={{width:44,height:44,borderRadius:"50%",background:"var(--grad2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>◎</div>
@@ -664,6 +669,13 @@ function Journal(){
 
   return(
     <div style={{padding:"2rem",maxWidth:800,margin:"0 auto"}}>
+      {/* ⚠️ Mandatory disclaimer */}
+      <div style={{background:"rgba(240,165,0,0.1)",border:"1px solid rgba(240,165,0,0.3)",borderRadius:12,padding:"10px 14px",marginBottom:"1.2rem",display:"flex",gap:10,alignItems:"flex-start"}}>
+        <span style={{fontSize:16,flexShrink:0}}>⚠️</span>
+        <p style={{fontSize:12,color:"var(--gold)",lineHeight:1.65,margin:0}}>
+          <strong>Your journal is private and not monitored between appointments.</strong> Entries are reviewed only during your scheduled sessions. If you are in crisis, call <strong>911</strong> or the <strong>988 Suicide &amp; Crisis Lifeline (call or text 988)</strong>.
+        </p>
+      </div>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem",flexWrap:"wrap",gap:10}}>
         <div><h1 style={{fontSize:"1.8rem",fontWeight:700}}>Your Journal</h1><p style={{color:"var(--muted)",fontSize:14,marginTop:2}}>A private space to reflect and grow.</p></div>
         <Btn onClick={()=>setEditing(true)}>+ New Entry</Btn>
@@ -1334,6 +1346,25 @@ function Settings({user,setPage,onSignOut}){
           </div>
         )}
       </GlassCard>
+
+      {/* Legal / Disclaimer */}
+      <GlassCard>
+        <div style={{fontWeight:600,marginBottom:12,fontSize:14}}>Legal &amp; Disclaimer</div>
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          <a href="/privacy.html" target="_blank" style={{fontSize:13,color:"var(--lavender)",textDecoration:"none"}}>Privacy Policy ↗</a>
+          <a href="/terms.html" target="_blank" style={{fontSize:13,color:"var(--lavender)",textDecoration:"none"}}>Terms of Service ↗</a>
+          <button
+            onClick={async()=>{
+              const { supabase } = await import("./lib/supabase.js");
+              const { data:{ user } } = await supabase.auth.getUser();
+              if(user){ await supabase.from("disclaimer_acceptances").delete().eq("user_id",user.id); window.location.reload(); }
+            }}
+            style={{background:"transparent",border:"none",color:"var(--muted)",fontSize:13,cursor:"pointer",textAlign:"left",padding:0}}
+          >
+            View MindShift+ Disclaimer / Re-read
+          </button>
+        </div>
+      </GlassCard>
     </div>
   );
 }
@@ -1342,8 +1373,8 @@ function Settings({user,setPage,onSignOut}){
 function About(){
   const credentials=[
     {icon:"🎓",label:"Education",value:"Walden University (MSN) · Framingham State University (2022)"},
-    {icon:"📋",label:"License",value:"Psychiatric Nurse Practitioner · MA License RN2267715 · Exp. 2028-02"},
-    {icon:"🏥",label:"Role",value:"Psychiatric Nurse Practitioner, BC, BSN, MSN"},
+    {icon:"📋",label:"License",value:"Psychiatric Mental Health Nurse Practitioner (PMHNP-BC) · MA License RN2267715 · Exp. 2028-02"},
+    {icon:"🏥",label:"Role",value:"Psychiatric Mental Health Nurse Practitioner (PMHNP-BC)"},
     {icon:"📍",label:"Locations",value:"31 Granite St. Suite #2, Milford, MA 01757 · 100 Cambridge St. 14th Fl, Boston, MA 02114"},
     {icon:"📞",label:"Phone",value:"(508) 306-1128"},
     {icon:"✉️",label:"Email",value:"info@mindshiftwellnessclinic.org"},
@@ -1385,9 +1416,9 @@ function About(){
         }}>👨🏾‍⚕️</div>
         <div style={{flex:1,minWidth:200}}>
           <h1 style={{fontSize:"clamp(1.3rem,4vw,1.8rem)",fontWeight:700,marginBottom:4}}>Kenneth Mutegyeki</h1>
-          <div style={{color:"var(--lavender)",fontSize:14,marginBottom:8}}>Psychiatric Nurse Practitioner, BC, BSN, MSN</div>
+          <div style={{color:"var(--lavender)",fontSize:14,marginBottom:8}}>Psychiatric Mental Health Nurse Practitioner (PMHNP-BC)</div>
           <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-            <Badge color="purple">PMHNP</Badge>
+            <Badge color="purple">PMHNP-BC</Badge>
             <Badge color="teal">15+ Years Experience</Badge>
             <Badge color="gold">Verified by Psychology Today</Badge>
           </div>
@@ -1521,6 +1552,17 @@ export default function App(){
   const [page, setPage] = useState("landing");
   const [showAuth, setShowAuth] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
+  const [disclaimerChecked, setDisclaimerChecked] = useState(false);
+
+  // Check disclaimer acceptance when user logs in
+  useEffect(()=>{
+    if (!user) { setDisclaimerChecked(false); return; }
+    hasAcceptedDisclaimer(user.id).then(accepted => {
+      if (!accepted) setShowDisclaimer(true);
+      else setDisclaimerChecked(true);
+    });
+  },[user?.id]);
 
   // Derive display name from Supabase user metadata
   const appUser = user ? {
@@ -1618,6 +1660,13 @@ export default function App(){
     <>
       <GlobalStyles/>
       {showAuth && <AuthModal onClose={()=>setShowAuth(false)}/>}
+      {/* Disclaimer modal — blocks app until accepted */}
+      {showDisclaimer && user && (
+        <DisclaimerModal
+          userId={user.id}
+          onAccept={()=>{ setShowDisclaimer(false); setDisclaimerChecked(true); }}
+        />
+      )}
       <div style={{display:"flex",minHeight:"100vh"}}>
         {needsSidebar&&(
           <Sidebar

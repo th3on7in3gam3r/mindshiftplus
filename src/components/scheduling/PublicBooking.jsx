@@ -34,10 +34,21 @@ const REASONS = [
   "Other",
 ];
 
-// Default weekly slots (Mon–Fri, 9am–5pm, 60 min)
-// In production these come from the availability table
-const DEFAULT_AVAILABILITY = [1,2,3,4,5]; // Mon–Fri
-const DEFAULT_TIMES = ["9:00 AM","10:00 AM","11:00 AM","1:00 PM","2:00 PM","3:00 PM","4:00 PM"];
+const CLINICIANS = [
+  { name:"Kenneth Mutegyeki, PMHNP-BC", title:"Psychiatric Mental Health Nurse Practitioner (PMHNP-BC)", emoji:"👨🏾‍⚕️" },
+  { name:"Rachel Nakkazi, PMHNP-BC", title:"Psychiatric Mental Health Nurse Practitioner (PMHNP-BC)", emoji:"👩🏾‍⚕️" },
+];
+
+// Availability: Mon/Thu 6–8 PM, Fri/Sat 8 AM–5 PM
+const DEFAULT_AVAILABILITY = [1, 4, 5, 6]; // Mon, Thu, Fri, Sat
+
+// Time slots per day of week
+const SLOTS_BY_DOW = {
+  1: ["6:00 PM","7:00 PM"],                                                          // Monday
+  4: ["6:00 PM","7:00 PM"],                                                          // Thursday
+  5: ["8:00 AM","9:00 AM","10:00 AM","11:00 AM","1:00 PM","2:00 PM","3:00 PM","4:00 PM"], // Friday
+  6: ["8:00 AM","9:00 AM","10:00 AM","11:00 AM","1:00 PM","2:00 PM","3:00 PM","4:00 PM"], // Saturday
+};
 
 // ── localStorage helpers ───────────────────────────────────────────────────────
 function saveAppointment(appt) {
@@ -189,9 +200,11 @@ function Calendar({ selected, onSelect }) {
 // ── Time Slots ─────────────────────────────────────────────────────────────────
 function TimeSlots({ date, selected, onSelect }) {
   const booked = getBookedSlots(date);
+  const dow = date ? new Date(date+"T12:00:00").getDay() : 1;
+  const times = SLOTS_BY_DOW[dow] || [];
   return (
     <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(100px,1fr))", gap:8 }}>
-      {DEFAULT_TIMES.map(t => {
+      {times.map(t => {
         const isBooked = booked.includes(t);
         const isSel = selected === t;
         return (
@@ -251,7 +264,7 @@ export default function PublicBooking({ onBack }) {
   const [step, setStep] = useState(1);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
-  const [form, setForm] = useState({ name:"", email:"", phone:"", reason:"" });
+  const [form, setForm] = useState({ name:"", email:"", phone:"", reason:"", clinician: CLINICIANS[0].name });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
@@ -268,11 +281,12 @@ export default function PublicBooking({ onBack }) {
         name: form.name, email: form.email, phone: form.phone,
         reason: form.reason, scheduled_at: `${date}T${time.replace(" AM","").replace(" PM","")}:00`,
         duration_minutes: 60, location: "Milford", appointment_type: form.reason || "consultation",
+        provider_name: form.clinician,
         is_public: true,
       });
     } catch {
       // Fallback to localStorage if API not yet deployed
-      saveAppointment({ date, time, ...form, status:"pending", provider:"Kenneth Mutegyeki, PMHNP" });
+      saveAppointment({ date, time, ...form, status:"pending", provider:"Kenneth Mutegyeki, PMHNP-BC" });
     }
     setSubmitting(false);
     setDone(true);
@@ -330,7 +344,7 @@ export default function PublicBooking({ onBack }) {
             Book an <em style={{ fontStyle:"italic", color:C.violet }}>Appointment</em>
           </h1>
           <p style={{ fontSize:14, color:C.muted, maxWidth:480, margin:"0 auto" }}>
-            with Kenneth Mutegyeki, PMHNP · Milford, MA
+            MindShift Wellness Clinic · Milford, MA
           </p>
         </div>
 
@@ -371,6 +385,22 @@ export default function PublicBooking({ onBack }) {
                   <div style={{ background:"rgba(224,122,143,0.08)", border:`1px solid rgba(224,122,143,0.3)`, borderRadius:10, padding:"10px 14px", fontSize:13, color:C.blush, marginBottom:14 }}>{error}</div>
                 )}
                 <form onSubmit={handleSubmit} style={{ display:"flex", flexDirection:"column", gap:14 }}>
+                  <div>
+                    <label style={{ fontSize:12, fontWeight:500, color:C.txt, display:"block", marginBottom:8 }}>Select Your Clinician *</label>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:4 }}>
+                      {CLINICIANS.map(c=>(
+                        <button key={c.name} type="button" onClick={()=>setForm(f=>({...f,clinician:c.name}))} style={{
+                          padding:"10px 12px", borderRadius:12, border:`2px solid ${form.clinician===c.name?C.violet:C.border}`,
+                          background:form.clinician===c.name?"rgba(107,95,207,0.06)":"#fff",
+                          cursor:"pointer", textAlign:"left", transition:"all .15s",
+                        }}>
+                          <div style={{ fontSize:18, marginBottom:3 }}>{c.emoji}</div>
+                          <div style={{ fontSize:12, fontWeight:700, color:C.txt, lineHeight:1.3 }}>{c.name.split(",")[0]}</div>
+                          <div style={{ fontSize:10, color:C.muted, marginTop:2 }}>{c.title.split(",")[0]}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
                     <Input label="Full Name" value={form.name} onChange={set("name")} placeholder="Your full name" required/>
                     <Input label="Email Address" type="email" value={form.email} onChange={set("email")} placeholder="you@example.com" required/>
@@ -399,10 +429,10 @@ export default function PublicBooking({ onBack }) {
                 <SectionLabel>Your Appointment</SectionLabel>
                 <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
                   <div style={{ display:"flex", gap:10, alignItems:"flex-start" }}>
-                    <span style={{ fontSize:20 }}>👨🏾‍⚕️</span>
+                    <span style={{ fontSize:20 }}>{CLINICIANS.find(c=>c.name===form.clinician)?.emoji||"👨🏾‍⚕️"}</span>
                     <div>
-                      <div style={{ fontSize:13, fontWeight:600, color:C.txt }}>Kenneth Mutegyeki</div>
-                      <div style={{ fontSize:11, color:C.muted }}>Psychiatric Nurse Practitioner, BC, BSN, MSN</div>
+                      <div style={{ fontSize:13, fontWeight:600, color:C.txt }}>{form.clinician||"Kenneth Mutegyeki"}</div>
+                      <div style={{ fontSize:11, color:C.muted }}>{CLINICIANS.find(c=>c.name===form.clinician)?.title||"Psychiatric Mental Health Nurse Practitioner (PMHNP-BC)"}</div>
                     </div>
                   </div>
                   <div style={{ display:"flex", gap:10, alignItems:"center" }}>
@@ -420,7 +450,7 @@ export default function PublicBooking({ onBack }) {
                 </div>
                 <div style={{ marginTop:"1rem", paddingTop:"1rem", borderTop:`1px solid ${C.border}` }}>
                   <div style={{ fontSize:11, color:C.muted2, lineHeight:1.7 }}>
-                    💳 Initial Evaluation: $400 · Follow-up: $150<br/>
+                    💳 Initial Evaluation: $400 (60 min) · Follow-Up: $150 (10–20 min)<br/>
                     Most insurance plans accepted · Self-pay available
                   </div>
                 </div>
@@ -435,8 +465,8 @@ export default function PublicBooking({ onBack }) {
               <Card style={{ background:C.cream, border:`1px solid ${C.border2}` }}>
                 <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:C.muted, marginBottom:8 }}>Office Hours</div>
                 <div style={{ fontSize:12, color:C.muted, lineHeight:1.8 }}>
-                  Monday – Friday<br/>
-                  9:00 AM – 5:00 PM<br/>
+                  Mon &amp; Thu: 6:00 PM – 8:00 PM<br/>
+                  Fri &amp; Sat: 8:00 AM – 5:00 PM<br/>
                   <span style={{ color:C.teal, fontWeight:500 }}>Telehealth available</span>
                 </div>
               </Card>

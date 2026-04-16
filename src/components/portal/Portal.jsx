@@ -3,10 +3,8 @@ import { supabase } from "../../lib/supabase";
 import PortalDashboard from "./PortalDashboard";
 import PortalAppointments from "./PortalAppointments";
 import PortalMessages from "./PortalMessages";
-import PortalDocuments from "./PortalDocuments";
-import PortalProfile from "./PortalProfile";
-import PortalVisitNotes from "./PortalVisitNotes";
 import PortalPrescriptions from "./PortalPrescriptions";
+import PortalProfile from "./PortalProfile";
 
 // ── Inline auth screen — stays on portal, no redirect ─────────────────────────
 function PortalAuthScreen({ onBack }) {
@@ -191,9 +189,7 @@ const NAV = [
   { id:"dashboard",     icon:"🏠", label:"Dashboard" },
   { id:"appointments",  icon:"📅", label:"Appointments" },
   { id:"messages",      icon:"💬", label:"Messages" },
-  { id:"documents",     icon:"📄", label:"Documents" },
-  { id:"visit-notes",   icon:"📋", label:"Visit Notes" },
-  { id:"prescriptions", icon:"💊", label:"Prescriptions" },
+  { id:"prescriptions", icon:"💊", label:"Medications" },
   { id:"profile",       icon:"👤", label:"My Profile" },
 ];
 
@@ -358,8 +354,6 @@ export default function Portal({ onExit }) {
           {page==="dashboard"     && <PortalDashboard user={user} displayName={displayName} setPage={setPage} P={P}/>}
           {page==="appointments"  && <PortalAppointments userId={user?.id} P={P}/>}
           {page==="messages"      && <PortalMessages userId={user?.id} P={P}/>}
-          {page==="documents"     && <PortalDocuments userId={user?.id} P={P}/>}
-          {page==="visit-notes"   && <PortalVisitNotes userId={user?.id} P={P}/>}
           {page==="prescriptions" && <PortalPrescriptions userId={user?.id} P={P}/>}
           {page==="profile"       && <PortalProfile userId={user?.id} displayName={displayName} P={P}/>}
         </div>
