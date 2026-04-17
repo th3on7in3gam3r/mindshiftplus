@@ -96,7 +96,7 @@ export default function EHRIntakes({ clinician, onOpenChart }) {
       </div>
 
       {/* Filters */}
-      <div style={{ display: "flex", gap: 6, marginBottom: "1.2rem", background: "rgba(255,255,255,0.03)", border: `1px solid ${var(--ehr-border)}`, borderRadius: 12, padding: "4px", width: "fit-content" }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: "1.2rem", background: "rgba(255,255,255,0.03)", border: `1px solid ${rgba(226,232,240,0.8)}`, borderRadius: 12, padding: "4px", width: "fit-content" }}>
         {[["pending", "Pending"], ["reviewed", "Reviewed"], ["chart_created", "Chart Created"], ["all", "All"]].map(([v, l]) => (
           <button key={v} onClick={() => setFilter(v)} style={{
             background: filter === v ? "rgba(124,111,247,0.2)" : "transparent",
@@ -121,9 +121,9 @@ export default function EHRIntakes({ clinician, onOpenChart }) {
           {filtered.map(i => (
             <div key={i.id} onClick={() => setSelected(i)} style={{
               display: "flex", alignItems: "center", gap: 14,
-              background: "rgba(255,255,255,0.03)", border: `1px solid ${var(--ehr-border)}`,
+              background: "rgba(255,255,255,0.03)", border: `1px solid ${rgba(226,232,240,0.8)}`,
               borderRadius: 16, padding: "1rem 1.2rem", cursor: "pointer",
-              borderLeft: i.status === "pending" ? `3px solid ${var(--ehr-gold)}` : i.status === "reviewed" ? `3px solid ${var(--ehr-teal)}` : `3px solid ${var(--ehr-green)}`,
+              borderLeft: i.status === "pending" ? `3px solid #f0a500` : i.status === "reviewed" ? `3px solid #0ea5a0` : `3px solid #16a34a`,
               transition: "background .15s, border-color .15s",
             }}
               onMouseEnter={e => e.currentTarget.style.background = "rgba(124,111,247,0.06)"}
@@ -186,7 +186,7 @@ function IntakeDetail({ intake, clinician, working, onBack, onReview, onCreateCh
       {/* Top bar */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem", flexWrap: "wrap", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button onClick={onBack} style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${var(--ehr-border2)}`, borderRadius: 8, padding: "7px 12px", color: "var(--ehr-muted)", cursor: "pointer", fontSize: 13, fontFamily: "inherit" }}>← Intakes</button>
+          <button onClick={onBack} style={{ background: "rgba(255,255,255,0.05)", border: `1px solid #cbd5e1`, borderRadius: 8, padding: "7px 12px", color: "var(--ehr-muted)", cursor: "pointer", fontSize: 13, fontFamily: "inherit" }}>← Intakes</button>
           <div>
             <h2 style={{ fontSize: 18, fontWeight: 800, color: "var(--ehr-text)", margin: 0 }}>{intake.full_name || "Intake Review"}</h2>
             <div style={{ fontSize: 12, color: "var(--ehr-muted2)", marginTop: 2 }}>
@@ -225,7 +225,7 @@ function IntakeDetail({ intake, clinician, working, onBack, onReview, onCreateCh
         </div>
       )}
 
-      <Section title="Demographics" color={var(--ehr-accent)}>
+      <Section title="Demographics" color="var(--ehr-accent)">
         <Row label="Full Name" value={intake.full_name} />
         <Row label="Date of Birth" value={intake.date_of_birth ? `${formatDate(intake.date_of_birth)} (${patientAge} yrs)` : null} />
         <Row label="Gender" value={intake.gender} />
@@ -234,7 +234,7 @@ function IntakeDetail({ intake, clinician, working, onBack, onReview, onCreateCh
         <Row label="Address" value={intake.address} wide />
       </Section>
 
-      <Section title="Emergency Contact & Insurance" color={var(--ehr-teal)}>
+      <Section title="Emergency Contact & Insurance" color="var(--ehr-teal)">
         <Row label="Emergency Contact" value={intake.emergency_contact_name} />
         <Row label="Relationship" value={intake.emergency_contact_relationship} />
         <Row label="Emergency Phone" value={intake.emergency_contact_phone} />
@@ -243,7 +243,7 @@ function IntakeDetail({ intake, clinician, working, onBack, onReview, onCreateCh
         <Row label="Group #" value={intake.insurance_group} />
       </Section>
 
-      <Section title="Medical History" color={var(--ehr-gold)}>
+      <Section title="Medical History" color="var(--ehr-gold)">
         <Row label="Primary Care Provider" value={intake.primary_care_provider} />
         <Row label="Pharmacy" value={intake.pharmacy} />
         <Row label="Current Medications" value={intake.current_medications} wide />
@@ -253,7 +253,7 @@ function IntakeDetail({ intake, clinician, working, onBack, onReview, onCreateCh
         <Row label="Surgeries" value={intake.surgeries} />
       </Section>
 
-      <Section title="Mental Health History" color={var(--ehr-purple)}>
+      <Section title="Mental Health History" color="var(--ehr-purple)">
         <Row label="Reason for Visit" value={intake.reason_for_visit} wide />
         <Row label="Duration of Symptoms" value={intake.symptoms_duration} />
         <Row label="Previous Therapy" value={intake.previous_therapy ? "Yes" : "No"} />
@@ -264,7 +264,7 @@ function IntakeDetail({ intake, clinician, working, onBack, onReview, onCreateCh
         <Row label="Substance Use" value={intake.substance_use} wide />
       </Section>
 
-      <Section title="Safety & Consents" color={var(--ehr-rose)}>
+      <Section title="Safety & Consents" color="var(--ehr-rose)">
         <Row label="Suicidal Ideation" value={intake.suicidal_ideation} />
         <Row label="Self-Harm" value={intake.self_harm} />
         {intake.safety_plan && <Row label="Safety Notes" value={intake.safety_plan} wide />}

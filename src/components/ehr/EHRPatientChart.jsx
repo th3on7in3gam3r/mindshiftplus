@@ -72,14 +72,14 @@ export default function EHRPatientChart({ chartId, clinician, onBack, isNew = fa
 
       {/* Patient header */}
       <div style={{
-        background: document.documentElement.getAttribute("data-theme") === "dark"
+        background: localStorage.getItem('msw_theme') === 'dark'
           ? "linear-gradient(135deg,rgba(124,111,247,0.1),rgba(78,205,196,0.05))"
-          : `linear-gradient(135deg,${var(--ehr-accent)}10,${var(--ehr-teal)}08)`,
-        borderBottom: `1px solid ${var(--ehr-border)}`,
+          : `linear-gradient(135deg,#3b5bdb10,#0ea5a008)`,
+        borderBottom: `1px solid ${rgba(226,232,240,0.8)}`,
         padding: "1.2rem 2rem",
         display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap",
       }}>
-        <button onClick={onBack} style={{ background: document.documentElement.getAttribute("data-theme") === "dark" ? "rgba(255,255,255,0.05)" : "#f1f5f9", border: `1px solid ${var(--ehr-border2)}`, borderRadius: 8, padding: "6px 12px", color: "var(--ehr-muted)", cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit", flexShrink: 0 }}>← Patients</button>
+        <button onClick={onBack} style={{ background: localStorage.getItem('msw_theme') === 'dark' ? "rgba(255,255,255,0.05)" : "#f1f5f9", border: `1px solid #cbd5e1`, borderRadius: 8, padding: "6px 12px", color: "var(--ehr-muted)", cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit", flexShrink: 0 }}>← Patients</button>
         <div style={{ width: 1, height: 24, background: "var(--ehr-border)" }} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 18, fontWeight: 800, color: "var(--ehr-text)", letterSpacing: "-0.02em" }}>{patientName}</div>
@@ -95,11 +95,11 @@ export default function EHRPatientChart({ chartId, clinician, onBack, isNew = fa
       </div>
 
       {/* Tabs */}
-      <div style={{ display: "flex", gap: 4, padding: "0.6rem 2rem", borderBottom: `1px solid ${var(--ehr-border)}`, background: "var(--ehr-surface)", overflowX: "auto" }}>
+      <div style={{ display: "flex", gap: 4, padding: "0.6rem 2rem", borderBottom: `1px solid ${rgba(226,232,240,0.8)}`, background: "var(--ehr-surface)", overflowX: "auto" }}>
         {TABS.map(tb => (
           <button key={tb.id} onClick={() => setTab(tb.id)} className="ehr-tab-btn" style={{
-            background: tab === tb.id ? `${var(--ehr-accent)}15` : "transparent",
-            border: tab === tb.id ? `1px solid ${var(--ehr-accent)}35` : "1px solid transparent",
+            background: tab === tb.id ? `#3b5bdb15` : "transparent",
+            border: tab === tb.id ? `1px solid #3b5bdb35` : "1px solid transparent",
             borderRadius: 10, padding: "8px 16px",
             color: tab === tb.id ? "var(--ehr-accent)" : "var(--ehr-muted)",
             fontSize: 13, fontWeight: tab === tb.id ? 700 : 400,
@@ -205,7 +205,7 @@ function ChartEditForm({ chart, clinician, saving, onSave, onCancel }) {
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        <EhrCard style={{ gridColumn: "1 / -1" }} glow={var(--ehr-accent)}>
+        <EhrCard style={{ gridColumn: "1 / -1" }} glow="var(--ehr-accent)">
           <h3 style={{ fontSize: 13, fontWeight: 700, color: "var(--ehr-accent)", marginBottom: "1rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>Demographics</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
             <EhrInput label="Full Name" value={form.full_name} onChange={set("full_name")} required />
@@ -417,7 +417,7 @@ function NoteCard({ note, onEdit, onSign, onDelete }) {
             </div>
           )}
           {note.risk_assessment && (
-            <div style={{ marginTop: 10, background: `${var(--ehr-rose)}10`, borderRadius: 8, padding: "0.8rem" }}>
+            <div style={{ marginTop: 10, background: `#e05c7a10`, borderRadius: 8, padding: "0.8rem" }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ehr-rose)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Risk Assessment</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {Object.entries(note.risk_assessment).filter(([, v]) => v).map(([k, v]) => (
@@ -487,7 +487,7 @@ function NoteForm({ note, chart, clinician, onSaved, onCancel }) {
           {(form.diagnoses?.length === 0) && <div style={{ fontSize: 13, color: "var(--ehr-muted2)" }}>No diagnoses added</div>}
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {form.diagnoses?.map(d => (
-              <span key={d.code} style={{ display: "flex", alignItems: "center", gap: 4, background: `${var(--ehr-accent)}15`, border: `1px solid ${var(--ehr-accent)}30`, borderRadius: 20, padding: "3px 10px", fontSize: 12, color: "var(--ehr-accent)" }}>
+              <span key={d.code} style={{ display: "flex", alignItems: "center", gap: 4, background: `#3b5bdb15`, border: `1px solid #3b5bdb30`, borderRadius: 20, padding: "3px 10px", fontSize: 12, color: "var(--ehr-accent)" }}>
                 {d.code} — {d.label}
                 <button type="button" onClick={() => setForm(f => ({ ...f, diagnoses: f.diagnoses.filter(x => x.code !== d.code) }))} style={{ background: "transparent", border: "none", color: "var(--ehr-muted2)", cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0, marginLeft: 2 }}>×</button>
               </span>

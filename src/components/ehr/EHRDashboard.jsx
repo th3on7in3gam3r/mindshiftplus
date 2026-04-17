@@ -44,7 +44,7 @@ export default function EHRDashboard({ clinician, onOpenChart, onNewChart }) {
       {/* Hero header */}
       <div style={{
         background: "linear-gradient(135deg, rgba(124,111,247,0.12) 0%, rgba(78,205,196,0.06) 50%, rgba(240,147,160,0.04) 100%)",
-        borderBottom: `1px solid ${var(--ehr-border)}`,
+        borderBottom: `1px solid ${rgba(226,232,240,0.8)}`,
         padding: "2rem 2.5rem 1.8rem",
         position: "relative", overflow: "hidden",
       }}>
@@ -55,7 +55,7 @@ export default function EHRDashboard({ clinician, onOpenChart, onNewChart }) {
         <div style={{ position:"relative", zIndex:1, display:"flex", alignItems:"flex-end", justifyContent:"space-between", flexWrap:"wrap", gap:16 }}>
           <div>
             <div style={{ fontSize:13, color: "var(--ehr-muted)", marginBottom:4, display:"flex", alignItems:"center", gap:8 }}>
-              <span style={{ width:8, height:8, borderRadius:"50%", background: "var(--ehr-green)", display:"inline-block", boxShadow:`0 0 8px ${var(--ehr-green)}` }} />
+              <span style={{ width:8, height:8, borderRadius:"50%", background: "var(--ehr-green)", display:"inline-block", boxShadow:`0 0 8px #16a34a` }} />
               {new Date().toLocaleDateString("en-US",{ weekday:"long", month:"long", day:"numeric", year:"numeric" })}
             </div>
             <h1 style={{ fontSize:"clamp(1.6rem,3vw,2.2rem)", fontWeight:800, color: "var(--ehr-text)", margin:0, letterSpacing:"-0.03em", lineHeight:1.1 }}>
@@ -110,13 +110,13 @@ export default function EHRDashboard({ clinician, onOpenChart, onNewChart }) {
                   placeholder="Search by name or MRN…"
                   style={{
                     width:"100%", background:"rgba(255,255,255,0.04)",
-                    border:`1px solid ${var(--ehr-border2)}`, borderRadius:12,
+                    border:`1px solid #cbd5e1`, borderRadius:12,
                     padding:"10px 12px 10px 36px",
                     color: "var(--ehr-text)", fontSize:14, fontFamily:"inherit", outline:"none",
                   }}
                 />
               </div>
-              <div style={{ display:"flex", gap:6, background:"rgba(255,255,255,0.03)", border:`1px solid ${var(--ehr-border)}`, borderRadius:12, padding:"4px" }}>
+              <div style={{ display:"flex", gap:6, background:"rgba(255,255,255,0.03)", border:`1px solid ${rgba(226,232,240,0.8)}`, borderRadius:12, padding:"4px" }}>
                 {["all","active","inactive","discharged"].map(f => (
                   <button key={f} onClick={() => setFilter(f)} style={{
                     background: filter===f ? "rgba(124,111,247,0.2)" : "transparent",
@@ -134,7 +134,7 @@ export default function EHRDashboard({ clinician, onOpenChart, onNewChart }) {
             {loading ? <Spinner /> : filtered.length === 0 ? (
               <div style={{
                 textAlign:"center", padding:"4rem 2rem",
-                background:"rgba(255,255,255,0.02)", border:`1px solid ${var(--ehr-border)}`,
+                background:"rgba(255,255,255,0.02)", border:`1px solid ${rgba(226,232,240,0.8)}`,
                 borderRadius:20,
               }}>
                 <div style={{ fontSize:48, marginBottom:12, opacity:0.4 }}>📂</div>
@@ -170,7 +170,7 @@ export default function EHRDashboard({ clinician, onOpenChart, onNewChart }) {
                 <div key={a.id} style={{
                   padding:"0.85rem", marginBottom: i < upcomingAppts.length-1 ? 8 : 0,
                   background:"rgba(255,255,255,0.03)", borderRadius:12,
-                  border:`1px solid ${var(--ehr-border)}`,
+                  border:`1px solid ${rgba(226,232,240,0.8)}`,
                 }}>
                   <div style={{ fontSize:13, fontWeight:600, color: "var(--ehr-text)", marginBottom:3 }}>{a.name || "Patient"}</div>
                   <div style={{ fontSize:12, color: "var(--ehr-muted2)", marginBottom:6 }}>{formatDateTime(a.scheduled_at)}</div>
@@ -228,7 +228,7 @@ function PatientRow({ chart, onClick }) {
     <div className="ehr-patient-row" onClick={onClick} style={{
       display:"flex", alignItems:"center", gap:14,
       background:"rgba(255,255,255,0.03)",
-      border:`1px solid ${var(--ehr-border)}`,
+      border:`1px solid ${rgba(226,232,240,0.8)}`,
       borderRadius:16, padding:"0.95rem 1.2rem",
       cursor:"pointer",
     }}>
