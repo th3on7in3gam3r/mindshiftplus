@@ -7,7 +7,6 @@ import EHRDashboard from "./EHRDashboard";
 import EHRPatientChart from "./EHRPatientChart";
 import EHRIntakes from "./EHRIntakes";
 import { Spinner, EhrStyles } from "./EHRUI";
-import { ThemeToggle } from "../../lib/ThemeContext";
 
 // ── Main EHR module entry point ───────────────────────────────────────────────
 export default function EHR({ onBack }) {
@@ -146,7 +145,18 @@ export default function EHR({ onBack }) {
 
         {/* Toggle + Clinician + sign out */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <ThemeToggle />
+          <button onClick={() => {
+            const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+            document.documentElement.setAttribute("data-theme", isDark ? "light" : "dark");
+            try { localStorage.setItem("msw_theme", isDark ? "light" : "dark"); } catch {}
+          }} style={{
+            display: "flex", alignItems: "center", gap: 6,
+            background: "rgba(128,128,128,0.1)", border: "1px solid rgba(128,128,128,0.2)",
+            borderRadius: 20, padding: "6px 12px", cursor: "pointer",
+            fontFamily: "inherit", fontSize: 12, fontWeight: 600, color: "var(--ehr-muted)",
+          }}>
+            🌙 Theme
+          </button>
           <div style={{ width: 1, height: 24, background: "var(--ehr-border)" }} />
           <div style={{ textAlign: "right" }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ehr-text)" }}>{clinician.full_name}</div>
