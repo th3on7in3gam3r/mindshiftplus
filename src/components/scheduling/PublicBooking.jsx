@@ -3,356 +3,147 @@ import { bookAppointment } from "../../lib/clinicApi";
 import { emailAppointmentRequested } from "../../lib/emailService";
 import { supabase } from "../../lib/supabase";
 
-// ── Inline auth form for booking ──────────────────────────────────────────────
-function BookingAuthForm({ onBack, onSuccess }) {
-  const [mode, setMode] = useState("signin");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [sent, setSent] = useState(false);
-
-  const inp = { width:"100%", padding:"11px 14px", borderRadius:10, border:"1.5px solid #e5e7eb", fontSize:14, color:"#1a1f36", background:"#fff", outline:"none", fontFamily:"inherit", transition:"border-color .2s" };
-  const focus = (e) => { e.target.style.borderColor="#6b5fcf"; e.target.style.boxShadow="0 0 0 3px rgba(107,95,207,0.1)"; };
-  const blur  = (e) => { e.target.style.borderColor="#e5e7eb"; e.target.style.boxShadow="none"; };
-
-  const handleSignIn = async (e) => {
-    e.preventDefault(); setError(""); setLoading(true);
-    const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
-    if (err) { setError(err.message.includes("Invalid") ? "Incorrect email or password." : err.message); }
-    else { onSuccess(data.user); }
-    setLoading(false);
-  };
-
-  const handleSignUp = async (e) => {
-    e.preventDefault(); setError(""); setLoading(true);
-    if (!name.trim()) { setError("Please enter your name."); setLoading(false); return; }
-    const { data, error: err } = await supabase.auth.signUp({ email, password, options:{ data:{ full_name: name.trim() } } });
-    if (err) setError(err.message);
-    else if (data.user?.confirmed_at || data.session) { onSuccess(data.user); }
-    else setSent(true);
-    setLoading(false);
-  };
-
-  const handleForgot = async (e) => {
-    e.preventDefault(); setError(""); setLoading(true);
-    const { error: err } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
-    if (err) setError(err.message); else setSent(true);
-    setLoading(false);
-  };
-
-  if (sent) return (
-    <div style={{ maxWidth:380, width:"100%", textAlign:"center" }}>
-      <div style={{ fontSize:48, marginBottom:"1rem" }}>📬</div>
-      <h2 style={{ fontSize:"1.3rem", fontWeight:700, color:"#1a1f36", marginBottom:8 }}>Check your email</h2>
-      <p style={{ fontSize:14, color:"#6b7280", lineHeight:1.7, marginBottom:"1.5rem" }}>We sent a link to <strong>{email}</strong>. Click it to continue, then come back to book.</p>
-      <button onClick={()=>{ setSent(false); setMode("signin"); }} style={{ background:"transparent", border:"none", color:"#6b5fcf", fontSize:14, cursor:"pointer" }}>← Back to sign in</button>
-    </div>
-  );
-
-  return (
-    <div style={{ maxWidth:380, width:"100%" }}>
-      {onBack && <button onClick={onBack} style={{ background:"transparent", border:"none", color:"#6b7280", fontSize:13, cursor:"pointer", marginBottom:"2rem", padding:0, display:"flex", alignItems:"center", gap:5 }}>← Back to clinic site</button>}
-
-      {mode === "signin" ? (
-        <>
-          <h2 style={{ fontSize:"1.5rem", fontWeight:700, color:"#1a1f36", marginBottom:6 }}>Sign in to book</h2>
-          <p style={{ fontSize:14, color:"#6b7280", marginBottom:"1.5rem" }}>Sign in to your MindShift Wellness Clinic account</p>
-          {error && <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:8, padding:"10px 14px", fontSize:13, color:"#dc2626", marginBottom:12 }}>{error}</div>}
-          <form onSubmit={handleSignIn} style={{ display:"flex", flexDirection:"column", gap:14 }}>
-            <div><label style={{ fontSize:12, fontWeight:500, color:"#374151", display:"block", marginBottom:5 }}>Email</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" required style={inp} onFocus={focus} onBlur={blur}/></div>
-            <div>
-              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}>
-                <label style={{ fontSize:12, fontWeight:500, color:"#374151" }}>Password</label>
-                <button type="button" onClick={()=>{ setError(""); setMode("forgot"); }} style={{ background:"transparent", border:"none", color:"#6b5fcf", fontSize:12, cursor:"pointer", padding:0 }}>Forgot?</button>
-              </div>
-              <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••" required style={inp} onFocus={focus} onBlur={blur}/>
-            </div>
-            <button type="submit" disabled={loading} style={{ background:`linear-gradient(135deg,#6b5fcf,#2a9d8f)`, border:"none", borderRadius:10, padding:"13px", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer", opacity:loading?0.7:1 }}>{loading?"Signing in…":"Sign In & Continue to Booking"}</button>
-          </form>
-          <p style={{ textAlign:"center", marginTop:"1.2rem", fontSize:13, color:"#6b7280" }}>New patient? <button onClick={()=>{ setError(""); setMode("signup"); }} style={{ background:"transparent", border:"none", color:"#6b5fcf", fontSize:13, cursor:"pointer", fontWeight:600 }}>Create account</button></p>
-        </>
-      ) : mode === "signup" ? (
-        <>
-          <h2 style={{ fontSize:"1.5rem", fontWeight:700, color:"#1a1f36", marginBottom:6 }}>Create your account</h2>
-          <p style={{ fontSize:14, color:"#6b7280", marginBottom:"1.5rem" }}>Join as a patient of MindShift Wellness Clinic</p>
-          {error && <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:8, padding:"10px 14px", fontSize:13, color:"#dc2626", marginBottom:12 }}>{error}</div>}
-          <form onSubmit={handleSignUp} style={{ display:"flex", flexDirection:"column", gap:14 }}>
-            <div><label style={{ fontSize:12, fontWeight:500, color:"#374151", display:"block", marginBottom:5 }}>Full Name</label><input value={name} onChange={e=>setName(e.target.value)} placeholder="Your full name" required style={inp} onFocus={focus} onBlur={blur}/></div>
-            <div><label style={{ fontSize:12, fontWeight:500, color:"#374151", display:"block", marginBottom:5 }}>Email</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" required style={inp} onFocus={focus} onBlur={blur}/></div>
-            <div><label style={{ fontSize:12, fontWeight:500, color:"#374151", display:"block", marginBottom:5 }}>Password</label><input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="At least 6 characters" required minLength={6} style={inp} onFocus={focus} onBlur={blur}/></div>
-            <button type="submit" disabled={loading} style={{ background:`linear-gradient(135deg,#6b5fcf,#2a9d8f)`, border:"none", borderRadius:10, padding:"13px", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer", opacity:loading?0.7:1 }}>{loading?"Creating…":"Create Account & Continue"}</button>
-          </form>
-          <p style={{ textAlign:"center", marginTop:"1.2rem", fontSize:13, color:"#6b7280" }}>Already have an account? <button onClick={()=>{ setError(""); setMode("signin"); }} style={{ background:"transparent", border:"none", color:"#6b5fcf", fontSize:13, cursor:"pointer", fontWeight:600 }}>Sign in</button></p>
-        </>
-      ) : (
-        <>
-          <h2 style={{ fontSize:"1.5rem", fontWeight:700, color:"#1a1f36", marginBottom:6 }}>Reset password</h2>
-          {error && <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:8, padding:"10px 14px", fontSize:13, color:"#dc2626", marginBottom:12 }}>{error}</div>}
-          <form onSubmit={handleForgot} style={{ display:"flex", flexDirection:"column", gap:14 }}>
-            <div><label style={{ fontSize:12, fontWeight:500, color:"#374151", display:"block", marginBottom:5 }}>Email</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" required style={inp} onFocus={focus} onBlur={blur}/></div>
-            <button type="submit" disabled={loading} style={{ background:`linear-gradient(135deg,#6b5fcf,#2a9d8f)`, border:"none", borderRadius:10, padding:"13px", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer", opacity:loading?0.7:1 }}>{loading?"Sending…":"Send Reset Link"}</button>
-          </form>
-          <p style={{ textAlign:"center", marginTop:"1.2rem" }}><button onClick={()=>{ setError(""); setMode("signin"); }} style={{ background:"transparent", border:"none", color:"#6b5fcf", fontSize:13, cursor:"pointer" }}>← Back to sign in</button></p>
-        </>
-      )}
-    </div>
-  );
-}
-
-// ── Design tokens matching site-main.html ──────────────────────────────────────
+// ── Design tokens ──────────────────────────────────────────────────────────────
 const C = {
-  pearl:   "#f5f0ee",
-  cream:   "#ede8e3",
-  warm:    "#d4ccc6",
-  ink:     "#06080f",
-  txt:     "#1a1c2e",
-  muted:   "#6b6d80",
-  muted2:  "#9b9dae",
-  violet:  "#6b5fcf",
-  lilac:   "#9d8ff0",
-  teal:    "#2a9d8f",
-  sage:    "#52b788",
-  blush:   "#e07a8f",
-  gold:    "#c9a84c",
-  border:  "#e5e0da",
-  border2: "#d4ccc6",
-  serif:   "'Cormorant Garamond',Georgia,serif",
-  sans:    "'DM Sans',system-ui,sans-serif",
+  pearl:  "#f5f0ee", cream: "#ede8e3", ink: "#06080f", txt: "#1a1c2e",
+  muted:  "#6b6d80", muted2: "#9b9dae",
+  violet: "#6b5fcf", lilac: "#9d8ff0", teal: "#2a9d8f", sage: "#52b788",
+  blush:  "#e07a8f", border: "#e5e0da",
+  serif:  "'Cormorant Garamond',Georgia,serif",
+  sans:   "'DM Sans',system-ui,sans-serif",
 };
 
 const REASONS = [
-  "Initial Evaluation",
-  "Medication Management",
-  "Follow-up Visit",
-  "Telehealth Consultation",
-  "Anxiety / Depression",
-  "ADHD Evaluation",
-  "Trauma / PTSD",
-  "Bipolar / Mood Disorder",
-  "Other",
+  "Initial Evaluation", "Medication Management", "Follow-up Visit",
+  "Telehealth Consultation", "Anxiety / Depression", "ADHD Evaluation",
+  "Trauma / PTSD", "Bipolar / Mood Disorder", "Other",
 ];
 
 const CLINICIANS = [
-  { name:"Kenneth Mutegyeki, PMHNP-BC", title:"Psychiatric Mental Health Nurse Practitioner (PMHNP-BC)", emoji:"👨🏾‍⚕️" },
-  { name:"Rachel Nakkazi, PMHNP-BC", title:"Psychiatric Mental Health Nurse Practitioner (PMHNP-BC)", emoji:"👩🏾‍⚕️" },
+  { name: "Kenneth Mutegyeki, PMHNP-BC", emoji: "👨🏾‍⚕️" },
+  { name: "Rachel Nakkazi, PMHNP-BC",    emoji: "👩🏾‍⚕️" },
 ];
 
-// Availability: Mon/Thu 6–8 PM, Fri/Sat 8 AM–5 PM
-const DEFAULT_AVAILABILITY = [1, 4, 5, 6]; // Mon, Thu, Fri, Sat
-
-// Time slots per day of week
+// Available days: Mon(1), Thu(4), Fri(5), Sat(6)
+const AVAIL_DAYS = [1, 4, 5, 6];
 const SLOTS_BY_DOW = {
-  1: ["6:00 PM","7:00 PM"],                                                          // Monday
-  4: ["6:00 PM","7:00 PM"],                                                          // Thursday
-  5: ["8:00 AM","9:00 AM","10:00 AM","11:00 AM","1:00 PM","2:00 PM","3:00 PM","4:00 PM"], // Friday
-  6: ["8:00 AM","9:00 AM","10:00 AM","11:00 AM","1:00 PM","2:00 PM","3:00 PM","4:00 PM"], // Saturday
+  1: ["6:00 PM", "7:00 PM"],
+  4: ["6:00 PM", "7:00 PM"],
+  5: ["8:00 AM","9:00 AM","10:00 AM","11:00 AM","1:00 PM","2:00 PM","3:00 PM","4:00 PM"],
+  6: ["8:00 AM","9:00 AM","10:00 AM","11:00 AM","1:00 PM","2:00 PM","3:00 PM","4:00 PM"],
 };
 
-// ── localStorage helpers ───────────────────────────────────────────────────────
-function saveAppointment(appt) {
-  try {
-    const existing = JSON.parse(localStorage.getItem("mswc_appointments") || "[]");
-    existing.push({ ...appt, id: crypto.randomUUID(), createdAt: new Date().toISOString() });
-    localStorage.setItem("mswc_appointments", JSON.stringify(existing));
-  } catch {}
-}
-
-function getBookedSlots(dateStr) {
-  try {
-    const all = JSON.parse(localStorage.getItem("mswc_appointments") || "[]");
-    return all.filter(a => a.date === dateStr && a.status !== "cancelled").map(a => a.time);
-  } catch { return []; }
+function fmtDate(d) {
+  return d ? new Date(d + "T12:00:00").toLocaleDateString("en-US", { weekday:"long", month:"long", day:"numeric", year:"numeric" }) : "";
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
-function Card({ children, style={} }) {
+function Card({ children, style = {} }) {
   return (
-    <div style={{
-      background:"#fff", border:`1px solid ${C.border}`,
-      borderRadius:20, padding:"1.8rem",
-      boxShadow:"0 2px 12px rgba(107,95,207,0.07)",
-      ...style,
-    }}>{children}</div>
-  );
-}
-
-function SectionLabel({ children }) {
-  return (
-    <div style={{
-      fontSize:11, fontWeight:700, letterSpacing:"0.14em",
-      textTransform:"uppercase", color:C.violet,
-      display:"flex", alignItems:"center", gap:8, marginBottom:10,
-    }}>
-      <span style={{ width:18, height:1.5, background:C.violet, display:"inline-block" }}/>
+    <div style={{ background:"#fff", border:`1px solid ${C.border}`, borderRadius:20, padding:"1.8rem", boxShadow:"0 2px 12px rgba(107,95,207,0.07)", ...style }}>
       {children}
     </div>
   );
 }
 
-function Input({ label, type="text", value, onChange, placeholder, required, options }) {
-  const base = {
-    width:"100%", padding:"11px 14px", borderRadius:10,
-    border:`1.5px solid ${C.border}`, fontSize:14,
-    color:C.txt, background:"#fff", outline:"none",
-    fontFamily:C.sans, transition:"border-color .2s, box-shadow .2s",
-  };
+function Inp({ label, type="text", value, onChange, placeholder, required, options }) {
+  const base = { width:"100%", padding:"11px 14px", borderRadius:10, border:`1.5px solid ${C.border}`, fontSize:14, color:C.txt, background:"#fff", outline:"none", fontFamily:C.sans, transition:"border-color .2s" };
+  const focus = e => { e.target.style.borderColor=C.violet; e.target.style.boxShadow=`0 0 0 3px rgba(107,95,207,0.1)`; };
+  const blur  = e => { e.target.style.borderColor=C.border; e.target.style.boxShadow="none"; };
   return (
     <div>
       <label style={{ fontSize:12, fontWeight:500, color:C.txt, display:"block", marginBottom:5 }}>
         {label}{required && <span style={{ color:C.blush }}> *</span>}
       </label>
       {options ? (
-        <select value={value} onChange={e=>onChange(e.target.value)} required={required} style={base}
-          onFocus={e=>{ e.target.style.borderColor=C.violet; e.target.style.boxShadow=`0 0 0 3px rgba(107,95,207,0.1)`; }}
-          onBlur={e=>{ e.target.style.borderColor=C.border; e.target.style.boxShadow="none"; }}>
+        <select value={value} onChange={e=>onChange(e.target.value)} required={required} style={base} onFocus={focus} onBlur={blur}>
           <option value="">Select…</option>
           {options.map(o=><option key={o}>{o}</option>)}
         </select>
       ) : (
-        <input type={type} value={value} onChange={e=>onChange(e.target.value)}
-          placeholder={placeholder} required={required} style={base}
-          onFocus={e=>{ e.target.style.borderColor=C.violet; e.target.style.boxShadow=`0 0 0 3px rgba(107,95,207,0.1)`; }}
-          onBlur={e=>{ e.target.style.borderColor=C.border; e.target.style.boxShadow="none"; }}
-        />
+        <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} required={required} style={base} onFocus={focus} onBlur={blur}/>
       )}
     </div>
   );
 }
 
-// ── Calendar ───────────────────────────────────────────────────────────────────
-function Calendar({ selected, onSelect }) {
-  const today = new Date();
-  today.setHours(0,0,0,0);
-  const [view, setView] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
-
-  const year  = view.getFullYear();
-  const month = view.getMonth();
-  const firstDow = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month+1, 0).getDate();
-  const monthLabel = view.toLocaleDateString("en-US", { month:"long", year:"numeric" });
-
-  const toStr = (d) => `${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-  const isToday = (d) => toStr(d) === today.toISOString().slice(0,10);
-  const isPast  = (d) => new Date(toStr(d)) < today;
-  const isAvail = (d) => {
-    const dow = new Date(toStr(d)+"T12:00:00").getDay();
-    return DEFAULT_AVAILABILITY.includes(dow) && !isPast(d);
-  };
-
-  const cells = [...Array(firstDow).fill(null), ...Array.from({length:daysInMonth},(_,i)=>i+1)];
-
-  const prevMonth = () => setView(new Date(year, month-1, 1));
-  const nextMonth = () => setView(new Date(year, month+1, 1));
-
+function Steps({ current }) {
+  const steps = ["Date", "Time", "Details", "Confirm"];
   return (
-    <div>
-      {/* Month nav */}
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-        <button onClick={prevMonth} style={{ background:"transparent", border:`1px solid ${C.border}`, borderRadius:8, width:32, height:32, cursor:"pointer", color:C.muted, fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
-        <span style={{ fontFamily:C.serif, fontSize:"1.1rem", fontWeight:600, color:C.txt }}>{monthLabel}</span>
-        <button onClick={nextMonth} style={{ background:"transparent", border:`1px solid ${C.border}`, borderRadius:8, width:32, height:32, cursor:"pointer", color:C.muted, fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
-      </div>
-
-      {/* Day headers */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:2, marginBottom:4 }}>
-        {["Su","Mo","Tu","We","Th","Fr","Sa"].map(d=>(
-          <div key={d} style={{ textAlign:"center", fontSize:11, fontWeight:600, color:C.muted2, padding:"4px 0" }}>{d}</div>
-        ))}
-      </div>
-
-      {/* Day cells */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:3 }}>
-        {cells.map((d,i) => {
-          if (!d) return <div key={`e${i}`}/>;
-          const ds = toStr(d);
-          const avail = isAvail(d);
-          const sel   = selected === ds;
-          const tod   = isToday(d);
-          return (
-            <button key={d} onClick={()=>avail && onSelect(ds)} disabled={!avail} style={{
-              aspectRatio:"1", borderRadius:10, border:"none",
-              fontSize:13, fontWeight: sel ? 700 : tod ? 600 : 400,
-              background: sel ? C.violet : tod && !sel ? "rgba(107,95,207,0.08)" : "transparent",
-              color: sel ? "#fff" : avail ? C.txt : C.muted2,
-              cursor: avail ? "pointer" : "default",
-              opacity: avail ? 1 : 0.3,
-              outline: tod && !sel ? `1.5px solid ${C.lilac}` : "none",
-              transition:"all .15s",
-            }}
-            onMouseOver={e=>{ if(avail&&!sel) e.currentTarget.style.background=C.cream; }}
-            onMouseOut={e=>{ if(avail&&!sel) e.currentTarget.style.background="transparent"; }}
-            >{d}</button>
-          );
-        })}
-      </div>
-
-      <div style={{ marginTop:12, display:"flex", gap:12, fontSize:11, color:C.muted2 }}>
-        <span style={{ display:"flex", alignItems:"center", gap:4 }}><span style={{ width:10, height:10, borderRadius:3, background:C.violet, display:"inline-block" }}/> Selected</span>
-        <span style={{ display:"flex", alignItems:"center", gap:4 }}><span style={{ width:10, height:10, borderRadius:3, outline:`1.5px solid ${C.lilac}`, display:"inline-block" }}/> Today</span>
-        <span style={{ display:"flex", alignItems:"center", gap:4 }}><span style={{ width:10, height:10, borderRadius:3, background:C.cream, border:`1px solid ${C.border}`, display:"inline-block" }}/> Available</span>
-      </div>
-    </div>
-  );
-}
-
-// ── Time Slots ─────────────────────────────────────────────────────────────────
-function TimeSlots({ date, selected, onSelect }) {
-  const booked = getBookedSlots(date);
-  const dow = date ? new Date(date+"T12:00:00").getDay() : 1;
-  const times = SLOTS_BY_DOW[dow] || [];
-  return (
-    <div className="slot-grid" style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(100px,1fr))", gap:8 }}>
-      {times.map(t => {
-        const isBooked = booked.includes(t);
-        const isSel = selected === t;
+    <div style={{ display:"flex", alignItems:"center", marginBottom:"2rem" }}>
+      {steps.map((s, i) => {
+        const n = i + 1;
+        const done = current > n;
+        const active = current === n;
         return (
-          <button key={t} onClick={()=>!isBooked && onSelect(t)} disabled={isBooked} style={{
-            padding:"10px 6px", borderRadius:10, fontSize:13, fontWeight: isSel ? 700 : 500,
-            border: isSel ? `2px solid ${C.violet}` : `1.5px solid ${C.border}`,
-            background: isSel ? C.violet : isBooked ? C.cream : "#fff",
-            color: isSel ? "#fff" : isBooked ? C.muted2 : C.txt,
-            cursor: isBooked ? "not-allowed" : "pointer",
-            transition:"all .15s",
-            textDecoration: isBooked ? "line-through" : "none",
-          }}
-          onMouseOver={e=>{ if(!isBooked&&!isSel) e.currentTarget.style.borderColor=C.violet; }}
-          onMouseOut={e=>{ if(!isBooked&&!isSel) e.currentTarget.style.borderColor=C.border; }}
-          >{t}</button>
+          <div key={s} style={{ display:"flex", alignItems:"center", flex: i < steps.length - 1 ? 1 : "none" }}>
+            <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
+              <div style={{ width:30, height:30, borderRadius:"50%", background: done ? C.teal : active ? C.violet : C.cream, border:`2px solid ${done ? C.teal : active ? C.violet : C.border}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color: done||active ? "#fff" : C.muted2, transition:"all .3s" }}>
+                {done ? "✓" : n}
+              </div>
+              <span style={{ fontSize:10, fontWeight: active ? 600 : 400, color: active ? C.violet : C.muted2, whiteSpace:"nowrap" }}>{s}</span>
+            </div>
+            {i < steps.length - 1 && <div style={{ flex:1, height:2, background: done ? C.teal : C.border, margin:"0 6px", marginBottom:16, transition:"background .3s" }}/>}
+          </div>
         );
       })}
     </div>
   );
 }
 
-// ── Progress Steps ─────────────────────────────────────────────────────────────
-function Steps({ current }) {
-  const steps = ["Date","Time","Details","Confirm"];
+function Calendar({ selected, onSelect }) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const [view, setView] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+  const year = view.getFullYear(), month = view.getMonth();
+  const firstDow = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const toStr = d => `${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+  const isPast  = d => new Date(toStr(d)) < today;
+  const isAvail = d => AVAIL_DAYS.includes(new Date(toStr(d)+"T12:00:00").getDay()) && !isPast(d);
+  const cells = [...Array(firstDow).fill(null), ...Array.from({length:daysInMonth},(_,i)=>i+1)];
+
   return (
-    <div className="steps-bar" style={{ display:"flex", alignItems:"center", marginBottom:"2rem" }}>
-      {steps.map((s,i) => {
-        const n = i+1;
-        const done = current > n;
-        const active = current === n;
+    <div>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+        <button onClick={()=>setView(new Date(year,month-1,1))} style={{ background:"transparent", border:`1px solid ${C.border}`, borderRadius:8, width:32, height:32, cursor:"pointer", color:C.muted, fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
+        <span style={{ fontFamily:C.serif, fontSize:"1.1rem", fontWeight:600, color:C.txt }}>{view.toLocaleDateString("en-US",{month:"long",year:"numeric"})}</span>
+        <button onClick={()=>setView(new Date(year,month+1,1))} style={{ background:"transparent", border:`1px solid ${C.border}`, borderRadius:8, width:32, height:32, cursor:"pointer", color:C.muted, fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:2, marginBottom:4 }}>
+        {["Su","Mo","Tu","We","Th","Fr","Sa"].map(d=><div key={d} style={{ textAlign:"center", fontSize:11, fontWeight:600, color:C.muted2, padding:"4px 0" }}>{d}</div>)}
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:3 }}>
+        {cells.map((d,i) => {
+          if (!d) return <div key={`e${i}`}/>;
+          const ds = toStr(d), avail = isAvail(d), sel = selected === ds;
+          return (
+            <button key={d} onClick={()=>avail&&onSelect(ds)} disabled={!avail} style={{ aspectRatio:"1", borderRadius:10, border:"none", fontSize:13, fontWeight: sel ? 700 : 400, background: sel ? C.violet : "transparent", color: sel ? "#fff" : avail ? C.txt : C.muted2, cursor: avail ? "pointer" : "default", opacity: avail ? 1 : 0.3, transition:"all .15s" }}
+              onMouseOver={e=>{ if(avail&&!sel) e.currentTarget.style.background=C.cream; }}
+              onMouseOut={e=>{ if(avail&&!sel) e.currentTarget.style.background="transparent"; }}
+            >{d}</button>
+          );
+        })}
+      </div>
+      <div style={{ marginTop:12, fontSize:11, color:C.muted2 }}>
+        Available: Mon & Thu evenings · Fri & Sat all day
+      </div>
+    </div>
+  );
+}
+
+function TimeSlots({ date, selected, onSelect, bookedTimes }) {
+  const dow = date ? new Date(date+"T12:00:00").getDay() : 1;
+  const times = SLOTS_BY_DOW[dow] || [];
+  return (
+    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(100px,1fr))", gap:8 }}>
+      {times.map(t => {
+        const isBooked = bookedTimes.includes(t);
+        const isSel = selected === t;
         return (
-          <div key={s} style={{ display:"flex", alignItems:"center", flex: i<steps.length-1 ? 1 : "none" }}>
-            <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
-              <div className="step-dot" style={{
-                width:30, height:30, borderRadius:"50%",
-                background: done ? C.teal : active ? C.violet : C.cream,
-                border: `2px solid ${done ? C.teal : active ? C.violet : C.border}`,
-                display:"flex", alignItems:"center", justifyContent:"center",
-                fontSize:12, fontWeight:700,
-                color: done||active ? "#fff" : C.muted2,
-                transition:"all .3s",
-              }}>{done ? "✓" : n}</div>
-              <span style={{ fontSize:10, fontWeight: active ? 600 : 400, color: active ? C.violet : C.muted2, whiteSpace:"nowrap" }}>{s}</span>
-            </div>
-            {i < steps.length-1 && (
-              <div style={{ flex:1, height:2, background: done ? C.teal : C.border, margin:"0 6px", marginBottom:16, transition:"background .3s" }}/>
-            )}
-          </div>
+          <button key={t} onClick={()=>!isBooked&&onSelect(t)} disabled={isBooked} style={{ padding:"10px 6px", borderRadius:10, fontSize:13, fontWeight: isSel ? 700 : 500, border: isSel ? `2px solid ${C.violet}` : `1.5px solid ${C.border}`, background: isSel ? C.violet : isBooked ? C.cream : "#fff", color: isSel ? "#fff" : isBooked ? C.muted2 : C.txt, cursor: isBooked ? "not-allowed" : "pointer", transition:"all .15s", textDecoration: isBooked ? "line-through" : "none" }}
+            onMouseOver={e=>{ if(!isBooked&&!isSel) e.currentTarget.style.borderColor=C.violet; }}
+            onMouseOut={e=>{ if(!isBooked&&!isSel) e.currentTarget.style.borderColor=C.border; }}
+          >{t}</button>
         );
       })}
     </div>
@@ -361,138 +152,121 @@ function Steps({ current }) {
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 export default function PublicBooking({ onBack }) {
-  const [user, setUser] = useState(undefined); // undefined = loading
-  const [step, setStep] = useState(1);
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [form, setForm] = useState({ name:"", email:"", phone:"", reason:"", clinician: CLINICIANS[0].name });
+  const [step, setStep]   = useState(1);
+  const [date, setDate]   = useState("");
+  const [time, setTime]   = useState("");
+  const [bookedTimes, setBookedTimes] = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [form, setForm]   = useState({ name:"", email:"", phone:"", reason:"", clinician: CLINICIANS[0].name, notes:"" });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [done, setDone] = useState(false);
+  const [done, setDone]   = useState(false);
 
-  // Check auth on mount and listen for changes
+  // Pre-fill if user is already logged in
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user || null);
       if (session?.user) {
         setForm(f => ({
           ...f,
-          name: session.user.user_metadata?.full_name || "",
-          email: session.user.email || "",
-        }));
-      }
-    });
-    // Listen for auth state changes (e.g. user signs in)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
-      setUser(session?.user || null);
-      if (session?.user) {
-        setForm(f => ({
-          ...f,
-          name: f.name || session.user.user_metadata?.full_name || "",
+          name:  f.name  || session.user.user_metadata?.full_name || "",
           email: f.email || session.user.email || "",
         }));
       }
     });
-    return () => subscription.unsubscribe();
   }, []);
 
-  const fmtDate = (d) => d ? new Date(d+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"}) : "";
-  const set = (k) => (v) => setForm(f=>({...f,[k]:v}));
+  // Load already-booked slots when date changes
+  useEffect(() => {
+    if (!date) return;
+    setLoadingSlots(true);
+    const from = `${date}T00:00:00`;
+    const to   = `${date}T23:59:59`;
+    supabase.from("appointments")
+      .select("scheduled_at")
+      .gte("scheduled_at", from)
+      .lte("scheduled_at", to)
+      .not("status", "eq", "cancelled")
+      .then(({ data }) => {
+        const taken = (data || []).map(a => {
+          const h = new Date(a.scheduled_at).getHours();
+          const m = new Date(a.scheduled_at).getMinutes();
+          const ampm = h >= 12 ? "PM" : "AM";
+          const h12 = h % 12 || 12;
+          return `${h12}:${String(m).padStart(2,"0")} ${ampm}`;
+        });
+        setBookedTimes(taken);
+        setLoadingSlots(false);
+      });
+  }, [date]);
 
-  // Loading auth check
-  if (user === undefined) return (
-    <div style={{ minHeight:"100vh", background:C.pearl, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:C.sans }}>
-      <div style={{ textAlign:"center" }}>
-        <div style={{ fontSize:32, marginBottom:8 }}>🏥</div>
-        <div style={{ fontSize:13, color:C.muted }}>Loading…</div>
-      </div>
-    </div>
-  );
-
-  // Not logged in — show inline login form
-  if (!user) return (
-    <div style={{ minHeight:"100vh", background:C.pearl, display:"flex", fontFamily:C.sans }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');*{box-sizing:border-box}`}</style>
-
-      {/* Left branding */}
-      <div style={{ width:"42%", background:`linear-gradient(160deg,#1e2a4a,#2d3f6e)`, display:"flex", flexDirection:"column", justifyContent:"space-between", padding:"3rem", position:"relative", overflow:"hidden" }} className="booking-auth-panel">
-        <div style={{ position:"absolute", top:"-20%", right:"-20%", width:350, height:350, borderRadius:"50%", background:"rgba(107,95,207,0.15)", filter:"blur(60px)" }}/>
-        <div style={{ position:"relative", zIndex:1 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:"2.5rem" }}>
-            <div style={{ width:40, height:40, borderRadius:10, background:`linear-gradient(135deg,${C.violet},${C.teal})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>🏥</div>
-            <div>
-              <div style={{ fontSize:14, fontWeight:700, color:"#fff" }}>MindShift Wellness Clinic</div>
-              <div style={{ fontSize:11, color:"rgba(255,255,255,0.45)" }}>Appointment Booking</div>
-            </div>
-          </div>
-          <h2 style={{ fontFamily:C.serif, fontSize:"clamp(1.6rem,3vw,2.4rem)", fontWeight:300, color:"#fff", lineHeight:1.2, marginBottom:"1rem" }}>
-            Book your<br/><em style={{ fontStyle:"italic", color:"rgba(168,156,245,0.9)" }}>appointment.</em>
-          </h2>
-          <p style={{ fontSize:13, color:"rgba(255,255,255,0.5)", lineHeight:1.75, marginBottom:"1.5rem" }}>Sign in or create a free account to book your appointment and manage your care.</p>
-          {[["📅","View & manage appointments"],["💬","Secure messaging with your care team"],["💊","Track your medications"],["📓","Private wellness journal"]].map(([icon,text])=>(
-            <div key={text} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
-              <div style={{ width:28, height:28, borderRadius:7, background:"rgba(255,255,255,0.08)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, flexShrink:0 }}>{icon}</div>
-              <span style={{ fontSize:12, color:"rgba(255,255,255,0.6)" }}>{text}</span>
-            </div>
-          ))}
-        </div>
-        <div style={{ position:"relative", zIndex:1, background:"rgba(255,255,255,0.06)", borderRadius:12, padding:"1rem", fontSize:12, color:"rgba(255,255,255,0.5)" }}>
-          Need help? <a href="tel:5083061128" style={{ color:"rgba(255,255,255,0.8)", textDecoration:"none" }}>(508) 306-1128</a>
-        </div>
-      </div>
-
-      {/* Right: inline auth form */}
-      <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", padding:"3rem 2rem" }}>
-        <BookingAuthForm onBack={onBack} onSuccess={(u)=>{ setUser(u); setForm(f=>({...f, name:u.user_metadata?.full_name||"", email:u.email||""})); }}/>
-      </div>
-
-      <style>{`@media(max-width:767px){ .booking-auth-panel{ display:none !important } }`}</style>
-    </div>
-  );
+  const set = k => v => setForm(f => ({ ...f, [k]: v }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim() || !form.email.trim()) { setError("Please fill in your name and email."); return; }
     setSubmitting(true); setError("");
+
+    // Convert "8:00 AM" → "08:00" for ISO datetime
+    const timeToISO = (t) => {
+      const [timePart, ampm] = t.split(" ");
+      let [h, m] = timePart.split(":").map(Number);
+      if (ampm === "PM" && h !== 12) h += 12;
+      if (ampm === "AM" && h === 12) h = 0;
+      return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+    };
+
     try {
       await bookAppointment({
-        name: form.name, email: form.email, phone: form.phone,
-        reason: form.reason, scheduled_at: `${date}T${time.replace(" AM","").replace(" PM","")}:00`,
-        duration_minutes: 60, location: "Milford", appointment_type: form.reason || "consultation",
-        provider_name: form.clinician,
-        patient_id: user?.id || null,
-        is_public: !user,
+        name:             form.name,
+        email:            form.email,
+        phone:            form.phone,
+        reason:           form.reason,
+        notes:            form.notes,
+        scheduled_at:     `${date}T${timeToISO(time)}:00`,
+        duration_minutes: 60,
+        location:         "Milford",
+        appointment_type: form.reason?.toLowerCase().replace(/\s+/g,"_") || "consultation",
+        provider_name:    form.clinician,
+        patient_id:       null,
+        is_public:        true,
+        status:           "pending",
       });
-      // Send email notifications (non-blocking)
+
+      // Non-blocking email
       emailAppointmentRequested({
         name: form.name, email: form.email,
         date: fmtDate(date), time, clinician: form.clinician,
         reason: form.reason, location: "Milford, MA",
-      });
-      setSubmitting(false);
+      }).catch(() => {});
+
       setDone(true);
-    } catch(err) {
-      // Show the actual error so we know what's wrong
-      setError(`Booking failed: ${err.message}. Please call (508) 306-1128 to schedule.`);
-      setSubmitting(false);
+    } catch (err) {
+      setError(`Booking failed: ${err.message}. Please call (508) 306-1128.`);
     }
+    setSubmitting(false);
   };
 
-  // ── Confirmation screen ──────────────────────────────────────────────────────
+  // ── Confirmation ─────────────────────────────────────────────────────────────
   if (done) return (
     <div style={{ minHeight:"100vh", background:C.pearl, display:"flex", alignItems:"center", justifyContent:"center", padding:"2rem", fontFamily:C.sans }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');*{box-sizing:border-box}`}</style>
-      <Card style={{ maxWidth:500, width:"100%", textAlign:"center", padding:"3rem" }}>
+      <Card style={{ maxWidth:520, width:"100%", textAlign:"center", padding:"3rem" }}>
         <div style={{ width:72, height:72, borderRadius:"50%", background:"rgba(82,183,136,0.12)", border:`2px solid ${C.sage}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:32, margin:"0 auto 1.5rem" }}>✓</div>
-        <div style={{ fontFamily:C.serif, fontSize:"1.8rem", fontWeight:300, color:C.txt, marginBottom:8 }}>Request Received</div>
-        <p style={{ fontSize:14, color:C.muted, lineHeight:1.75, marginBottom:"1.5rem" }}>
-          Thank you, <strong>{form.name}</strong>. Your appointment request for<br/>
-          <strong>{fmtDate(date)}</strong> at <strong>{time}</strong> has been submitted.
+        <div style={{ fontFamily:C.serif, fontSize:"1.8rem", fontWeight:300, color:C.txt, marginBottom:8 }}>Request Received!</div>
+        <p style={{ fontSize:14, color:C.muted, lineHeight:1.8, marginBottom:"1.5rem" }}>
+          Thank you, <strong>{form.name}</strong>.<br/>
+          Your appointment request for <strong>{fmtDate(date)}</strong> at <strong>{time}</strong><br/>
+          with <strong>{form.clinician}</strong> has been submitted.
         </p>
-        <div style={{ background:"rgba(82,183,136,0.08)", border:`1px solid rgba(82,183,136,0.25)`, borderRadius:12, padding:"1rem", marginBottom:"1.5rem", fontSize:13, color:"#166534", lineHeight:1.7 }}>
-          We'll confirm your appointment via email at <strong>{form.email}</strong> within 1 business day.
+        <div style={{ background:"rgba(82,183,136,0.08)", border:`1px solid rgba(82,183,136,0.25)`, borderRadius:12, padding:"1rem 1.2rem", marginBottom:"1.5rem", fontSize:13, color:"#166534", lineHeight:1.7, textAlign:"left" }}>
+          <div style={{ fontWeight:600, marginBottom:4 }}>What happens next?</div>
+          <div>📧 Confirmation sent to <strong>{form.email}</strong></div>
+          <div>📞 We'll confirm within 1 business day</div>
+          <div>🏥 Location: 31 Granite St. Suite #2, Milford, MA</div>
         </div>
-        <p style={{ fontSize:12, color:C.muted2, marginBottom:"1.5rem" }}>Questions? Call us at (508) 306-1128</p>
+        <p style={{ fontSize:12, color:C.muted2, marginBottom:"1.5rem" }}>
+          Questions? Call <a href="tel:5083061128" style={{ color:C.violet, textDecoration:"none" }}>(508) 306-1128</a>
+        </p>
         {onBack && (
           <button onClick={onBack} style={{ background:C.violet, border:"none", borderRadius:30, padding:"11px 28px", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer" }}>
             ← Back to Clinic Site
@@ -502,178 +276,164 @@ export default function PublicBooking({ onBack }) {
     </div>
   );
 
-  // ── Main booking UI ──────────────────────────────────────────────────────────
+  // ── Main booking flow ─────────────────────────────────────────────────────────
   return (
     <div style={{ minHeight:"100vh", background:C.pearl, fontFamily:C.sans }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
         *{box-sizing:border-box}
         @media(max-width:767px){
-          .booking-grid{grid-template-columns:1fr !important}
-          .booking-summary{display:none !important}
-          .booking-step3{max-width:100% !important; margin:0 !important}
-          .booking-form-grid{grid-template-columns:1fr !important}
-          .clinician-grid{grid-template-columns:1fr !important}
-          .slot-grid{grid-template-columns:repeat(3,1fr) !important}
-          .steps-bar span{display:none}
-          .steps-bar .step-dot{width:24px !important; height:24px !important; font-size:10px !important}
-        }
-        @media(max-width:480px){
-          .slot-grid{grid-template-columns:repeat(2,1fr) !important}
+          .bk-grid{grid-template-columns:1fr !important}
+          .bk-summary{display:none !important}
         }
       `}</style>
 
       {/* Header */}
-      <div style={{ background:"#fff", borderBottom:`1px solid ${C.border}`, padding:"1rem 5%", display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:100 }}>
+      <div style={{ background:"#fff", borderBottom:`1px solid ${C.border}`, padding:"1rem 5%", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <div style={{ width:38, height:38, borderRadius:10, background:`linear-gradient(135deg,${C.violet},${C.teal})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>🏥</div>
+          <div style={{ width:36, height:36, borderRadius:9, background:`linear-gradient(135deg,${C.violet},${C.teal})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>🏥</div>
           <div>
-            <div style={{ fontFamily:C.serif, fontSize:"1.1rem", fontWeight:600, color:C.txt }}>MindShift Wellness Clinic</div>
+            <div style={{ fontSize:14, fontWeight:700, color:C.txt }}>MindShift Wellness Clinic</div>
             <div style={{ fontSize:11, color:C.muted }}>Book an Appointment</div>
           </div>
         </div>
-        {onBack && (
-          <button onClick={onBack} style={{ background:"transparent", border:`1px solid ${C.border}`, borderRadius:20, padding:"6px 14px", fontSize:12, color:C.muted, cursor:"pointer" }}>← Back</button>
-        )}
+        {onBack && <button onClick={onBack} style={{ background:"transparent", border:`1px solid ${C.border}`, borderRadius:20, padding:"7px 16px", fontSize:13, color:C.muted, cursor:"pointer" }}>← Back</button>}
       </div>
 
-      <div style={{ maxWidth:960, margin:"0 auto", padding:"clamp(1rem,4vw,2rem) 5% 4rem" }}>
-
-        {/* Page title */}
+      <div style={{ maxWidth:900, margin:"0 auto", padding:"2rem 5%" }}>
+        {/* Hero */}
         <div style={{ textAlign:"center", marginBottom:"2rem" }}>
-          <SectionLabel>Schedule Your Visit</SectionLabel>
-          <h1 style={{ fontFamily:C.serif, fontSize:"clamp(1.8rem,4vw,2.8rem)", fontWeight:300, color:C.txt, lineHeight:1.1, marginBottom:8 }}>
-            Book an <em style={{ fontStyle:"italic", color:C.violet }}>Appointment</em>
+          <h1 style={{ fontFamily:C.serif, fontSize:"clamp(1.8rem,4vw,2.6rem)", fontWeight:300, color:C.txt, marginBottom:8 }}>
+            Book Your <em style={{ fontStyle:"italic", color:C.violet }}>Appointment</em>
           </h1>
-          <p style={{ fontSize:14, color:C.muted, maxWidth:480, margin:"0 auto" }}>
-            MindShift Wellness Clinic · Milford, MA
-          </p>
+          <p style={{ fontSize:14, color:C.muted }}>No account needed — just pick a time and we'll confirm within 1 business day.</p>
         </div>
 
-        <Steps current={step}/>
+        <Steps current={step} />
 
-        <div className="booking-grid" style={{ display:"grid", gridTemplateColumns: step <= 2 ? "1.2fr 1fr" : "1fr", gap:"1.5rem" }}>
+        <div className="bk-grid" style={{ display:"grid", gridTemplateColumns:"1fr 300px", gap:24, alignItems:"start" }}>
 
-          {/* ── Left / Main ── */}
+          {/* Left: step content */}
           <div>
-            {/* Step 1: Calendar */}
+            {/* Step 1: Pick date */}
             {step === 1 && (
               <Card>
-                <SectionLabel>Select a Date</SectionLabel>
-                <h2 style={{ fontFamily:C.serif, fontSize:"1.3rem", fontWeight:600, color:C.txt, marginBottom:"1.2rem" }}>When would you like to come in?</h2>
-                <Calendar selected={date} onSelect={(d)=>{ setDate(d); setTime(""); setStep(2); }}/>
+                <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:C.violet, marginBottom:16 }}>Step 1 — Choose a Date</div>
+                <Calendar selected={date} onSelect={d => { setDate(d); setTime(""); }} />
+                <div style={{ marginTop:"1.5rem", display:"flex", justifyContent:"flex-end" }}>
+                  <button onClick={()=>setStep(2)} disabled={!date} style={{ background: date ? C.violet : C.cream, border:"none", borderRadius:30, padding:"11px 28px", color: date ? "#fff" : C.muted2, fontSize:14, fontWeight:600, cursor: date ? "pointer" : "not-allowed", transition:"all .2s" }}>
+                    Next: Choose Time →
+                  </button>
+                </div>
               </Card>
             )}
 
-            {/* Step 2: Time */}
+            {/* Step 2: Pick time */}
             {step === 2 && (
               <Card>
-                <button onClick={()=>setStep(1)} style={{ background:"transparent", border:"none", color:C.violet, fontSize:13, cursor:"pointer", marginBottom:12, padding:0, display:"flex", alignItems:"center", gap:4 }}>← Change date</button>
-                <SectionLabel>Select a Time</SectionLabel>
-                <h2 style={{ fontFamily:C.serif, fontSize:"1.3rem", fontWeight:600, color:C.txt, marginBottom:4 }}>Available times</h2>
-                <p style={{ fontSize:13, color:C.muted, marginBottom:"1.2rem" }}>{fmtDate(date)}</p>
-                <TimeSlots date={date} selected={time} onSelect={(t)=>{ setTime(t); setStep(3); }}/>
-                <p style={{ fontSize:11, color:C.muted2, marginTop:12 }}>Strikethrough times are already booked. All appointments are 60 minutes.</p>
+                <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:C.violet, marginBottom:4 }}>Step 2 — Choose a Time</div>
+                <div style={{ fontSize:13, color:C.muted, marginBottom:16 }}>{fmtDate(date)}</div>
+                {loadingSlots ? (
+                  <div style={{ textAlign:"center", padding:"2rem", color:C.muted }}>Loading available times…</div>
+                ) : (
+                  <TimeSlots date={date} selected={time} onSelect={setTime} bookedTimes={bookedTimes} />
+                )}
+                <div style={{ marginTop:"1.5rem", display:"flex", justifyContent:"space-between" }}>
+                  <button onClick={()=>setStep(1)} style={{ background:"transparent", border:`1px solid ${C.border}`, borderRadius:30, padding:"11px 22px", fontSize:13, color:C.muted, cursor:"pointer" }}>← Back</button>
+                  <button onClick={()=>setStep(3)} disabled={!time} style={{ background: time ? C.violet : C.cream, border:"none", borderRadius:30, padding:"11px 28px", color: time ? "#fff" : C.muted2, fontSize:14, fontWeight:600, cursor: time ? "pointer" : "not-allowed", transition:"all .2s" }}>
+                    Next: Your Details →
+                  </button>
+                </div>
               </Card>
             )}
 
-            {/* Step 3: Details */}
+            {/* Step 3: Patient details */}
             {step === 3 && (
-              <Card style={{ maxWidth:560, margin:"0 auto" }}>
-                <button onClick={()=>setStep(2)} style={{ background:"transparent", border:"none", color:C.violet, fontSize:13, cursor:"pointer", marginBottom:12, padding:0 }}>← Change time</button>
-                <SectionLabel>Your Information</SectionLabel>
-                <h2 style={{ fontFamily:C.serif, fontSize:"1.3rem", fontWeight:600, color:C.txt, marginBottom:"1.2rem" }}>Tell us about yourself</h2>
-                {error && (
-                  <div style={{ background:"rgba(224,122,143,0.08)", border:`1px solid rgba(224,122,143,0.3)`, borderRadius:10, padding:"10px 14px", fontSize:13, color:C.blush, marginBottom:14 }}>{error}</div>
-                )}
-                <form onSubmit={handleSubmit} style={{ display:"flex", flexDirection:"column", gap:14 }}>
-                  <div>
-                    <label style={{ fontSize:12, fontWeight:500, color:C.txt, display:"block", marginBottom:8 }}>Select Your Clinician *</label>
-                    <div className="clinician-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:4 }}>
-                      {CLINICIANS.map(c=>(
-                        <button key={c.name} type="button" onClick={()=>setForm(f=>({...f,clinician:c.name}))} style={{
-                          padding:"10px 12px", borderRadius:12, border:`2px solid ${form.clinician===c.name?C.violet:C.border}`,
-                          background:form.clinician===c.name?"rgba(107,95,207,0.06)":"#fff",
-                          cursor:"pointer", textAlign:"left", transition:"all .15s",
-                        }}>
-                          <div style={{ fontSize:18, marginBottom:3 }}>{c.emoji}</div>
-                          <div style={{ fontSize:12, fontWeight:700, color:C.txt, lineHeight:1.3 }}>{c.name.split(",")[0]}</div>
-                          <div style={{ fontSize:10, color:C.muted, marginTop:2 }}>{c.title.split(",")[0]}</div>
-                        </button>
-                      ))}
-                    </div>
+              <Card>
+                <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:C.violet, marginBottom:16 }}>Step 3 — Your Information</div>
+                <form onSubmit={e => { e.preventDefault(); setStep(4); }}>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
+                    <Inp label="Full Name" value={form.name} onChange={set("name")} placeholder="Your full name" required />
+                    <Inp label="Email Address" type="email" value={form.email} onChange={set("email")} placeholder="you@example.com" required />
+                    <Inp label="Phone Number" type="tel" value={form.phone} onChange={set("phone")} placeholder="(555) 000-0000" />
+                    <Inp label="Reason for Visit" value={form.reason} onChange={set("reason")} options={REASONS} />
                   </div>
-                  <div className="booking-form-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-                    <Input label="Full Name" value={form.name} onChange={set("name")} placeholder="Your full name" required/>
-                    <Input label="Email Address" type="email" value={form.email} onChange={set("email")} placeholder="you@example.com" required/>
+                  <div style={{ marginBottom:14 }}>
+                    <Inp label="Preferred Clinician" value={form.clinician} onChange={set("clinician")} options={CLINICIANS.map(c=>c.name)} />
                   </div>
-                  <Input label="Phone Number" type="tel" value={form.phone} onChange={set("phone")} placeholder="(555) 000-0000"/>
-                  <Input label="Reason for Visit" value={form.reason} onChange={set("reason")} options={REASONS}/>
-                  <p style={{ fontSize:11, color:C.muted2, lineHeight:1.65 }}>
-                    Your request will be reviewed and confirmed within 1 business day. You'll receive a confirmation at the email provided.
-                  </p>
-                  <button type="submit" disabled={submitting} style={{
-                    background:`linear-gradient(135deg,${C.violet},${C.teal})`, border:"none",
-                    borderRadius:30, padding:"13px", color:"#fff", fontSize:15, fontWeight:600,
-                    cursor:"pointer", opacity:submitting?0.7:1, transition:"opacity .2s",
-                  }}>
-                    {submitting ? "Submitting…" : "Request Appointment →"}
-                  </button>
+                  <div style={{ marginBottom:14 }}>
+                    <label style={{ fontSize:12, fontWeight:500, color:C.txt, display:"block", marginBottom:5 }}>Additional Notes (optional)</label>
+                    <textarea value={form.notes} onChange={e=>set("notes")(e.target.value)} placeholder="Anything else you'd like us to know…" rows={3} style={{ width:"100%", padding:"11px 14px", borderRadius:10, border:`1.5px solid ${C.border}`, fontSize:14, color:C.txt, background:"#fff", outline:"none", fontFamily:C.sans, resize:"vertical" }}/>
+                  </div>
+                  <div style={{ display:"flex", justifyContent:"space-between" }}>
+                    <button type="button" onClick={()=>setStep(2)} style={{ background:"transparent", border:`1px solid ${C.border}`, borderRadius:30, padding:"11px 22px", fontSize:13, color:C.muted, cursor:"pointer" }}>← Back</button>
+                    <button type="submit" style={{ background:C.violet, border:"none", borderRadius:30, padding:"11px 28px", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer" }}>Review & Confirm →</button>
+                  </div>
                 </form>
+              </Card>
+            )}
+
+            {/* Step 4: Confirm */}
+            {step === 4 && (
+              <Card>
+                <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:C.violet, marginBottom:16 }}>Step 4 — Confirm Your Appointment</div>
+                {error && <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:10, padding:"10px 14px", fontSize:13, color:"#dc2626", marginBottom:14 }}>{error}</div>}
+
+                <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:"1.5rem" }}>
+                  {[
+                    ["📅", "Date & Time", `${fmtDate(date)} at ${time}`],
+                    ["👨‍⚕️", "Clinician",   form.clinician],
+                    ["👤", "Name",        form.name],
+                    ["✉️", "Email",       form.email],
+                    ["📞", "Phone",       form.phone || "—"],
+                    ["🩺", "Reason",      form.reason || "—"],
+                    ["🏥", "Location",    "31 Granite St. Suite #2, Milford, MA"],
+                  ].map(([icon, label, val]) => (
+                    <div key={label} style={{ display:"flex", gap:12, padding:"10px 14px", background:"rgba(107,95,207,0.04)", borderRadius:10 }}>
+                      <span style={{ fontSize:16, flexShrink:0 }}>{icon}</span>
+                      <div>
+                        <div style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.06em" }}>{label}</div>
+                        <div style={{ fontSize:14, color:C.txt, marginTop:2 }}>{val}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ background:"#fffbeb", border:"1px solid #fde68a", borderRadius:10, padding:"10px 14px", fontSize:12, color:"#92400e", marginBottom:"1.5rem", lineHeight:1.6 }}>
+                  ⚠️ This is a <strong>request</strong> — not a confirmed appointment. We'll contact you within 1 business day to confirm.
+                </div>
+
+                <div style={{ display:"flex", justifyContent:"space-between" }}>
+                  <button onClick={()=>setStep(3)} style={{ background:"transparent", border:`1px solid ${C.border}`, borderRadius:30, padding:"11px 22px", fontSize:13, color:C.muted, cursor:"pointer" }}>← Edit</button>
+                  <button onClick={handleSubmit} disabled={submitting} style={{ background:`linear-gradient(135deg,${C.violet},${C.teal})`, border:"none", borderRadius:30, padding:"13px 32px", color:"#fff", fontSize:14, fontWeight:700, cursor: submitting ? "not-allowed" : "pointer", opacity: submitting ? 0.7 : 1, boxShadow:"0 4px 16px rgba(107,95,207,0.3)" }}>
+                    {submitting ? "Submitting…" : "✓ Confirm Appointment Request"}
+                  </button>
+                </div>
               </Card>
             )}
           </div>
 
-          {/* ── Right: Summary (steps 1–2) ── */}
-          {step <= 2 && (
-            <div className="booking-summary" style={{ display:"flex", flexDirection:"column", gap:"1rem" }}>
-              <Card style={{ background:`linear-gradient(135deg,rgba(107,95,207,0.06),rgba(42,157,143,0.04))`, border:`1px solid rgba(107,95,207,0.15)` }}>
-                <SectionLabel>Your Appointment</SectionLabel>
-                <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-                  <div style={{ display:"flex", gap:10, alignItems:"flex-start" }}>
-                    <span style={{ fontSize:20 }}>{CLINICIANS.find(c=>c.name===form.clinician)?.emoji||"👨🏾‍⚕️"}</span>
-                    <div>
-                      <div style={{ fontSize:13, fontWeight:600, color:C.txt }}>{form.clinician||"Kenneth Mutegyeki"}</div>
-                      <div style={{ fontSize:11, color:C.muted }}>{CLINICIANS.find(c=>c.name===form.clinician)?.title||"Psychiatric Mental Health Nurse Practitioner (PMHNP-BC)"}</div>
-                    </div>
-                  </div>
-                  <div style={{ display:"flex", gap:10, alignItems:"center" }}>
-                    <span style={{ fontSize:18 }}>📅</span>
-                    <span style={{ fontSize:13, color: date ? C.txt : C.muted2 }}>{date ? fmtDate(date) : "No date selected"}</span>
-                  </div>
-                  <div style={{ display:"flex", gap:10, alignItems:"center" }}>
-                    <span style={{ fontSize:18 }}>🕐</span>
-                    <span style={{ fontSize:13, color: time ? C.txt : C.muted2 }}>{time || "No time selected"}</span>
-                  </div>
-                  <div style={{ display:"flex", gap:10, alignItems:"center" }}>
-                    <span style={{ fontSize:18 }}>📍</span>
-                    <span style={{ fontSize:13, color:C.muted }}>31 Granite St. Suite #2, Milford, MA</span>
-                  </div>
+          {/* Right: summary sidebar */}
+          <div className="bk-summary">
+            <Card style={{ position:"sticky", top:24 }}>
+              <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", color:C.violet, marginBottom:14 }}>Your Selection</div>
+              {date ? (
+                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                  <div style={{ fontSize:13, color:C.txt }}><span style={{ color:C.muted, display:"block", fontSize:11 }}>Date</span>{fmtDate(date)}</div>
+                  {time && <div style={{ fontSize:13, color:C.txt }}><span style={{ color:C.muted, display:"block", fontSize:11 }}>Time</span>{time}</div>}
+                  {form.clinician && <div style={{ fontSize:13, color:C.txt }}><span style={{ color:C.muted, display:"block", fontSize:11 }}>Clinician</span>{form.clinician}</div>}
+                  {form.name && <div style={{ fontSize:13, color:C.txt }}><span style={{ color:C.muted, display:"block", fontSize:11 }}>Patient</span>{form.name}</div>}
                 </div>
-                <div style={{ marginTop:"1rem", paddingTop:"1rem", borderTop:`1px solid ${C.border}` }}>
-                  <div style={{ fontSize:11, color:C.muted2, lineHeight:1.7 }}>
-                    💳 Initial Evaluation: $400 (60 min) · Follow-Up: $150 (10–20 min)<br/>
-                    Most insurance plans accepted · Self-pay available
-                  </div>
-                </div>
-              </Card>
-
-              <Card>
-                <SectionLabel>Need Help?</SectionLabel>
-                <a href="tel:5083061128" style={{ display:"flex", gap:8, alignItems:"center", fontSize:13, color:C.muted, textDecoration:"none", marginBottom:8 }}>📞 (508) 306-1128</a>
-                <a href="mailto:info@mindshiftwellnessclinic.org" style={{ display:"flex", gap:8, alignItems:"center", fontSize:12, color:C.muted, textDecoration:"none" }}>✉️ info@mindshiftwellnessclinic.org</a>
-              </Card>
-
-              <Card style={{ background:C.cream, border:`1px solid ${C.border2}` }}>
-                <div style={{ fontSize:11, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:C.muted, marginBottom:8 }}>Office Hours</div>
-                <div style={{ fontSize:12, color:C.muted, lineHeight:1.8 }}>
-                  Mon &amp; Thu: 6:00 PM – 8:00 PM<br/>
-                  Fri &amp; Sat: 8:00 AM – 5:00 PM<br/>
-                  <span style={{ color:C.teal, fontWeight:500 }}>Telehealth available</span>
-                </div>
-              </Card>
-            </div>
-          )}
+              ) : (
+                <div style={{ fontSize:13, color:C.muted2 }}>Select a date to get started.</div>
+              )}
+              <div style={{ marginTop:20, paddingTop:16, borderTop:`1px solid ${C.border}` }}>
+                <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:8 }}>Need help?</div>
+                <a href="tel:5083061128" style={{ display:"block", fontSize:13, color:C.violet, textDecoration:"none", marginBottom:4 }}>📞 (508) 306-1128</a>
+                <a href="mailto:info@mindshiftwellnessclinic.org" style={{ display:"block", fontSize:12, color:C.muted, textDecoration:"none" }}>✉️ info@mindshiftwellnessclinic.org</a>
+              </div>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
