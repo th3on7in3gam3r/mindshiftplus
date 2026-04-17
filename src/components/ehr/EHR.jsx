@@ -7,7 +7,7 @@ import EHRDashboard from "./EHRDashboard";
 import EHRPatientChart from "./EHRPatientChart";
 import EHRIntakes from "./EHRIntakes";
 import { Spinner, EhrStyles } from "./EHRUI";
-import { useTokens, ThemeToggle } from "../../lib/ThemeContext";
+import { ThemeToggle } from "../../lib/ThemeContext";
 
 // ── Main EHR module entry point ───────────────────────────────────────────────
 export default function EHR({ onBack }) {

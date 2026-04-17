@@ -25,14 +25,7 @@ export function isAdminEmail(email) {
 export async function getAllCharts() {
   const { data, error } = await supabase
     .from("ehr_charts")
-    .select(`
-      *,
-      patient:patient_id (
-        id,
-        email,
-        raw_user_meta_data
-      )
-    `)
+    .select("*")
     .order("updated_at", { ascending: false });
   return { data, error };
 }
