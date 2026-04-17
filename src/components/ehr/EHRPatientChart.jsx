@@ -10,7 +10,6 @@ import {
   StatusBadge, SectionHeader, Divider, Spinner, EhrStyles,
   formatDate, formatDateTime, age,
 } from "./EHRUI";
-import { useTokens } from "../../lib/ThemeContext";
 
 const TABS = [
   { id: "overview",     label: "Overview",     icon: "🏠" },
@@ -22,7 +21,6 @@ const TABS = [
 ];
 
 export default function EHRPatientChart({ chartId, clinician, onBack, isNew = false, newPatientId = null }) {
-  const t = useTokens();
   const [tab, setTab]           = useState("overview");
   const [chart, setChart]       = useState(null);
   const [notes, setNotes]       = useState([]);
@@ -69,27 +67,27 @@ export default function EHRPatientChart({ chartId, clinician, onBack, isNew = fa
   if (loading) return <Spinner />;
 
   return (
-    <div className="ehr-root" style={{ fontFamily: "inherit", minHeight: "100vh", background: t.bg }}>
+    <div className="ehr-root" style={{ fontFamily: "inherit", minHeight: "100vh", background: var(--ehr-bg) }}>
       <EhrStyles />
 
       {/* Patient header */}
       <div style={{
-        background: t.bg === "#080c18"
+        background: var(--ehr-bg) === "#080c18"
           ? "linear-gradient(135deg,rgba(124,111,247,0.1),rgba(78,205,196,0.05))"
-          : `linear-gradient(135deg,${t.accent}10,${t.teal}08)`,
-        borderBottom: `1px solid ${t.border}`,
+          : `linear-gradient(135deg,${var(--ehr-accent)}10,${var(--ehr-teal)}08)`,
+        borderBottom: `1px solid ${var(--ehr-border)}`,
         padding: "1.2rem 2rem",
         display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap",
       }}>
-        <button onClick={onBack} style={{ background: t.bg === "#080c18" ? "rgba(255,255,255,0.05)" : "#f1f5f9", border: `1px solid ${t.border2}`, borderRadius: 8, padding: "6px 12px", color: t.muted, cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit", flexShrink: 0 }}>← Patients</button>
-        <div style={{ width: 1, height: 24, background: t.border }} />
+        <button onClick={onBack} style={{ background: var(--ehr-bg) === "#080c18" ? "rgba(255,255,255,0.05)" : "#f1f5f9", border: `1px solid ${var(--ehr-border2)}`, borderRadius: 8, padding: "6px 12px", color: var(--ehr-muted), cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit", flexShrink: 0 }}>← Patients</button>
+        <div style={{ width: 1, height: 24, background: var(--ehr-border) }} />
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 18, fontWeight: 800, color: t.text, letterSpacing: "-0.02em" }}>{patientName}</div>
-          <div style={{ fontSize: 12, color: t.muted2, marginTop: 2, display: "flex", gap: 10, flexWrap: "wrap" }}>
-            {chart?.mrn && <span style={{ color: t.accent, fontWeight: 600 }}>MRN: {chart.mrn}</span>}
+          <div style={{ fontSize: 18, fontWeight: 800, color: var(--ehr-text), letterSpacing: "-0.02em" }}>{patientName}</div>
+          <div style={{ fontSize: 12, color: var(--ehr-muted2), marginTop: 2, display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {chart?.mrn && <span style={{ color: var(--ehr-accent), fontWeight: 600 }}>MRN: {chart.mrn}</span>}
             {patientAge && <span>{patientAge} yrs</span>}
             {chart?.gender && <span>{chart.gender}</span>}
-            {chart?.primary_diagnosis && <span style={{ color: t.teal }}>{chart.primary_diagnosis} — {chart.primary_diagnosis_label}</span>}
+            {chart?.primary_diagnosis && <span style={{ color: var(--ehr-teal) }}>{chart.primary_diagnosis} — {chart.primary_diagnosis_label}</span>}
           </div>
         </div>
         <StatusBadge status={chart?.status ?? "active"} />
@@ -97,13 +95,13 @@ export default function EHRPatientChart({ chartId, clinician, onBack, isNew = fa
       </div>
 
       {/* Tabs */}
-      <div style={{ display: "flex", gap: 4, padding: "0.6rem 2rem", borderBottom: `1px solid ${t.border}`, background: t.surface, overflowX: "auto" }}>
+      <div style={{ display: "flex", gap: 4, padding: "0.6rem 2rem", borderBottom: `1px solid ${var(--ehr-border)}`, background: var(--ehr-surface), overflowX: "auto" }}>
         {TABS.map(tb => (
           <button key={tb.id} onClick={() => setTab(tb.id)} className="ehr-tab-btn" style={{
-            background: tab === tb.id ? `${t.accent}15` : "transparent",
-            border: tab === tb.id ? `1px solid ${t.accent}35` : "1px solid transparent",
+            background: tab === tb.id ? `${var(--ehr-accent)}15` : "transparent",
+            border: tab === tb.id ? `1px solid ${var(--ehr-accent)}35` : "1px solid transparent",
             borderRadius: 10, padding: "8px 16px",
-            color: tab === tb.id ? t.accent : t.muted,
+            color: tab === tb.id ? var(--ehr-accent) : var(--ehr-muted),
             fontSize: 13, fontWeight: tab === tb.id ? 700 : 400,
             cursor: "pointer", whiteSpace: "nowrap",
             display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit",
@@ -177,7 +175,6 @@ export default function EHRPatientChart({ chartId, clinician, onBack, isNew = fa
 
 // ── Chart Edit Form ────────────────────────────────────────────────────────────
 function ChartEditForm({ chart, clinician, saving, onSave, onCancel }) {
-  const t = useTokens();
   const [form, setForm] = useState({
     id: chart?.id, patient_id: chart?.patient_id,
     mrn: chart?.mrn ?? "", full_name: chart?.full_name ?? "",
@@ -201,15 +198,15 @@ function ChartEditForm({ chart, clinician, saving, onSave, onCancel }) {
   return (
     <form onSubmit={handleSubmit}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: t.text, margin: 0 }}>{form.id ? "Edit Patient Chart" : "New Patient Chart"}</h2>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: var(--ehr-text), margin: 0 }}>{form.id ? "Edit Patient Chart" : "New Patient Chart"}</h2>
         <div style={{ display: "flex", gap: 8 }}>
           <EhrBtn variant="secondary" onClick={onCancel} type="button">Cancel</EhrBtn>
           <EhrBtn type="submit" disabled={saving}>{saving ? "Saving…" : "Save Chart"}</EhrBtn>
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        <EhrCard style={{ gridColumn: "1 / -1" }} glow={t.accent}>
-          <h3 style={{ fontSize: 13, fontWeight: 700, color: t.accent, marginBottom: "1rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>Demographics</h3>
+        <EhrCard style={{ gridColumn: "1 / -1" }} glow={var(--ehr-accent)}>
+          <h3 style={{ fontSize: 13, fontWeight: 700, color: var(--ehr-accent), marginBottom: "1rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>Demographics</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
             <EhrInput label="Full Name" value={form.full_name} onChange={set("full_name")} required />
             <EhrInput label="Date of Birth" type="date" value={form.date_of_birth} onChange={set("date_of_birth")} />
@@ -228,7 +225,7 @@ function ChartEditForm({ chart, clinician, saving, onSave, onCancel }) {
         </EhrCard>
 
         <EhrCard>
-          <h3 style={{ fontSize: 13, fontWeight: 700, color: t.accent, marginBottom: "1rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>Emergency Contact</h3>
+          <h3 style={{ fontSize: 13, fontWeight: 700, color: var(--ehr-accent), marginBottom: "1rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>Emergency Contact</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <EhrInput label="Name" value={form.emergency_contact_name} onChange={set("emergency_contact_name")} />
             <EhrInput label="Phone" type="tel" value={form.emergency_contact_phone} onChange={set("emergency_contact_phone")} />
@@ -236,7 +233,7 @@ function ChartEditForm({ chart, clinician, saving, onSave, onCancel }) {
         </EhrCard>
 
         <EhrCard>
-          <h3 style={{ fontSize: 13, fontWeight: 700, color: t.accent, marginBottom: "1rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>Insurance</h3>
+          <h3 style={{ fontSize: 13, fontWeight: 700, color: var(--ehr-accent), marginBottom: "1rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>Insurance</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <EhrInput label="Provider" value={form.insurance_provider} onChange={set("insurance_provider")} />
             <EhrInput label="Member ID" value={form.insurance_member_id} onChange={set("insurance_member_id")} />
@@ -245,7 +242,7 @@ function ChartEditForm({ chart, clinician, saving, onSave, onCancel }) {
         </EhrCard>
 
         <EhrCard style={{ gridColumn: "1 / -1" }}>
-          <h3 style={{ fontSize: 13, fontWeight: 700, color: t.accent, marginBottom: "1rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>Clinical</h3>
+          <h3 style={{ fontSize: 13, fontWeight: 700, color: var(--ehr-accent), marginBottom: "1rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>Clinical</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
             <div style={{ gridColumn: "1 / -1" }}>
               <ICD10Picker
@@ -272,7 +269,6 @@ function ChartEditForm({ chart, clinician, saving, onSave, onCancel }) {
 
 // ── Overview Tab ──────────────────────────────────────────────────────────────
 function OverviewTab({ chart, notes, meds, appts }) {
-  const t = useTokens();
   const patientAge = age(chart?.date_of_birth);
   const activeMeds = meds.filter(m => m.status === "active");
   const recentNote = notes[0];
@@ -292,8 +288,8 @@ function OverviewTab({ chart, notes, meds, appts }) {
           ["Referral", chart.referral_source || "—"],
         ].map(([label, val]) => (
           <div key={label} style={{ display: "flex", gap: 12, fontSize: 13, marginBottom: 6 }}>
-            <span style={{ color: t.muted2, width: 90, flexShrink: 0 }}>{label}</span>
-            <span style={{ color: t.text }}>{val}</span>
+            <span style={{ color: var(--ehr-muted2), width: 90, flexShrink: 0 }}>{label}</span>
+            <span style={{ color: var(--ehr-text) }}>{val}</span>
           </div>
         ))}
       </EhrCard>
@@ -306,13 +302,13 @@ function OverviewTab({ chart, notes, meds, appts }) {
           ["Pharmacy",   chart.pharmacy  || "—"],
         ].map(([label, val]) => (
           <div key={label} style={{ display: "flex", gap: 12, fontSize: 13, marginBottom: 6 }}>
-            <span style={{ color: t.muted2, width: 90, flexShrink: 0 }}>{label}</span>
-            <span style={{ color: t.text }}>{val}</span>
+            <span style={{ color: var(--ehr-muted2), width: 90, flexShrink: 0 }}>{label}</span>
+            <span style={{ color: var(--ehr-text) }}>{val}</span>
           </div>
         ))}
         {(chart.secondary_diagnoses ?? []).length > 0 && (
           <div style={{ marginTop: 6 }}>
-            <div style={{ fontSize: 12, color: t.muted2, marginBottom: 4 }}>Secondary Diagnoses</div>
+            <div style={{ fontSize: 12, color: var(--ehr-muted2), marginBottom: 4 }}>Secondary Diagnoses</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {chart.secondary_diagnoses.map(d => <EhrBadge key={d.code} color="purple">{d.code}</EhrBadge>)}
             </div>
@@ -330,8 +326,8 @@ function OverviewTab({ chart, notes, meds, appts }) {
           ["Emerg. Phone", chart.emergency_contact_phone || "—"],
         ].map(([label, val]) => (
           <div key={label} style={{ display: "flex", gap: 12, fontSize: 13, marginBottom: 6 }}>
-            <span style={{ color: t.muted2, width: 100, flexShrink: 0 }}>{label}</span>
-            <span style={{ color: t.text }}>{val}</span>
+            <span style={{ color: var(--ehr-muted2), width: 100, flexShrink: 0 }}>{label}</span>
+            <span style={{ color: var(--ehr-text) }}>{val}</span>
           </div>
         ))}
       </EhrCard>
@@ -339,13 +335,13 @@ function OverviewTab({ chart, notes, meds, appts }) {
       <EhrCard>
         <SectionHeader title="At a Glance" />
         {[
-          { label: "Active Medications", color: t.accent, content: activeMeds.length === 0 ? "None on file" : activeMeds.slice(0, 3).map(m => `${m.medication} ${m.dosage} — ${m.frequency}`).join(", ") },
-          { label: "Most Recent Note",   color: t.teal,   content: recentNote ? `${formatDate(recentNote.note_date)} — ${recentNote.note_type}` : "No notes yet" },
-          { label: "Next Appointment",   color: t.gold,   content: nextAppt ? formatDateTime(nextAppt.scheduled_at) : "None scheduled" },
+          { label: "Active Medications", color: var(--ehr-accent), content: activeMeds.length === 0 ? "None on file" : activeMeds.slice(0, 3).map(m => `${m.medication} ${m.dosage} — ${m.frequency}`).join(", ") },
+          { label: "Most Recent Note",   color: var(--ehr-teal),   content: recentNote ? `${formatDate(recentNote.note_date)} — ${recentNote.note_type}` : "No notes yet" },
+          { label: "Next Appointment",   color: var(--ehr-gold),   content: nextAppt ? formatDateTime(nextAppt.scheduled_at) : "None scheduled" },
         ].map(item => (
           <div key={item.label} style={{ background: `${item.color}10`, borderRadius: 10, padding: "0.8rem", marginBottom: 8 }}>
-            <div style={{ fontSize: 11, color: t.muted2, marginBottom: 4 }}>{item.label}</div>
-            <div style={{ fontSize: 13, color: t.text }}>{item.content}</div>
+            <div style={{ fontSize: 11, color: var(--ehr-muted2), marginBottom: 4 }}>{item.label}</div>
+            <div style={{ fontSize: 13, color: var(--ehr-text) }}>{item.content}</div>
           </div>
         ))}
       </EhrCard>
@@ -355,7 +351,6 @@ function OverviewTab({ chart, notes, meds, appts }) {
 
 // ── Notes Tab ─────────────────────────────────────────────────────────────────
 function NotesTab({ notes, chart, clinician, showForm, editingNote, onNew, onEdit, onSaved, onSign, onDelete, onClose }) {
-  const t = useTokens();
   if (showForm) return <NoteForm note={editingNote} chart={chart} clinician={clinician} onSaved={onSaved} onCancel={onClose} />;
   return (
     <div>
@@ -363,7 +358,7 @@ function NotesTab({ notes, chart, clinician, showForm, editingNote, onNew, onEdi
       {notes.length === 0 ? (
         <EhrCard style={{ textAlign: "center", padding: "3rem" }}>
           <div style={{ fontSize: 32, marginBottom: 10 }}>📝</div>
-          <div style={{ color: t.muted, fontSize: 14 }}>No clinical notes yet.</div>
+          <div style={{ color: var(--ehr-muted), fontSize: 14 }}>No clinical notes yet.</div>
         </EhrCard>
       ) : notes.map(n => (
         <NoteCard key={n.id} note={n} onEdit={() => onEdit(n)} onSign={() => onSign(n.id)} onDelete={() => { if (window.confirm("Delete this note?")) onDelete(n.id); }} />
@@ -373,7 +368,6 @@ function NotesTab({ notes, chart, clinician, showForm, editingNote, onNew, onEdi
 }
 
 function NoteCard({ note, onEdit, onSign, onDelete }) {
-  const t = useTokens();
   const [expanded, setExpanded] = useState(false);
   const TYPE_LABEL = { intake: "Intake Eval", progress: "Progress Note", discharge: "Discharge", phone: "Phone Contact" };
   return (
@@ -381,13 +375,13 @@ function NoteCard({ note, onEdit, onSign, onDelete }) {
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
         <div style={{ flex: 1, cursor: "pointer" }} onClick={() => setExpanded(e => !e)}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: t.text }}>{formatDate(note.note_date)}</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: var(--ehr-text) }}>{formatDate(note.note_date)}</span>
             <EhrBadge color="purple">{TYPE_LABEL[note.note_type] ?? note.note_type}</EhrBadge>
             {note.is_signed && <EhrBadge color="green">✓ Signed</EhrBadge>}
           </div>
-          <div style={{ fontSize: 12, color: t.muted2 }}>{note.clinician_name}</div>
+          <div style={{ fontSize: 12, color: var(--ehr-muted2) }}>{note.clinician_name}</div>
           {!expanded && note.presenting_concerns && (
-            <div style={{ fontSize: 13, color: t.muted, marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 500 }}>
+            <div style={{ fontSize: 13, color: var(--ehr-muted), marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 500 }}>
               {note.presenting_concerns}
             </div>
           )}
@@ -410,25 +404,25 @@ function NoteCard({ note, onEdit, onSign, onDelete }) {
             ["Follow-up",   note.follow_up_instructions],
           ].filter(([, v]) => v).map(([label, val]) => (
             <div key={label} style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: t.muted2, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>{label}</div>
-              <div style={{ fontSize: 13, color: t.text, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{val}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: var(--ehr-muted2), textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>{label}</div>
+              <div style={{ fontSize: 13, color: var(--ehr-text), lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{val}</div>
             </div>
           ))}
           {note.diagnoses?.length > 0 && (
             <div style={{ marginTop: 8 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: t.muted2, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5 }}>Diagnoses</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: var(--ehr-muted2), textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5 }}>Diagnoses</div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {note.diagnoses.map(d => <EhrBadge key={d.code} color="purple">{d.code} — {d.label}</EhrBadge>)}
               </div>
             </div>
           )}
           {note.risk_assessment && (
-            <div style={{ marginTop: 10, background: `${t.rose}10`, borderRadius: 8, padding: "0.8rem" }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: t.rose, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Risk Assessment</div>
+            <div style={{ marginTop: 10, background: `${var(--ehr-rose)}10`, borderRadius: 8, padding: "0.8rem" }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: var(--ehr-rose), textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Risk Assessment</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {Object.entries(note.risk_assessment).filter(([, v]) => v).map(([k, v]) => (
-                  <div key={k} style={{ fontSize: 12, color: t.muted }}>
-                    <span style={{ color: t.muted2 }}>{k.replace(/_/g, " ")}: </span>{v}
+                  <div key={k} style={{ fontSize: 12, color: var(--ehr-muted) }}>
+                    <span style={{ color: var(--ehr-muted2) }}>{k.replace(/_/g, " ")}: </span>{v}
                   </div>
                 ))}
               </div>
@@ -441,7 +435,6 @@ function NoteCard({ note, onEdit, onSign, onDelete }) {
 }
 
 function NoteForm({ note, chart, clinician, onSaved, onCancel }) {
-  const t = useTokens();
   const [form, setForm] = useState({
     id: note?.id, note_date: note?.note_date ?? new Date().toISOString().slice(0, 10),
     note_type: note?.note_type ?? "progress",
@@ -463,7 +456,7 @@ function NoteForm({ note, chart, clinician, onSaved, onCancel }) {
   return (
     <form onSubmit={handleSubmit}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: t.text, margin: 0 }}>{note ? "Edit Note" : "New Clinical Note"}</h2>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: var(--ehr-text), margin: 0 }}>{note ? "Edit Note" : "New Clinical Note"}</h2>
         <div style={{ display: "flex", gap: 8 }}>
           <EhrBtn variant="secondary" onClick={onCancel} type="button">Cancel</EhrBtn>
           <EhrBtn type="submit" disabled={saving}>{saving ? "Saving…" : "Save Note"}</EhrBtn>
@@ -491,18 +484,18 @@ function NoteForm({ note, chart, clinician, onSaved, onCancel }) {
               <ICD10Picker label="" value={icdSearch} onChange={(item) => { if (item) setForm(f => ({ ...f, diagnoses: [...(f.diagnoses ?? []).filter(d => d.code !== item.code), item] })); setIcdSearch(null); }} />
             </div>
           )}
-          {(form.diagnoses?.length === 0) && <div style={{ fontSize: 13, color: t.muted2 }}>No diagnoses added</div>}
+          {(form.diagnoses?.length === 0) && <div style={{ fontSize: 13, color: var(--ehr-muted2) }}>No diagnoses added</div>}
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {form.diagnoses?.map(d => (
-              <span key={d.code} style={{ display: "flex", alignItems: "center", gap: 4, background: `${t.accent}15`, border: `1px solid ${t.accent}30`, borderRadius: 20, padding: "3px 10px", fontSize: 12, color: t.accent }}>
+              <span key={d.code} style={{ display: "flex", alignItems: "center", gap: 4, background: `${var(--ehr-accent)}15`, border: `1px solid ${var(--ehr-accent)}30`, borderRadius: 20, padding: "3px 10px", fontSize: 12, color: var(--ehr-accent) }}>
                 {d.code} — {d.label}
-                <button type="button" onClick={() => setForm(f => ({ ...f, diagnoses: f.diagnoses.filter(x => x.code !== d.code) }))} style={{ background: "transparent", border: "none", color: t.muted2, cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0, marginLeft: 2 }}>×</button>
+                <button type="button" onClick={() => setForm(f => ({ ...f, diagnoses: f.diagnoses.filter(x => x.code !== d.code) }))} style={{ background: "transparent", border: "none", color: var(--ehr-muted2), cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0, marginLeft: 2 }}>×</button>
               </span>
             ))}
           </div>
         </EhrCard>
         <EhrCard style={{ padding: "1rem" }}>
-          <h3 style={{ fontSize: 14, fontWeight: 700, color: t.rose, marginBottom: "1rem" }}>Risk Assessment</h3>
+          <h3 style={{ fontSize: 14, fontWeight: 700, color: var(--ehr-rose), marginBottom: "1rem" }}>Risk Assessment</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             {[["suicidal_ideation","Suicidal Ideation"],["homicidal_ideation","Homicidal Ideation"],["self_harm","Self-Harm"],["substance_use","Substance Use"],["protective_factors","Protective Factors"]].map(([key, label]) => (
               <EhrInput key={key} label={label} value={form.risk_assessment[key] ?? ""} onChange={setRisk(key)} placeholder="Denied / Present / Details…" />
@@ -520,7 +513,6 @@ function NoteForm({ note, chart, clinician, onSaved, onCancel }) {
 
 // ── Medications Tab ───────────────────────────────────────────────────────────
 function MedicationsTab({ meds, chart, clinician, showForm, editingMed, onNew, onEdit, onSaved, onDelete, onClose }) {
-  const t = useTokens();
   if (showForm) return <MedForm med={editingMed} chart={chart} clinician={clinician} onSaved={onSaved} onCancel={onClose} />;
   const active   = meds.filter(m => m.status === "active");
   const inactive = meds.filter(m => m.status !== "active");
@@ -529,20 +521,20 @@ function MedicationsTab({ meds, chart, clinician, showForm, editingMed, onNew, o
       <SectionHeader title={`Medications (${meds.length})`} action={<EhrBtn small onClick={onNew}>+ Add Medication</EhrBtn>} />
       {active.length > 0 && (
         <>
-          <div style={{ fontSize: 12, fontWeight: 700, color: t.teal, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Active</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: var(--ehr-teal), textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Active</div>
           {active.map(m => <MedRow key={m.id} med={m} onEdit={() => onEdit(m)} onDelete={() => { if (window.confirm("Remove medication?")) onDelete(m.id); }} />)}
         </>
       )}
       {inactive.length > 0 && (
         <>
-          <div style={{ fontSize: 12, fontWeight: 700, color: t.muted2, textTransform: "uppercase", letterSpacing: "0.06em", margin: "1rem 0 8px" }}>Discontinued / On Hold</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: var(--ehr-muted2), textTransform: "uppercase", letterSpacing: "0.06em", margin: "1rem 0 8px" }}>Discontinued / On Hold</div>
           {inactive.map(m => <MedRow key={m.id} med={m} onEdit={() => onEdit(m)} onDelete={() => { if (window.confirm("Remove medication?")) onDelete(m.id); }} />)}
         </>
       )}
       {meds.length === 0 && (
         <EhrCard style={{ textAlign: "center", padding: "3rem" }}>
           <div style={{ fontSize: 32, marginBottom: 10 }}>💊</div>
-          <div style={{ color: t.muted, fontSize: 14 }}>No medications on file.</div>
+          <div style={{ color: var(--ehr-muted), fontSize: 14 }}>No medications on file.</div>
         </EhrCard>
       )}
     </div>
@@ -550,22 +542,21 @@ function MedicationsTab({ meds, chart, clinician, showForm, editingMed, onNew, o
 }
 
 function MedRow({ med, onEdit, onDelete }) {
-  const t = useTokens();
   return (
     <EhrCard style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 14 }}>
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: t.text }}>{med.medication}</div>
-        <div style={{ fontSize: 12, color: t.muted2, marginTop: 3, display: "flex", gap: 10 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: var(--ehr-text) }}>{med.medication}</div>
+        <div style={{ fontSize: 12, color: var(--ehr-muted2), marginTop: 3, display: "flex", gap: 10 }}>
           {med.dosage && <span>{med.dosage}</span>}
           {med.frequency && <span>{med.frequency}</span>}
           {med.route && <span>{med.route}</span>}
           {med.refills != null && <span>Refills: {med.refills}</span>}
         </div>
-        {med.notes && <div style={{ fontSize: 12, color: t.muted, marginTop: 4 }}>{med.notes}</div>}
+        {med.notes && <div style={{ fontSize: 12, color: var(--ehr-muted), marginTop: 4 }}>{med.notes}</div>}
       </div>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5 }}>
         <StatusBadge status={med.status} />
-        <div style={{ fontSize: 11, color: t.muted2 }}>Since {formatDate(med.prescribed_date)}</div>
+        <div style={{ fontSize: 11, color: var(--ehr-muted2) }}>Since {formatDate(med.prescribed_date)}</div>
       </div>
       <div style={{ display: "flex", gap: 6 }}>
         <EhrBtn small variant="secondary" onClick={onEdit}>Edit</EhrBtn>
@@ -576,7 +567,6 @@ function MedRow({ med, onEdit, onDelete }) {
 }
 
 function MedForm({ med, chart, clinician, onSaved, onCancel }) {
-  const t = useTokens();
   const [form, setForm] = useState({
     id: med?.id, medication: med?.medication ?? "", dosage: med?.dosage ?? "",
     frequency: med?.frequency ?? "", route: med?.route ?? "oral",
@@ -592,7 +582,7 @@ function MedForm({ med, chart, clinician, onSaved, onCancel }) {
   return (
     <form onSubmit={handleSubmit}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: t.text, margin: 0 }}>{med ? "Edit Medication" : "Add Medication"}</h2>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: var(--ehr-text), margin: 0 }}>{med ? "Edit Medication" : "Add Medication"}</h2>
         <div style={{ display: "flex", gap: 8 }}>
           <EhrBtn variant="secondary" onClick={onCancel} type="button">Cancel</EhrBtn>
           <EhrBtn type="submit" disabled={saving}>{saving ? "Saving…" : "Save"}</EhrBtn>
@@ -624,27 +614,26 @@ function MedForm({ med, chart, clinician, onSaved, onCancel }) {
 
 // ── Appointments Tab ──────────────────────────────────────────────────────────
 function AppointmentsTab({ appts }) {
-  const t = useTokens();
   return (
     <div>
       <SectionHeader title={`Appointment History (${appts.length})`} />
       {appts.length === 0 ? (
         <EhrCard style={{ textAlign: "center", padding: "3rem" }}>
           <div style={{ fontSize: 32, marginBottom: 10 }}>📅</div>
-          <div style={{ color: t.muted, fontSize: 14 }}>No appointments on file.</div>
+          <div style={{ color: var(--ehr-muted), fontSize: 14 }}>No appointments on file.</div>
         </EhrCard>
       ) : appts.map(a => (
         <EhrCard key={a.id} style={{ marginBottom: 8 }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: t.text }}>{formatDateTime(a.scheduled_at)}</div>
-              <div style={{ fontSize: 12, color: t.muted2, marginTop: 3, display: "flex", gap: 10 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: var(--ehr-text) }}>{formatDateTime(a.scheduled_at)}</div>
+              <div style={{ fontSize: 12, color: var(--ehr-muted2), marginTop: 3, display: "flex", gap: 10 }}>
                 {a.appointment_type && <span>{a.appointment_type.replace(/_/g, " ")}</span>}
                 {a.location && <span>{a.location}</span>}
                 {a.provider_name && <span>{a.provider_name}</span>}
               </div>
-              {a.reason && <div style={{ fontSize: 13, color: t.muted, marginTop: 5 }}>{a.reason}</div>}
-              {a.notes  && <div style={{ fontSize: 12, color: t.muted2, marginTop: 4, fontStyle: "italic" }}>{a.notes}</div>}
+              {a.reason && <div style={{ fontSize: 13, color: var(--ehr-muted), marginTop: 5 }}>{a.reason}</div>}
+              {a.notes  && <div style={{ fontSize: 12, color: var(--ehr-muted2), marginTop: 4, fontStyle: "italic" }}>{a.notes}</div>}
             </div>
             <StatusBadge status={a.status} />
           </div>
@@ -656,7 +645,6 @@ function AppointmentsTab({ appts }) {
 
 // ── Messages Tab ──────────────────────────────────────────────────────────────
 function MessagesTab({ messages, chart, clinician, showForm, onNew, onSent, onClose }) {
-  const t = useTokens();
   const [subj, setSubj]     = useState("");
   const [body, setBody]     = useState("");
   const [sending, setSending] = useState(false);
@@ -670,7 +658,7 @@ function MessagesTab({ messages, chart, clinician, showForm, onNew, onSent, onCl
     return (
       <form onSubmit={handleSend}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: t.text, margin: 0 }}>Send Message to Patient</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: var(--ehr-text), margin: 0 }}>Send Message to Patient</h2>
           <div style={{ display: "flex", gap: 8 }}>
             <EhrBtn variant="secondary" onClick={onClose} type="button">Cancel</EhrBtn>
             <EhrBtn type="submit" disabled={sending || !body.trim()}>{sending ? "Sending…" : "Send Message"}</EhrBtn>
@@ -692,7 +680,7 @@ function MessagesTab({ messages, chart, clinician, showForm, onNew, onSent, onCl
       {messages.length === 0 ? (
         <EhrCard style={{ textAlign: "center", padding: "3rem" }}>
           <div style={{ fontSize: 32, marginBottom: 10 }}>💬</div>
-          <div style={{ color: t.muted, fontSize: 14 }}>No messages yet.</div>
+          <div style={{ color: var(--ehr-muted), fontSize: 14 }}>No messages yet.</div>
         </EhrCard>
       ) : messages.map(m => (
         <EhrCard key={m.id} style={{ marginBottom: 8 }}>
@@ -702,11 +690,11 @@ function MessagesTab({ messages, chart, clinician, showForm, onNew, onSent, onCl
                 <EhrBadge color={m.sender_role === "clinic" ? "teal" : "purple"}>
                   {m.sender_role === "clinic" ? "Clinic" : "Patient"}
                 </EhrBadge>
-                {m.subject && <span style={{ fontSize: 14, fontWeight: 600, color: t.text }}>{m.subject}</span>}
+                {m.subject && <span style={{ fontSize: 14, fontWeight: 600, color: var(--ehr-text) }}>{m.subject}</span>}
               </div>
-              <div style={{ fontSize: 13, color: t.muted, lineHeight: 1.6 }}>{m.body}</div>
+              <div style={{ fontSize: 13, color: var(--ehr-muted), lineHeight: 1.6 }}>{m.body}</div>
             </div>
-            <div style={{ fontSize: 11, color: t.muted2, flexShrink: 0 }}>{formatDateTime(m.created_at)}</div>
+            <div style={{ fontSize: 11, color: var(--ehr-muted2), flexShrink: 0 }}>{formatDateTime(m.created_at)}</div>
           </div>
         </EhrCard>
       ))}
@@ -716,25 +704,24 @@ function MessagesTab({ messages, chart, clinician, showForm, onNew, onSent, onCl
 
 // ── Documents Tab ─────────────────────────────────────────────────────────────
 function DocumentsTab({ docs }) {
-  const t = useTokens();
   return (
     <div>
       <SectionHeader title={`Documents (${docs.length})`} />
       {docs.length === 0 ? (
         <EhrCard style={{ textAlign: "center", padding: "3rem" }}>
           <div style={{ fontSize: 32, marginBottom: 10 }}>📄</div>
-          <div style={{ color: t.muted, fontSize: 14 }}>No documents on file.</div>
+          <div style={{ color: var(--ehr-muted), fontSize: 14 }}>No documents on file.</div>
         </EhrCard>
       ) : docs.map(d => (
         <EhrCard key={d.id} style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{ fontSize: 24 }}>📄</div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: t.text }}>{d.name}</div>
-            <div style={{ fontSize: 12, color: t.muted2, marginTop: 2 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: var(--ehr-text) }}>{d.name}</div>
+            <div style={{ fontSize: 12, color: var(--ehr-muted2), marginTop: 2 }}>
               {d.doc_type && <span style={{ marginRight: 8 }}>{d.doc_type}</span>}
               {formatDate(d.created_at)}
             </div>
-            {d.notes && <div style={{ fontSize: 12, color: t.muted, marginTop: 4 }}>{d.notes}</div>}
+            {d.notes && <div style={{ fontSize: 12, color: var(--ehr-muted), marginTop: 4 }}>{d.notes}</div>}
           </div>
           {d.file_url && (
             <a href={d.file_url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
