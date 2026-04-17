@@ -5,16 +5,6 @@ import { useTokens } from "../../lib/ThemeContext";
 // Re-export so all EHR components can use C as a hook-based alias
 export function useC() { return useTokens(); }
 
-// Static fallback (dark) for non-hook contexts — use useC() in components
-export const C = {
-  bg: "#080c18", surface: "#0d1225", card: "rgba(255,255,255,0.03)",
-  border: "rgba(255,255,255,0.08)", border2: "rgba(255,255,255,0.14)",
-  accent: "#7c6ff7", teal: "#4ecdc4", rose: "#f093a0", gold: "#f5c842",
-  green: "#4ade80", purple: "#a89cf5", lavender: "#a89cf5",
-  text: "#eef0ff", muted: "#94a3b8", muted2: "#5a6a85",
-  grad: "linear-gradient(135deg,#7c6ff7,#4ecdc4)",
-};
-
 export const EhrStyles = () => (
   <style>{`
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');

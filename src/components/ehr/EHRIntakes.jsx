@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { getAllIntakes, markIntakeReviewed, markIntakeChartCreated } from "../../lib/intakeDb";
 import { upsertChart, generateMRN } from "../../lib/ehrDb";
 import {
-  C, EhrCard, EhrBtn, EhrBadge, EhrStyles,
+  EhrCard, EhrBtn, EhrBadge, EhrStyles,
   Divider, Spinner, formatDate, formatDateTime, age,
 } from "./EHRUI";
 import { useTokens } from "../../lib/ThemeContext";

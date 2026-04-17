@@ -6,7 +6,7 @@ import {
   deleteNote, generateMRN, sendClinicianMessage,
 } from "../../lib/ehrDb";
 import {
-  C, EhrCard, EhrBtn, EhrBadge, EhrInput, EhrSelect, ICD10Picker,
+  EhrCard, EhrBtn, EhrBadge, EhrInput, EhrSelect, ICD10Picker,
   StatusBadge, SectionHeader, Divider, Spinner, EhrStyles,
   formatDate, formatDateTime, age,
 } from "./EHRUI";

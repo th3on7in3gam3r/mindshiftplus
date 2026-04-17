@@ -6,7 +6,7 @@ import EHRLogin from "./EHRLogin";
 import EHRDashboard from "./EHRDashboard";
 import EHRPatientChart from "./EHRPatientChart";
 import EHRIntakes from "./EHRIntakes";
-import { C, Spinner, EhrStyles } from "./EHRUI";
+import { Spinner, EhrStyles } from "./EHRUI";
 import { useTokens, ThemeToggle } from "../../lib/ThemeContext";
 
 // ── Main EHR module entry point ───────────────────────────────────────────────
