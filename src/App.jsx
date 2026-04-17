@@ -542,13 +542,11 @@ function Mia(){
     try{
       // Only send last 20 messages to API to keep context manageable
       const contextMessages = newMessages.slice(-20).map(m=>({ role:m.role, content:m.content }));
-      const { supabase } = await import("./lib/supabase.js");
-      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(import.meta.env.VITE_AI_PROXY_URL,{
         method:"POST",
         headers:{
           "Content-Type":"application/json",
-          "Authorization": `Bearer ${session?.access_token ?? import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
         },
         body:JSON.stringify({
