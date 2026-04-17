@@ -14,8 +14,17 @@ const STATUS_DOT = {
   cancelled: { color: "#e05c7a", label: "Cancelled" },
 };
 
+// Available slots per day of week (matches PublicBooking)
+const SLOTS_BY_DOW = {
+  1: 2,  // Monday: 2 evening slots
+  4: 2,  // Thursday: 2 evening slots
+  5: 8,  // Friday: 8 slots
+  6: 8,  // Saturday: 8 slots
+};
+const AVAIL_DAYS = [1, 4, 5, 6];
+
 // ── Mini Calendar ──────────────────────────────────────────────────────────────
-function AppointmentCalendar({ appointments, onDayClick, selectedDate }) {
+function AppointmentCalendar({ appointments, onDayClick, selectedDate, fullDays }) {
   const today = new Date(); today.setHours(0,0,0,0);
   const [view, setView] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
 
@@ -68,22 +77,31 @@ function AppointmentCalendar({ appointments, onDayClick, selectedDate }) {
             const isToday = ds === today.toISOString().slice(0,10);
             const isSel = selectedDate === ds;
             const hasAppt = dayAppts.length > 0;
+            const isFull = fullDays?.includes(ds);
+            const dow = new Date(ds+"T12:00:00").getDay();
+            const isAvailDay = AVAIL_DAYS.includes(dow);
+            const isPast = new Date(ds) < today;
 
             return (
-              <button key={d} onClick={() => onDayClick(hasAppt ? ds : null)} style={{
+              <button key={d} onClick={() => !isFull && onDayClick(hasAppt ? ds : null)} style={{
                 position:"relative", aspectRatio:"1", borderRadius:10, border:"none",
-                background: isSel ? T.accent : isToday ? `${T.accent}12` : "transparent",
-                color: isSel ? "#fff" : isToday ? T.accent : T.text,
+                background: isSel ? T.accent : isFull ? "#fef2f2" : isToday ? `${T.accent}12` : "transparent",
+                color: isSel ? "#fff" : isFull ? "#fca5a5" : isToday ? T.accent : T.text,
                 fontWeight: isSel || isToday ? 700 : 400,
-                fontSize:13, cursor: hasAppt ? "pointer" : "default",
+                fontSize:13, cursor: hasAppt && !isFull ? "pointer" : "default",
                 outline: isToday && !isSel ? `2px solid ${T.accent}40` : "none",
                 transition:"all .15s",
                 display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:2,
+                opacity: isPast && !hasAppt ? 0.35 : 1,
               }}
-                onMouseOver={e=>{ if(hasAppt&&!isSel) e.currentTarget.style.background=`${T.accent}10`; }}
-                onMouseOut={e=>{ if(hasAppt&&!isSel) e.currentTarget.style.background="transparent"; }}
+                onMouseOver={e=>{ if(hasAppt&&!isSel&&!isFull) e.currentTarget.style.background=`${T.accent}10`; }}
+                onMouseOut={e=>{ if(hasAppt&&!isSel&&!isFull) e.currentTarget.style.background="transparent"; }}
+                title={isFull ? "This day is fully booked" : undefined}
               >
                 {d}
+                {isFull && !hasAppt && (
+                  <span style={{ fontSize:7, color:"#fca5a5", fontWeight:700, lineHeight:1 }}>FULL</span>
+                )}
                 {hasAppt && (
                   <div style={{ display:"flex", gap:2, justifyContent:"center" }}>
                     {dayAppts.slice(0,3).map((a,idx) => (
@@ -104,6 +122,10 @@ function AppointmentCalendar({ appointments, onDayClick, selectedDate }) {
               {label}
             </div>
           ))}
+          <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, color:T.muted }}>
+            <span style={{ width:8, height:8, borderRadius:2, background:"#fca5a5", display:"inline-block" }}/>
+            Fully Booked
+          </div>
         </div>
       </div>
     </div>
@@ -153,6 +175,7 @@ export default function PortalAppointments({ userId, P }) {
   const [loading, setLoading]           = useState(true);
   const [showForm, setShowForm]         = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
+  const [fullDays, setFullDays]         = useState([]);
   const [form, setForm]                 = useState({ appointment_type:"", location:"", notes:"" });
   const [submitting, setSubmitting]     = useState(false);
   const [toast, setToast]               = useState("");
@@ -162,8 +185,40 @@ export default function PortalAppointments({ userId, P }) {
     const now = new Date();
     const from = new Date(now.getFullYear(), now.getMonth()-2, 1).toISOString();
     const to   = new Date(now.getFullYear(), now.getMonth()+6, 0).toISOString();
-    try { const data = await getAppointments(from, to, userId); setAppointments(Array.isArray(data)?data:[]); }
-    catch { setAppointments([]); }
+    try {
+      const data = await getAppointments(from, to, userId);
+      setAppointments(Array.isArray(data)?data:[]);
+    } catch { setAppointments([]); }
+
+    // Load ALL clinic appointments to detect full days
+    try {
+      const { supabase } = await import("../../lib/supabase.js");
+      const { data: allAppts } = await supabase
+        .from("appointments")
+        .select("scheduled_at, status")
+        .gte("scheduled_at", from)
+        .lte("scheduled_at", to)
+        .not("status", "in", '("cancelled","archived")');
+
+      // Count bookings per day and compare to available slots
+      const countByDay = {};
+      (allAppts || []).forEach(a => {
+        if (!a.scheduled_at) return;
+        const ds = a.scheduled_at.slice(0,10);
+        countByDay[ds] = (countByDay[ds] || 0) + 1;
+      });
+
+      const full = Object.entries(countByDay)
+        .filter(([ds, count]) => {
+          const dow = new Date(ds+"T12:00:00").getDay();
+          const maxSlots = SLOTS_BY_DOW[dow] ?? 0;
+          return maxSlots > 0 && count >= maxSlots;
+        })
+        .map(([ds]) => ds);
+
+      setFullDays(full);
+    } catch {}
+
     setLoading(false);
   };
 
@@ -252,15 +307,27 @@ export default function PortalAppointments({ userId, P }) {
           <AppointmentCalendar
             appointments={appointments}
             selectedDate={selectedDate}
+            fullDays={fullDays}
             onDayClick={d => setSelectedDate(d === selectedDate ? null : d)}
           />
           {selectedDate && (
-            <DayDetail
-              date={selectedDate}
-              appointments={appointments}
-              onCancel={handleCancel}
-              onClose={() => setSelectedDate(null)}
-            />
+            <>
+              {fullDays.includes(selectedDate) && (
+                <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:14, padding:"1rem 1.4rem", marginTop:16, display:"flex", gap:10, alignItems:"center" }}>
+                  <span style={{ fontSize:20 }}>🚫</span>
+                  <div>
+                    <div style={{ fontSize:13, fontWeight:700, color:"#991b1b" }}>This day is fully booked</div>
+                    <div style={{ fontSize:12, color:"#b91c1c", marginTop:2 }}>All available time slots for this day have been taken. Please select a different date or call us at (508) 306-1128.</div>
+                  </div>
+                </div>
+              )}
+              <DayDetail
+                date={selectedDate}
+                appointments={appointments}
+                onCancel={handleCancel}
+                onClose={() => setSelectedDate(null)}
+              />
+            </>
           )}
           {appointments.length === 0 && (
             <EmptyState icon="📅" title="No appointments yet" subtitle="Request your first appointment above or call (508) 306-1128."

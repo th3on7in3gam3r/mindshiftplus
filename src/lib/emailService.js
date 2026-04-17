@@ -28,3 +28,4 @@ export const emailAppointmentConfirmed  = (data) => send("appointment_confirmed"
 export const emailAppointmentCancelled  = (data) => send("appointment_cancelled",  data);
 export const emailNewMessage            = (data) => send("new_message",            data);
 export const emailAppointmentReminder   = (data) => send("appointment_reminder",   data);
+export const emailIntakeSubmitted       = (data) => send("intake_submitted",       data);

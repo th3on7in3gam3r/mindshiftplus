@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { getMyIntake, saveIntake, submitIntake } from "../../lib/intakeDb";
+import { emailIntakeSubmitted } from "../../lib/emailService";
+import { supabase } from "../../lib/supabase";
 import { T, PageHeader, Card, Alert, Btn } from "./PortalUI";
 
 const STEPS = [
@@ -157,6 +159,15 @@ export default function PortalIntake({ userId, displayName, onComplete }) {
     const { error } = await submitIntake(userId, form);
     setSubmitting(false);
     if (!error) {
+      // Get patient email from session for notification
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        emailIntakeSubmitted({
+          patient_name:     form.full_name || "Patient",
+          patient_email:    session?.user?.email,
+          reason_for_visit: form.reason_for_visit,
+          submitted_at:     new Date().toISOString(),
+        }).catch(() => {});
+      });
       setSubmitted(true);
       onComplete?.();
     }
