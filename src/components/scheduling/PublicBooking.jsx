@@ -203,7 +203,10 @@ export default function PublicBooking({ onBack }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.email.trim()) { setError("Please fill in your name and email."); return; }
+    if (!form.name.trim() || !form.email.trim() || !form.phone.trim() || !form.reason || !form.clinician) {
+      setError("Please fill in all required fields (name, email, phone, reason, and clinician).");
+      return;
+    }
     setSubmitting(true); setError("");
 
     // Convert "8:00 AM" → "08:00" for ISO datetime
@@ -355,11 +358,11 @@ export default function PublicBooking({ onBack }) {
                   <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
                     <Inp label="Full Name" value={form.name} onChange={set("name")} placeholder="Your full name" required />
                     <Inp label="Email Address" type="email" value={form.email} onChange={set("email")} placeholder="you@example.com" required />
-                    <Inp label="Phone Number" type="tel" value={form.phone} onChange={set("phone")} placeholder="(555) 000-0000" />
-                    <Inp label="Reason for Visit" value={form.reason} onChange={set("reason")} options={REASONS} />
+                    <Inp label="Phone Number" type="tel" value={form.phone} onChange={set("phone")} placeholder="(555) 000-0000" required />
+                    <Inp label="Reason for Visit" value={form.reason} onChange={set("reason")} options={REASONS} required />
                   </div>
                   <div style={{ marginBottom:14 }}>
-                    <Inp label="Preferred Clinician" value={form.clinician} onChange={set("clinician")} options={CLINICIANS.map(c=>c.name)} />
+                    <Inp label="Preferred Clinician" value={form.clinician} onChange={set("clinician")} options={CLINICIANS.map(c=>c.name)} required />
                   </div>
                   <div style={{ marginBottom:14 }}>
                     <label style={{ fontSize:12, fontWeight:500, color:C.txt, display:"block", marginBottom:5 }}>Additional Notes (optional)</label>
