@@ -75,7 +75,7 @@ export default function EHR({ onBack }) {
   // ── Loading ──
   if (authLoading || session === undefined) {
     return (
-      <div style={{ minHeight: "100vh", background: var(--ehr-bg), display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ minHeight: "100vh", background: "var(--ehr-bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <Spinner />
       </div>
     );
@@ -88,7 +88,7 @@ export default function EHR({ onBack }) {
 
   // ── Authenticated — render EHR shell ──
   return (
-    <div className="ehr-root" style={{ minHeight: "100vh", background: var(--ehr-bg), color: var(--ehr-text) }}>
+    <div className="ehr-root" style={{ minHeight: "100vh", background: "var(--ehr-bg)", color: "var(--ehr-text)" }}>
       <EhrStyles />
 
       {/* Top navigation bar */}
@@ -96,17 +96,17 @@ export default function EHR({ onBack }) {
         position: "sticky", top: 0, zIndex: 50,
         display: "flex", alignItems: "center", gap: 12,
         padding: "0 2rem", height: 58,
-        background: var(--ehr-bg) === "#080c18" ? "rgba(8,12,24,0.94)" : var(--ehr-surface),
+        background: document.documentElement.getAttribute("data-theme") === "dark" ? "rgba(8,12,24,0.94)" : "var(--ehr-surface)",
         backdropFilter: "blur(20px)",
         borderBottom: `1px solid ${var(--ehr-border)}`,
-        boxShadow: var(--ehr-shadow),
+        boxShadow: "var(--ehr-shadow)",
       }}>
         {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
-          <div style={{ width: 34, height: 34, borderRadius: 9, background: var(--ehr-grad), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0, boxShadow: `0 4px 12px ${var(--ehr-accent)}40` }}>🏥</div>
+          <div style={{ width: 34, height: 34, borderRadius: 9, background: "var(--ehr-grad)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0, boxShadow: `0 4px 12px ${var(--ehr-accent)}40` }}>🏥</div>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 700, background: var(--ehr-grad), WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", lineHeight: 1.2 }}>MindShift Wellness Clinic</div>
-            <div style={{ fontSize: 10, color: var(--ehr-muted2), lineHeight: 1.2, letterSpacing: "0.04em" }}>ELECTRONIC HEALTH RECORDS</div>
+            <div style={{ fontSize: 13, fontWeight: 700, background: "var(--ehr-grad)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", lineHeight: 1.2 }}>MindShift Wellness Clinic</div>
+            <div style={{ fontSize: 10, color: "var(--ehr-muted2)", lineHeight: 1.2, letterSpacing: "0.04em" }}>ELECTRONIC HEALTH RECORDS</div>
           </div>
         </div>
 
@@ -116,7 +116,7 @@ export default function EHR({ onBack }) {
             background: view === "dashboard" ? `${var(--ehr-accent)}14` : "transparent",
             border: view === "dashboard" ? `1px solid ${var(--ehr-accent)}30` : "1px solid transparent",
             borderRadius: 8, padding: "5px 12px",
-            cursor: "pointer", color: view === "dashboard" ? var(--ehr-accent) : var(--ehr-muted),
+            cursor: "pointer", color: view === "dashboard" ? "var(--ehr-accent)" : "var(--ehr-muted)",
             fontWeight: view === "dashboard" ? 600 : 400,
             fontFamily: "inherit", fontSize: 13, transition: "all .15s",
           }}>Patients</button>
@@ -124,20 +124,20 @@ export default function EHR({ onBack }) {
             background: view === "intakes" ? `${var(--ehr-gold)}14` : "transparent",
             border: view === "intakes" ? `1px solid ${var(--ehr-gold)}30` : "1px solid transparent",
             borderRadius: 8, padding: "5px 12px",
-            cursor: "pointer", color: view === "intakes" ? var(--ehr-gold) : var(--ehr-muted),
+            cursor: "pointer", color: view === "intakes" ? "var(--ehr-gold)" : "var(--ehr-muted)",
             fontWeight: view === "intakes" ? 600 : 400,
             fontFamily: "inherit", fontSize: 13, transition: "all .15s",
             display: "flex", alignItems: "center", gap: 6,
           }}>
             Intakes
             {pendingIntakes > 0 && (
-              <span style={{ background: var(--ehr-gold), color: "#000", fontSize: 10, fontWeight: 800, borderRadius: 20, padding: "1px 7px" }}>{pendingIntakes}</span>
+              <span style={{ background: "var(--ehr-gold)", color: "#000", fontSize: 10, fontWeight: 800, borderRadius: 20, padding: "1px 7px" }}>{pendingIntakes}</span>
             )}
           </button>
           {(view === "chart" || view === "new-chart") && (
             <>
-              <span style={{ color: var(--ehr-muted2), fontSize: 16 }}>›</span>
-              <span style={{ background: `${var(--ehr-teal)}14`, border: `1px solid ${var(--ehr-teal)}30`, borderRadius: 8, padding: "5px 12px", color: var(--ehr-teal), fontSize: 13, fontWeight: 600 }}>
+              <span style={{ color: "var(--ehr-muted2)", fontSize: 16 }}>›</span>
+              <span style={{ background: `${var(--ehr-teal)}14`, border: `1px solid ${var(--ehr-teal)}30`, borderRadius: 8, padding: "5px 12px", color: "var(--ehr-teal)", fontSize: 13, fontWeight: 600 }}>
                 {view === "new-chart" ? "New Patient" : "Chart"}
               </span>
             </>
@@ -147,15 +147,15 @@ export default function EHR({ onBack }) {
         {/* Toggle + Clinician + sign out */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <ThemeToggle />
-          <div style={{ width: 1, height: 24, background: var(--ehr-border) }} />
+          <div style={{ width: 1, height: 24, background: "var(--ehr-border)" }} />
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: var(--ehr-text) }}>{clinician.full_name}</div>
-            <div style={{ fontSize: 10, color: var(--ehr-muted2), letterSpacing: "0.03em" }}>{clinician.title}</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ehr-text)" }}>{clinician.full_name}</div>
+            <div style={{ fontSize: 10, color: "var(--ehr-muted2)", letterSpacing: "0.03em" }}>{clinician.title}</div>
           </div>
-          <div style={{ width: 36, height: 36, borderRadius: "50%", background: var(--ehr-grad), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "#fff", boxShadow: `0 4px 12px ${var(--ehr-accent)}35` }}>
+          <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--ehr-grad)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "#fff", boxShadow: `0 4px 12px ${var(--ehr-accent)}35` }}>
             {clinician.full_name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2)}
           </div>
-          <button onClick={signOut} style={{ background: var(--ehr-bg) === "#080c18" ? "rgba(255,255,255,0.04)" : "#f1f5f9", border: `1px solid ${var(--ehr-border)}`, borderRadius: 8, padding: "7px 14px", color: var(--ehr-muted), fontSize: 12, cursor: "pointer", fontFamily: "inherit", transition: "all .15s" }}>
+          <button onClick={signOut} style={{ background: document.documentElement.getAttribute("data-theme") === "dark" ? "rgba(255,255,255,0.04)" : "#f1f5f9", border: `1px solid ${var(--ehr-border)}`, borderRadius: 8, padding: "7px 14px", color: "var(--ehr-muted)", fontSize: 12, cursor: "pointer", fontFamily: "inherit", transition: "all .15s" }}>
             Sign Out
           </button>
         </div>
