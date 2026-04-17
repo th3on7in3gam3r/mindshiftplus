@@ -5,25 +5,171 @@ import { PageHeader, Card, SectionDivider, Badge, EmptyState, Alert, Btn, Toast,
 const TYPES = ["Follow-up","Medication Review","Telehealth","Initial Evaluation"];
 const LOCATIONS = ["Milford — 31 Granite St. Suite #2","Telehealth (Video)"];
 
+const STATUS_DOT = {
+  upcoming:  { color: "#22c55e", label: "Upcoming" },
+  confirmed: { color: "#22c55e", label: "Confirmed" },
+  requested: { color: "#f0a500", label: "Requested" },
+  pending:   { color: "#f0a500", label: "Pending" },
+  completed: { color: "#4a6cf7", label: "Completed" },
+  cancelled: { color: "#e05c7a", label: "Cancelled" },
+};
+
+// ── Mini Calendar ──────────────────────────────────────────────────────────────
+function AppointmentCalendar({ appointments, onDayClick, selectedDate }) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const [view, setView] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+
+  const year = view.getFullYear(), month = view.getMonth();
+  const firstDow = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const monthLabel = view.toLocaleDateString("en-US", { month:"long", year:"numeric" });
+
+  const toStr = d => `${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+
+  // Build a map of date → appointments
+  const apptMap = {};
+  appointments.forEach(a => {
+    if (!a.scheduled_at) return;
+    const ds = a.scheduled_at.slice(0,10);
+    if (!apptMap[ds]) apptMap[ds] = [];
+    apptMap[ds].push(a);
+  });
+
+  const cells = [...Array(firstDow).fill(null), ...Array.from({length:daysInMonth},(_,i)=>i+1)];
+
+  return (
+    <div style={{ background:"#fff", borderRadius:20, border:`1px solid ${T.border}`, overflow:"hidden", boxShadow:"0 2px 16px rgba(74,108,247,0.07)" }}>
+      {/* Calendar header */}
+      <div style={{ background:`linear-gradient(135deg,${T.accent},${T.teal})`, padding:"1.2rem 1.5rem", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <button onClick={()=>setView(new Date(year,month-1,1))} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:8, width:32, height:32, cursor:"pointer", color:"#fff", fontSize:18, display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
+        <div style={{ textAlign:"center" }}>
+          <div style={{ fontSize:16, fontWeight:700, color:"#fff" }}>{monthLabel}</div>
+          <div style={{ fontSize:11, color:"rgba(255,255,255,0.7)", marginTop:2 }}>
+            {appointments.filter(a => a.scheduled_at?.startsWith(`${year}-${String(month+1).padStart(2,"0")}`)).length} appointment(s) this month
+          </div>
+        </div>
+        <button onClick={()=>setView(new Date(year,month+1,1))} style={{ background:"rgba(255,255,255,0.2)", border:"none", borderRadius:8, width:32, height:32, cursor:"pointer", color:"#fff", fontSize:18, display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
+      </div>
+
+      <div style={{ padding:"1rem 1.2rem 1.4rem" }}>
+        {/* Day headers */}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", marginBottom:6 }}>
+          {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => (
+            <div key={d} style={{ textAlign:"center", fontSize:11, fontWeight:700, color:T.muted2, padding:"4px 0", letterSpacing:"0.04em" }}>{d}</div>
+          ))}
+        </div>
+
+        {/* Day cells */}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:3 }}>
+          {cells.map((d, i) => {
+            if (!d) return <div key={`e${i}`} />;
+            const ds = toStr(d);
+            const dayAppts = apptMap[ds] || [];
+            const isToday = ds === today.toISOString().slice(0,10);
+            const isSel = selectedDate === ds;
+            const hasAppt = dayAppts.length > 0;
+
+            return (
+              <button key={d} onClick={() => onDayClick(hasAppt ? ds : null)} style={{
+                position:"relative", aspectRatio:"1", borderRadius:10, border:"none",
+                background: isSel ? T.accent : isToday ? `${T.accent}12` : "transparent",
+                color: isSel ? "#fff" : isToday ? T.accent : T.text,
+                fontWeight: isSel || isToday ? 700 : 400,
+                fontSize:13, cursor: hasAppt ? "pointer" : "default",
+                outline: isToday && !isSel ? `2px solid ${T.accent}40` : "none",
+                transition:"all .15s",
+                display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:2,
+              }}
+                onMouseOver={e=>{ if(hasAppt&&!isSel) e.currentTarget.style.background=`${T.accent}10`; }}
+                onMouseOut={e=>{ if(hasAppt&&!isSel) e.currentTarget.style.background="transparent"; }}
+              >
+                {d}
+                {hasAppt && (
+                  <div style={{ display:"flex", gap:2, justifyContent:"center" }}>
+                    {dayAppts.slice(0,3).map((a,idx) => (
+                      <span key={idx} style={{ width:5, height:5, borderRadius:"50%", background: isSel ? "rgba(255,255,255,0.8)" : (STATUS_DOT[a.status]?.color || T.accent), display:"inline-block" }} />
+                    ))}
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Legend */}
+        <div style={{ display:"flex", gap:14, marginTop:14, paddingTop:12, borderTop:`1px solid ${T.border}`, flexWrap:"wrap" }}>
+          {Object.entries(STATUS_DOT).slice(0,4).map(([status, { color, label }]) => (
+            <div key={status} style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, color:T.muted }}>
+              <span style={{ width:8, height:8, borderRadius:"50%", background:color, display:"inline-block" }}/>
+              {label}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Selected day detail panel ──────────────────────────────────────────────────
+function DayDetail({ date, appointments, onCancel, onClose }) {
+  const dayAppts = appointments.filter(a => a.scheduled_at?.startsWith(date));
+  const fmtTime = iso => new Date(iso).toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
+  const fmtDay  = d => new Date(d+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"});
+
+  return (
+    <div style={{ background:`linear-gradient(135deg,${T.accent}08,${T.teal}05)`, border:`1px solid ${T.accent}20`, borderRadius:16, padding:"1.2rem 1.4rem", marginTop:16 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+        <div>
+          <div style={{ fontSize:13, fontWeight:700, color:T.accent }}>📅 {fmtDay(date)}</div>
+          <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>{dayAppts.length} appointment{dayAppts.length!==1?"s":""}</div>
+        </div>
+        <button onClick={onClose} style={{ background:"transparent", border:"none", color:T.muted, cursor:"pointer", fontSize:18, lineHeight:1 }}>✕</button>
+      </div>
+      {dayAppts.map(a => (
+        <div key={a.id} style={{ background:"#fff", borderRadius:12, padding:"0.9rem 1rem", marginBottom:8, border:`1px solid ${T.border}`, display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10 }}>
+          <div>
+            <div style={{ fontWeight:700, fontSize:13, color:T.text, marginBottom:4 }}>{a.appointment_type?.replace(/_/g," ")||"Appointment"}</div>
+            <div style={{ fontSize:12, color:T.muted, display:"flex", flexDirection:"column", gap:2 }}>
+              <span>🕐 {fmtTime(a.scheduled_at)}</span>
+              <span>📍 {a.location||"TBD"}</span>
+              <span>👨‍⚕️ {a.provider_name||"Clinician"}</span>
+            </div>
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6 }}>
+            <Badge status={a.status}/>
+            {a.status==="upcoming"&&(
+              <button onClick={()=>onCancel(a.id)} style={{ background:"#fee2e2", border:"none", borderRadius:20, padding:"4px 12px", color:"#991b1b", fontSize:11, fontWeight:600, cursor:"pointer" }}>Cancel</button>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Main Component ─────────────────────────────────────────────────────────────
 export default function PortalAppointments({ userId, P }) {
   const [appointments, setAppointments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ appointment_type:"", location:"", notes:"" });
-  const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState("");
+  const [loading, setLoading]           = useState(true);
+  const [showForm, setShowForm]         = useState(false);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [form, setForm]                 = useState({ appointment_type:"", location:"", notes:"" });
+  const [submitting, setSubmitting]     = useState(false);
+  const [toast, setToast]               = useState("");
+  const [view, setView]                 = useState("calendar"); // calendar | list
 
   const load = async () => {
     const now = new Date();
-    const from = new Date(now.getFullYear(), now.getMonth()-1, 1).toISOString();
-    const to   = new Date(now.getFullYear(), now.getMonth()+3, 0).toISOString();
+    const from = new Date(now.getFullYear(), now.getMonth()-2, 1).toISOString();
+    const to   = new Date(now.getFullYear(), now.getMonth()+6, 0).toISOString();
     try { const data = await getAppointments(from, to, userId); setAppointments(Array.isArray(data)?data:[]); }
     catch { setAppointments([]); }
     setLoading(false);
   };
+
   useEffect(() => { if(userId) load(); }, [userId]);
 
-  const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(""),4000); };
+  const showToast = msg => { setToast(msg); setTimeout(()=>setToast(""),4000); };
 
   const handleRequest = async (e) => {
     e.preventDefault();
@@ -40,26 +186,41 @@ export default function PortalAppointments({ userId, P }) {
   const handleCancel = async (id) => {
     if(!confirm("Cancel this appointment?")) return;
     try { await cancelAppointment(id); } catch {}
+    setSelectedDate(null);
     load();
   };
 
-  const fmt = (iso) => iso ? new Date(iso).toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "Date TBD";
-  const upcoming = appointments.filter(a=>["upcoming","requested"].includes(a.status));
-  const past = appointments.filter(a=>["completed","cancelled"].includes(a.status));
+  const fmt = iso => iso ? new Date(iso).toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "Date TBD";
+  const upcoming = appointments.filter(a=>["upcoming","requested","confirmed","pending"].includes(a.status));
+  const past     = appointments.filter(a=>["completed","cancelled"].includes(a.status));
 
   return (
-    <div style={{ padding:"2rem", maxWidth:860, margin:"0 auto" }}>
+    <div style={{ padding:"2rem", maxWidth:900, margin:"0 auto" }}>
       <Toast message={toast}/>
 
       <PageHeader
         icon="📅" label="Appointments"
         title="Your Appointments"
-        subtitle="View upcoming visits and request new appointments"
+        subtitle="View your schedule and request new appointments"
         gradient={`linear-gradient(135deg,${T.accent}15,${T.teal}10)`}
         action={<Btn onClick={()=>setShowForm(true)}>+ Request Appointment</Btn>}
       />
 
-      {/* Modal */}
+      {/* View toggle */}
+      <div style={{ display:"flex", gap:6, marginBottom:"1.5rem", background:"#f3f4f6", borderRadius:12, padding:4, width:"fit-content" }}>
+        {[["calendar","📅 Calendar"],["list","☰ List"]].map(([v,l])=>(
+          <button key={v} onClick={()=>setView(v)} style={{
+            padding:"7px 18px", borderRadius:9, border:"none", fontSize:13, fontWeight:view===v?600:400,
+            background:view===v?"#fff":  "transparent",
+            color:view===v?T.accent:T.muted,
+            cursor:"pointer", fontFamily:"inherit",
+            boxShadow:view===v?"0 1px 4px rgba(0,0,0,0.08)":"none",
+            transition:"all .15s",
+          }}>{l}</button>
+        ))}
+      </div>
+
+      {/* Request modal */}
       {showForm && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", zIndex:300, display:"flex", alignItems:"center", justifyContent:"center", padding:"1rem", backdropFilter:"blur(4px)" }}>
           <div style={{ background:"#fff", borderRadius:24, padding:"2rem", maxWidth:480, width:"100%", boxShadow:"0 20px 60px rgba(0,0,0,0.15)" }}>
@@ -84,47 +245,71 @@ export default function PortalAppointments({ userId, P }) {
         </div>
       )}
 
-      {/* Upcoming */}
-      <SectionDivider label="Upcoming" color={T.accent}/>
-      {loading ? <div style={{color:T.muted,fontSize:13,padding:"1rem 0"}}>Loading…</div>
-      : upcoming.length===0 ? (
-        <EmptyState icon="📅" title="No upcoming appointments" subtitle="Request an appointment above or call us at (508) 306-1128."
-          action={<Btn onClick={()=>setShowForm(true)}>Request Appointment</Btn>}/>
-      ) : upcoming.map(a=>(
-        <Card key={a.id} style={{ marginBottom:"0.75rem" }} accent={a.status==="requested"?T.gold:T.green}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:12 }}>
-            <div>
-              <div style={{ fontWeight:700, fontSize:14, color:T.text, marginBottom:6 }}>{a.appointment_type?.replace(/_/g," ")||"Appointment"}</div>
-              <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
-                <span style={{ fontSize:12, color:T.muted }}>📅 {fmt(a.scheduled_at)}</span>
-                <span style={{ fontSize:12, color:T.muted }}>📍 {a.location||"Location TBD"}</span>
-                <span style={{ fontSize:12, color:T.muted }}>👨‍⚕️ {a.provider_name}</span>
-                {a.notes&&<span style={{ fontSize:11, color:T.muted2, fontStyle:"italic", marginTop:2 }}>"{a.notes}"</span>}
-              </div>
-            </div>
-            <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:8 }}>
-              <Badge status={a.status}/>
-              {a.status==="upcoming"&&<Btn variant="danger" small onClick={()=>handleCancel(a.id)}>Cancel</Btn>}
-            </div>
-          </div>
-        </Card>
-      ))}
-
-      {/* Past */}
-      {past.length>0&&(
+      {loading ? (
+        <div style={{ textAlign:"center", padding:"3rem", color:T.muted }}>Loading your appointments…</div>
+      ) : view === "calendar" ? (
         <>
-          <SectionDivider label="Past Appointments" color={T.muted}/>
-          {past.map(a=>(
-            <Card key={a.id} style={{ marginBottom:"0.75rem", opacity:0.7 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:10 }}>
+          <AppointmentCalendar
+            appointments={appointments}
+            selectedDate={selectedDate}
+            onDayClick={d => setSelectedDate(d === selectedDate ? null : d)}
+          />
+          {selectedDate && (
+            <DayDetail
+              date={selectedDate}
+              appointments={appointments}
+              onCancel={handleCancel}
+              onClose={() => setSelectedDate(null)}
+            />
+          )}
+          {appointments.length === 0 && (
+            <EmptyState icon="📅" title="No appointments yet" subtitle="Request your first appointment above or call (508) 306-1128."
+              action={<Btn onClick={()=>setShowForm(true)}>Request Appointment</Btn>}/>
+          )}
+        </>
+      ) : (
+        <>
+          {/* List view */}
+          <SectionDivider label="Upcoming" color={T.accent}/>
+          {upcoming.length===0 ? (
+            <EmptyState icon="📅" title="No upcoming appointments" subtitle="Request an appointment above or call us at (508) 306-1128."
+              action={<Btn onClick={()=>setShowForm(true)}>Request Appointment</Btn>}/>
+          ) : upcoming.map(a=>(
+            <Card key={a.id} style={{ marginBottom:"0.75rem" }} accent={a.status==="requested"||a.status==="pending"?T.gold:T.green}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:12 }}>
                 <div>
-                  <div style={{ fontWeight:600, fontSize:13, color:T.text }}>{a.appointment_type?.replace(/_/g," ")||"Appointment"}</div>
-                  <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>📅 {fmt(a.scheduled_at)} · {a.location||"—"}</div>
+                  <div style={{ fontWeight:700, fontSize:14, color:T.text, marginBottom:6 }}>{a.appointment_type?.replace(/_/g," ")||"Appointment"}</div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+                    <span style={{ fontSize:12, color:T.muted }}>📅 {fmt(a.scheduled_at)}</span>
+                    <span style={{ fontSize:12, color:T.muted }}>📍 {a.location||"Location TBD"}</span>
+                    <span style={{ fontSize:12, color:T.muted }}>👨‍⚕️ {a.provider_name}</span>
+                    {a.notes&&<span style={{ fontSize:11, color:T.muted2, fontStyle:"italic", marginTop:2 }}>"{a.notes}"</span>}
+                  </div>
                 </div>
-                <Badge status={a.status}/>
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:8 }}>
+                  <Badge status={a.status}/>
+                  {a.status==="upcoming"&&<Btn variant="danger" small onClick={()=>handleCancel(a.id)}>Cancel</Btn>}
+                </div>
               </div>
             </Card>
           ))}
+
+          {past.length>0&&(
+            <>
+              <SectionDivider label="Past Appointments" color={T.muted}/>
+              {past.map(a=>(
+                <Card key={a.id} style={{ marginBottom:"0.75rem", opacity:0.7 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:10 }}>
+                    <div>
+                      <div style={{ fontWeight:600, fontSize:13, color:T.text }}>{a.appointment_type?.replace(/_/g," ")||"Appointment"}</div>
+                      <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>📅 {fmt(a.scheduled_at)} · {a.location||"—"}</div>
+                    </div>
+                    <Badge status={a.status}/>
+                  </div>
+                </Card>
+              ))}
+            </>
+          )}
         </>
       )}
     </div>
