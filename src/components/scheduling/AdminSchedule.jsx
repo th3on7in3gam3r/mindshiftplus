@@ -88,6 +88,7 @@ const STATUS_COLORS = {
   completed: { bg:"#dbeafe", color:"#1e40af", label:"Completed" },
   requested: { bg:"#fef9c3", color:"#854d0e", label:"Requested" },
   upcoming:  { bg:"#dcfce7", color:"#166534", label:"Upcoming" },
+  archived:  { bg:"#f3f4f6", color:"#6b7280", label:"Archived" },
 };
 
 function Card({ children, style={} }) {
@@ -155,7 +156,9 @@ function AppointmentsTab({ userId }) {
 
   const fmt = (iso) => iso ? new Date(iso).toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}) : "—";
 
-  const filtered = filter==="all" ? appointments : appointments.filter(a=>a.status===filter);
+  const filtered = filter==="all"
+    ? appointments.filter(a => a.status !== "archived")
+    : appointments.filter(a=>a.status===filter);
   const pending = appointments.filter(a=>["pending","requested"].includes(a.status));
 
   return (
@@ -170,7 +173,7 @@ function AppointmentsTab({ userId }) {
       )}
 
       <div style={{ display:"flex", gap:6, marginBottom:"1.2rem", flexWrap:"wrap" }}>
-        {[["all","All",null],["pending","Pending",pending.length],["confirmed","Confirmed",null],["cancelled","Cancelled",null],["completed","Completed",null]].map(([v,l,c])=>(
+        {[["all","All",null],["pending","Pending",pending.length],["confirmed","Confirmed",null],["cancelled","Cancelled",null],["completed","Completed",null],["archived","🗄️ Archived",null]].map(([v,l,c])=>(
           <Tab key={v} label={l} active={filter===v} onClick={()=>setFilter(v)} count={c}/>
         ))}
       </div>
@@ -179,10 +182,10 @@ function AppointmentsTab({ userId }) {
       : filtered.length===0 ? (
         <Card style={{ textAlign:"center", padding:"2.5rem" }}>
           <div style={{ fontSize:36, marginBottom:10 }}>📅</div>
-          <div style={{ color:P.muted, fontSize:13 }}>No appointments found.</div>
+          <div style={{ color:P.muted, fontSize:13 }}>{filter==="archived" ? "No archived appointments." : "No appointments found."}</div>
         </Card>
       ) : filtered.map(a=>(
-        <Card key={a.id} style={{ marginBottom:"0.75rem" }}>
+        <Card key={a.id} style={{ marginBottom:"0.75rem", opacity: a.status==="archived" ? 0.75 : 1 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:12 }}>
             <div style={{ flex:1, minWidth:200 }}>
               <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
@@ -195,19 +198,22 @@ function AppointmentsTab({ userId }) {
               {a.reason&&<div style={{ color:P.muted2, fontSize:11, marginTop:4, fontStyle:"italic" }}>Reason: {a.reason}</div>}
               {a.notes&&<div style={{ color:P.muted2, fontSize:11, marginTop:2, fontStyle:"italic" }}>Notes: {a.notes}</div>}
             </div>
-            {["pending","requested","upcoming"].includes(a.status)&&(
-              <div className="admin-appt-actions" style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
+              {["pending","requested","upcoming"].includes(a.status) && <>
                 <button onClick={()=>handleStatus(a.id,"confirmed")} style={{ background:"#dcfce7", border:"none", borderRadius:20, padding:"6px 14px", color:"#166534", fontSize:12, fontWeight:600, cursor:"pointer" }}>✓ Confirm</button>
                 <button onClick={()=>handleStatus(a.id,"cancelled")} style={{ background:"#fee2e2", border:"none", borderRadius:20, padding:"6px 14px", color:"#991b1b", fontSize:12, fontWeight:600, cursor:"pointer" }}>✕ Cancel</button>
-                {a.status==="confirmed"&&<button onClick={()=>handleStatus(a.id,"completed")} style={{ background:"#dbeafe", border:"none", borderRadius:20, padding:"6px 14px", color:"#1e40af", fontSize:12, fontWeight:600, cursor:"pointer" }}>✓ Complete</button>}
-              </div>
-            )}
-            {a.status==="confirmed"&&(
-              <div style={{ display:"flex", gap:8 }}>
-                <button onClick={()=>handleStatus(a.id,"completed")} style={{ background:"#dbeafe", border:"none", borderRadius:20, padding:"6px 14px", color:"#1e40af", fontSize:12, fontWeight:600, cursor:"pointer" }}>Mark Complete</button>
-                <button onClick={()=>handleStatus(a.id,"cancelled")} style={{ background:"#fee2e2", border:"none", borderRadius:20, padding:"6px 14px", color:"#991b1b", fontSize:12, fontWeight:600, cursor:"pointer" }}>Cancel</button>
-              </div>
-            )}
+              </>}
+              {a.status==="confirmed" && <>
+                <button onClick={()=>handleStatus(a.id,"completed")} style={{ background:"#dbeafe", border:"none", borderRadius:20, padding:"6px 14px", color:"#1e40af", fontSize:12, fontWeight:600, cursor:"pointer" }}>✓ Complete</button>
+                <button onClick={()=>handleStatus(a.id,"cancelled")} style={{ background:"#fee2e2", border:"none", borderRadius:20, padding:"6px 14px", color:"#991b1b", fontSize:12, fontWeight:600, cursor:"pointer" }}>✕ Cancel</button>
+              </>}
+              {["completed","cancelled"].includes(a.status) && (
+                <button onClick={()=>handleStatus(a.id,"archived")} style={{ background:"#f3f4f6", border:"1px solid #e5e7eb", borderRadius:20, padding:"6px 14px", color:"#6b7280", fontSize:12, fontWeight:600, cursor:"pointer" }}>🗄️ Archive</button>
+              )}
+              {a.status==="archived" && (
+                <button onClick={()=>handleStatus(a.id,"completed")} style={{ background:"#dbeafe", border:"none", borderRadius:20, padding:"6px 14px", color:"#1e40af", fontSize:12, fontWeight:600, cursor:"pointer" }}>↩ Restore</button>
+              )}
+            </div>
           </div>
         </Card>
       ))}
