@@ -40,13 +40,13 @@ export default function EHRDashboard({ clinician, onOpenChart, onNewChart }) {
   const firstName = clinician?.full_name?.split(" ")[0] ?? "Clinician";
 
   return (
-    <div className="ehr-root" style={{ minHeight: "100vh", background: C.bg }}>
+    <div className="ehr-root" style={{ minHeight: "100vh", background: t.bg }}>
       <EhrStyles />
 
       {/* Hero header */}
       <div style={{
         background: "linear-gradient(135deg, rgba(124,111,247,0.12) 0%, rgba(78,205,196,0.06) 50%, rgba(240,147,160,0.04) 100%)",
-        borderBottom: `1px solid ${C.border}`,
+        borderBottom: `1px solid ${t.border}`,
         padding: "2rem 2.5rem 1.8rem",
         position: "relative", overflow: "hidden",
       }}>
@@ -56,14 +56,14 @@ export default function EHRDashboard({ clinician, onOpenChart, onNewChart }) {
 
         <div style={{ position:"relative", zIndex:1, display:"flex", alignItems:"flex-end", justifyContent:"space-between", flexWrap:"wrap", gap:16 }}>
           <div>
-            <div style={{ fontSize:13, color: C.muted, marginBottom:4, display:"flex", alignItems:"center", gap:8 }}>
-              <span style={{ width:8, height:8, borderRadius:"50%", background: C.green, display:"inline-block", boxShadow:`0 0 8px ${C.green}` }} />
+            <div style={{ fontSize:13, color: t.muted, marginBottom:4, display:"flex", alignItems:"center", gap:8 }}>
+              <span style={{ width:8, height:8, borderRadius:"50%", background: t.green, display:"inline-block", boxShadow:`0 0 8px ${t.green}` }} />
               {new Date().toLocaleDateString("en-US",{ weekday:"long", month:"long", day:"numeric", year:"numeric" })}
             </div>
-            <h1 style={{ fontSize:"clamp(1.6rem,3vw,2.2rem)", fontWeight:800, color: C.text, margin:0, letterSpacing:"-0.03em", lineHeight:1.1 }}>
+            <h1 style={{ fontSize:"clamp(1.6rem,3vw,2.2rem)", fontWeight:800, color: t.text, margin:0, letterSpacing:"-0.03em", lineHeight:1.1 }}>
               {greeting}, <span style={{ background:"linear-gradient(135deg,#a89cf5,#4ecdc4)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>{firstName}</span>
             </h1>
-            <p style={{ fontSize:14, color: C.muted, marginTop:6 }}>
+            <p style={{ fontSize:14, color: t.muted, marginTop:6 }}>
               {stats?.totalPatients ?? 0} patients · {upcomingAppts.length} upcoming today
             </p>
           </div>
@@ -94,7 +94,7 @@ export default function EHRDashboard({ clinician, onOpenChart, onNewChart }) {
               <div style={{ position:"absolute", top:-20, right:-20, width:80, height:80, borderRadius:"50%", background:`${s.glow}15`, filter:"blur(20px)" }} />
               <div style={{ fontSize:24, marginBottom:8 }}>{s.icon}</div>
               <div style={{ fontSize:32, fontWeight:800, color: s.color, lineHeight:1, letterSpacing:"-0.03em" }}>{s.value}</div>
-              <div style={{ fontSize:12, color: C.muted, marginTop:4, fontWeight:500 }}>{s.label}</div>
+              <div style={{ fontSize:12, color: t.muted, marginTop:4, fontWeight:500 }}>{s.label}</div>
             </div>
           ))}
         </div>
@@ -112,19 +112,19 @@ export default function EHRDashboard({ clinician, onOpenChart, onNewChart }) {
                   placeholder="Search by name or MRN…"
                   style={{
                     width:"100%", background:"rgba(255,255,255,0.04)",
-                    border:`1px solid ${C.border2}`, borderRadius:12,
+                    border:`1px solid ${t.border2}`, borderRadius:12,
                     padding:"10px 12px 10px 36px",
-                    color: C.text, fontSize:14, fontFamily:"inherit", outline:"none",
+                    color: t.text, fontSize:14, fontFamily:"inherit", outline:"none",
                   }}
                 />
               </div>
-              <div style={{ display:"flex", gap:6, background:"rgba(255,255,255,0.03)", border:`1px solid ${C.border}`, borderRadius:12, padding:"4px" }}>
+              <div style={{ display:"flex", gap:6, background:"rgba(255,255,255,0.03)", border:`1px solid ${t.border}`, borderRadius:12, padding:"4px" }}>
                 {["all","active","inactive","discharged"].map(f => (
                   <button key={f} onClick={() => setFilter(f)} style={{
                     background: filter===f ? "rgba(124,111,247,0.2)" : "transparent",
                     border: filter===f ? "1px solid rgba(124,111,247,0.35)" : "1px solid transparent",
                     borderRadius:8, padding:"6px 14px",
-                    color: filter===f ? C.lavender : C.muted,
+                    color: filter===f ? t.accent : t.muted,
                     fontSize:12, fontWeight: filter===f ? 600 : 400,
                     cursor:"pointer", textTransform:"capitalize", fontFamily:"inherit",
                     transition:"all .15s",
@@ -136,19 +136,19 @@ export default function EHRDashboard({ clinician, onOpenChart, onNewChart }) {
             {loading ? <Spinner /> : filtered.length === 0 ? (
               <div style={{
                 textAlign:"center", padding:"4rem 2rem",
-                background:"rgba(255,255,255,0.02)", border:`1px solid ${C.border}`,
+                background:"rgba(255,255,255,0.02)", border:`1px solid ${t.border}`,
                 borderRadius:20,
               }}>
                 <div style={{ fontSize:48, marginBottom:12, opacity:0.4 }}>📂</div>
-                <div style={{ fontSize:16, fontWeight:600, color: C.muted, marginBottom:6 }}>
+                <div style={{ fontSize:16, fontWeight:600, color: t.muted, marginBottom:6 }}>
                   {search ? "No patients match your search." : "No patient charts yet."}
                 </div>
-                {!search && <div style={{ fontSize:13, color: C.muted2, marginBottom:20 }}>Create your first chart to get started.</div>}
+                {!search && <div style={{ fontSize:13, color: t.muted2, marginBottom:20 }}>Create your first chart to get started.</div>}
                 {!search && <EhrBtn onClick={onNewChart}>+ Create First Chart</EhrBtn>}
               </div>
             ) : (
               <div style={{ display:"flex", flexDirection:"column", gap:8, animation:"ehrFadeUp .3s ease" }}>
-                <div style={{ fontSize:12, color: C.muted2, marginBottom:4, paddingLeft:4 }}>
+                <div style={{ fontSize:12, color: t.muted2, marginBottom:4, paddingLeft:4 }}>
                   {filtered.length} patient{filtered.length !== 1 ? "s" : ""}
                 </div>
                 {filtered.map(c => <PatientRow key={c.id} chart={c} onClick={() => onOpenChart(c.id)} />)}
@@ -161,21 +161,21 @@ export default function EHRDashboard({ clinician, onOpenChart, onNewChart }) {
             <EhrCard glow="#7c6ff7" style={{ padding:"1.4rem" }}>
               <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:"1.2rem" }}>
                 <div style={{ width:30, height:30, borderRadius:8, background:"rgba(124,111,247,0.2)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14 }}>📅</div>
-                <h3 style={{ fontSize:14, fontWeight:700, color: C.text, margin:0 }}>Upcoming Appointments</h3>
+                <h3 style={{ fontSize:14, fontWeight:700, color: t.text, margin:0 }}>Upcoming Appointments</h3>
               </div>
               {upcomingAppts.length === 0 ? (
                 <div style={{ textAlign:"center", padding:"1.5rem 0" }}>
                   <div style={{ fontSize:28, marginBottom:8, opacity:0.3 }}>📅</div>
-                  <div style={{ fontSize:13, color: C.muted2 }}>No upcoming appointments</div>
+                  <div style={{ fontSize:13, color: t.muted2 }}>No upcoming appointments</div>
                 </div>
               ) : upcomingAppts.map((a, i) => (
                 <div key={a.id} style={{
                   padding:"0.85rem", marginBottom: i < upcomingAppts.length-1 ? 8 : 0,
                   background:"rgba(255,255,255,0.03)", borderRadius:12,
-                  border:`1px solid ${C.border}`,
+                  border:`1px solid ${t.border}`,
                 }}>
-                  <div style={{ fontSize:13, fontWeight:600, color: C.text, marginBottom:3 }}>{a.name || "Patient"}</div>
-                  <div style={{ fontSize:12, color: C.muted2, marginBottom:6 }}>{formatDateTime(a.scheduled_at)}</div>
+                  <div style={{ fontSize:13, fontWeight:600, color: t.text, marginBottom:3 }}>{a.name || "Patient"}</div>
+                  <div style={{ fontSize:12, color: t.muted2, marginBottom:6 }}>{formatDateTime(a.scheduled_at)}</div>
                   <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
                     <StatusBadge status={a.status} />
                     {a.appointment_type && <EhrBadge color="purple">{a.appointment_type.replace(/_/g," ")}</EhrBadge>}
@@ -196,11 +196,11 @@ export default function EHRDashboard({ clinician, onOpenChart, onNewChart }) {
                   {clinician?.full_name?.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2)}
                 </div>
                 <div>
-                  <div style={{ fontSize:14, fontWeight:700, color: C.text }}>{clinician?.full_name}</div>
-                  <div style={{ fontSize:12, color: C.muted }}>{clinician?.title}</div>
+                  <div style={{ fontSize:14, fontWeight:700, color: t.text }}>{clinician?.full_name}</div>
+                  <div style={{ fontSize:12, color: t.muted }}>{clinician?.title}</div>
                 </div>
               </div>
-              <div style={{ fontSize:11, color: C.muted2, lineHeight:1.6 }}>
+              <div style={{ fontSize:11, color: t.muted2, lineHeight:1.6 }}>
                 MindShift Wellness Clinic · EHR System
               </div>
             </div>
@@ -231,7 +231,7 @@ function PatientRow({ chart, onClick }) {
     <div className="ehr-patient-row" onClick={onClick} style={{
       display:"flex", alignItems:"center", gap:14,
       background:"rgba(255,255,255,0.03)",
-      border:`1px solid ${C.border}`,
+      border:`1px solid ${t.border}`,
       borderRadius:16, padding:"0.95rem 1.2rem",
       cursor:"pointer",
     }}>
@@ -239,9 +239,9 @@ function PatientRow({ chart, onClick }) {
         {initials}
       </div>
       <div style={{ flex:1, minWidth:0 }}>
-        <div style={{ fontSize:14, fontWeight:700, color: C.text, marginBottom:3 }}>{name}</div>
-        <div style={{ fontSize:12, color: C.muted2, display:"flex", gap:10, flexWrap:"wrap" }}>
-          {chart.mrn && <span style={{ color: C.muted }}>MRN: {chart.mrn}</span>}
+        <div style={{ fontSize:14, fontWeight:700, color: t.text, marginBottom:3 }}>{name}</div>
+        <div style={{ fontSize:12, color: t.muted2, display:"flex", gap:10, flexWrap:"wrap" }}>
+          {chart.mrn && <span style={{ color: t.muted }}>MRN: {chart.mrn}</span>}
           {patientAge && <span>{patientAge} yrs</span>}
           {chart.gender && <span>{chart.gender}</span>}
           {email && <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:160 }}>{email}</span>}
@@ -250,7 +250,7 @@ function PatientRow({ chart, onClick }) {
       <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:5, flexShrink:0 }}>
         <StatusBadge status={chart.status} />
         {chart.primary_diagnosis && (
-          <span style={{ fontSize:11, color: C.lavender, fontWeight:500 }}>{chart.primary_diagnosis}</span>
+          <span style={{ fontSize:11, color: t.accent, fontWeight:500 }}>{chart.primary_diagnosis}</span>
         )}
       </div>
       <span style={{ color:"rgba(124,111,247,0.5)", fontSize:18, fontWeight:300 }}>›</span>

@@ -75,7 +75,7 @@ export default function EHR({ onBack }) {
   // ── Loading ──
   if (authLoading || session === undefined) {
     return (
-      <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ minHeight: "100vh", background: t.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <Spinner />
       </div>
     );

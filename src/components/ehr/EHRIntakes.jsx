@@ -85,26 +85,26 @@ export default function EHRIntakes({ clinician, onOpenChart }) {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem", flexWrap: "wrap", gap: 12 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: C.text, margin: 0, letterSpacing: "-0.02em" }}>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: t.text, margin: 0, letterSpacing: "-0.02em" }}>
             Patient Intakes
             {pendingCount > 0 && (
-              <span style={{ marginLeft: 10, background: "#f5c84222", border: "1px solid #f5c84244", borderRadius: 20, padding: "2px 10px", fontSize: 13, color: C.gold, fontWeight: 700 }}>
+              <span style={{ marginLeft: 10, background: "#f5c84222", border: "1px solid #f5c84244", borderRadius: 20, padding: "2px 10px", fontSize: 13, color: t.gold, fontWeight: 700 }}>
                 {pendingCount} pending
               </span>
             )}
           </h1>
-          <p style={{ fontSize: 13, color: C.muted2, marginTop: 3 }}>Review submitted patient intake forms and create EHR charts</p>
+          <p style={{ fontSize: 13, color: t.muted2, marginTop: 3 }}>Review submitted patient intake forms and create EHR charts</p>
         </div>
       </div>
 
       {/* Filters */}
-      <div style={{ display: "flex", gap: 6, marginBottom: "1.2rem", background: "rgba(255,255,255,0.03)", border: `1px solid ${C.border}`, borderRadius: 12, padding: "4px", width: "fit-content" }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: "1.2rem", background: "rgba(255,255,255,0.03)", border: `1px solid ${t.border}`, borderRadius: 12, padding: "4px", width: "fit-content" }}>
         {[["pending", "Pending"], ["reviewed", "Reviewed"], ["chart_created", "Chart Created"], ["all", "All"]].map(([v, l]) => (
           <button key={v} onClick={() => setFilter(v)} style={{
             background: filter === v ? "rgba(124,111,247,0.2)" : "transparent",
             border: filter === v ? "1px solid rgba(124,111,247,0.35)" : "1px solid transparent",
             borderRadius: 8, padding: "7px 16px",
-            color: filter === v ? C.lavender : C.muted,
+            color: filter === v ? t.accent : t.muted,
             fontSize: 12, fontWeight: filter === v ? 700 : 400,
             cursor: "pointer", fontFamily: "inherit",
           }}>{l}</button>
@@ -114,7 +114,7 @@ export default function EHRIntakes({ clinician, onOpenChart }) {
       {loading ? <Spinner /> : filtered.length === 0 ? (
         <EhrCard style={{ textAlign: "center", padding: "4rem" }}>
           <div style={{ fontSize: 40, marginBottom: 12, opacity: 0.4 }}>📭</div>
-          <div style={{ fontSize: 15, fontWeight: 600, color: C.muted }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: t.muted }}>
             {filter === "pending" ? "No pending intakes — you're all caught up!" : "No intakes in this category."}
           </div>
         </EhrCard>
@@ -123,9 +123,9 @@ export default function EHRIntakes({ clinician, onOpenChart }) {
           {filtered.map(i => (
             <div key={i.id} onClick={() => setSelected(i)} style={{
               display: "flex", alignItems: "center", gap: 14,
-              background: "rgba(255,255,255,0.03)", border: `1px solid ${C.border}`,
+              background: "rgba(255,255,255,0.03)", border: `1px solid ${t.border}`,
               borderRadius: 16, padding: "1rem 1.2rem", cursor: "pointer",
-              borderLeft: i.status === "pending" ? `3px solid ${C.gold}` : i.status === "reviewed" ? `3px solid ${C.teal}` : `3px solid ${C.green}`,
+              borderLeft: i.status === "pending" ? `3px solid ${t.gold}` : i.status === "reviewed" ? `3px solid ${t.teal}` : `3px solid ${t.green}`,
               transition: "background .15s, border-color .15s",
             }}
               onMouseEnter={e => e.currentTarget.style.background = "rgba(124,111,247,0.06)"}
@@ -135,18 +135,18 @@ export default function EHRIntakes({ clinician, onOpenChart }) {
                 {(i.full_name || "?").split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2)}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{i.full_name || "Unknown"}</div>
-                <div style={{ fontSize: 12, color: C.muted2, marginTop: 2, display: "flex", gap: 10 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: t.text }}>{i.full_name || "Unknown"}</div>
+                <div style={{ fontSize: 12, color: t.muted2, marginTop: 2, display: "flex", gap: 10 }}>
                   {i.date_of_birth && <span>{age(i.date_of_birth)} yrs</span>}
                   {i.gender && <span>{i.gender}</span>}
                   {i.phone && <span>{i.phone}</span>}
                 </div>
-                <div style={{ fontSize: 12, color: C.muted2, marginTop: 2 }}>Submitted: {formatDateTime(i.submitted_at)}</div>
+                <div style={{ fontSize: 12, color: t.muted2, marginTop: 2 }}>Submitted: {formatDateTime(i.submitted_at)}</div>
               </div>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5 }}>
                 <EhrBadge color={STATUS_COLOR[i.status] ?? "muted"}>{STATUS_LABEL[i.status] ?? i.status}</EhrBadge>
                 {i.reason_for_visit && (
-                  <div style={{ fontSize: 11, color: C.muted2, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "right" }}>
+                  <div style={{ fontSize: 11, color: t.muted2, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "right" }}>
                     {i.reason_for_visit}
                   </div>
                 )}
@@ -177,8 +177,8 @@ function IntakeDetail({ intake, clinician, working, onBack, onReview, onCreateCh
 
   const Row = ({ label, value, wide }) => (
     <div style={{ gridColumn: wide ? "1 / -1" : "auto" }}>
-      <div style={{ fontSize: 10, fontWeight: 600, color: C.muted2, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>{label}</div>
-      <div style={{ fontSize: 13, color: value ? C.text : C.muted2, fontStyle: !value ? "italic" : "normal" }}>{value || "Not provided"}</div>
+      <div style={{ fontSize: 10, fontWeight: 600, color: t.muted2, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>{label}</div>
+      <div style={{ fontSize: 13, color: value ? t.text : t.muted2, fontStyle: !value ? "italic" : "normal" }}>{value || "Not provided"}</div>
     </div>
   );
 
@@ -189,10 +189,10 @@ function IntakeDetail({ intake, clinician, working, onBack, onReview, onCreateCh
       {/* Top bar */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem", flexWrap: "wrap", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button onClick={onBack} style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${C.border2}`, borderRadius: 8, padding: "7px 12px", color: C.muted, cursor: "pointer", fontSize: 13, fontFamily: "inherit" }}>← Intakes</button>
+          <button onClick={onBack} style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${t.border2}`, borderRadius: 8, padding: "7px 12px", color: t.muted, cursor: "pointer", fontSize: 13, fontFamily: "inherit" }}>← Intakes</button>
           <div>
-            <h2 style={{ fontSize: 18, fontWeight: 800, color: C.text, margin: 0 }}>{intake.full_name || "Intake Review"}</h2>
-            <div style={{ fontSize: 12, color: C.muted2, marginTop: 2 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 800, color: t.text, margin: 0 }}>{intake.full_name || "Intake Review"}</h2>
+            <div style={{ fontSize: 12, color: t.muted2, marginTop: 2 }}>
               Submitted: {formatDateTime(intake.submitted_at)}
               {patientAge && ` · ${patientAge} yrs`}
             </div>
@@ -218,8 +218,8 @@ function IntakeDetail({ intake, clinician, working, onBack, onReview, onCreateCh
         <div style={{ background: "rgba(240,147,160,0.12)", border: "1px solid rgba(240,147,160,0.35)", borderRadius: 14, padding: "1rem 1.4rem", marginBottom: 14, display: "flex", gap: 10 }}>
           <span style={{ fontSize: 20 }}>⚠️</span>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.rose, marginBottom: 4 }}>Active Safety Concern</div>
-            <div style={{ fontSize: 13, color: C.muted }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: t.rose, marginBottom: 4 }}>Active Safety Concern</div>
+            <div style={{ fontSize: 13, color: t.muted }}>
               {intake.suicidal_ideation === "current" && <div>Patient reports current suicidal ideation.</div>}
               {intake.self_harm === "current" && <div>Patient reports current self-harm.</div>}
               {intake.safety_plan && <div style={{ marginTop: 4 }}><strong>Patient note:</strong> {intake.safety_plan}</div>}
@@ -228,7 +228,7 @@ function IntakeDetail({ intake, clinician, working, onBack, onReview, onCreateCh
         </div>
       )}
 
-      <Section title="Demographics" color={C.lavender}>
+      <Section title="Demographics" color={t.accent}>
         <Row label="Full Name" value={intake.full_name} />
         <Row label="Date of Birth" value={intake.date_of_birth ? `${formatDate(intake.date_of_birth)} (${patientAge} yrs)` : null} />
         <Row label="Gender" value={intake.gender} />
@@ -237,7 +237,7 @@ function IntakeDetail({ intake, clinician, working, onBack, onReview, onCreateCh
         <Row label="Address" value={intake.address} wide />
       </Section>
 
-      <Section title="Emergency Contact & Insurance" color={C.teal}>
+      <Section title="Emergency Contact & Insurance" color={t.teal}>
         <Row label="Emergency Contact" value={intake.emergency_contact_name} />
         <Row label="Relationship" value={intake.emergency_contact_relationship} />
         <Row label="Emergency Phone" value={intake.emergency_contact_phone} />
@@ -246,7 +246,7 @@ function IntakeDetail({ intake, clinician, working, onBack, onReview, onCreateCh
         <Row label="Group #" value={intake.insurance_group} />
       </Section>
 
-      <Section title="Medical History" color={C.gold}>
+      <Section title="Medical History" color={t.gold}>
         <Row label="Primary Care Provider" value={intake.primary_care_provider} />
         <Row label="Pharmacy" value={intake.pharmacy} />
         <Row label="Current Medications" value={intake.current_medications} wide />
@@ -256,7 +256,7 @@ function IntakeDetail({ intake, clinician, working, onBack, onReview, onCreateCh
         <Row label="Surgeries" value={intake.surgeries} />
       </Section>
 
-      <Section title="Mental Health History" color={C.purple}>
+      <Section title="Mental Health History" color={t.purple}>
         <Row label="Reason for Visit" value={intake.reason_for_visit} wide />
         <Row label="Duration of Symptoms" value={intake.symptoms_duration} />
         <Row label="Previous Therapy" value={intake.previous_therapy ? "Yes" : "No"} />
@@ -267,7 +267,7 @@ function IntakeDetail({ intake, clinician, working, onBack, onReview, onCreateCh
         <Row label="Substance Use" value={intake.substance_use} wide />
       </Section>
 
-      <Section title="Safety & Consents" color={C.rose}>
+      <Section title="Safety & Consents" color={t.rose}>
         <Row label="Suicidal Ideation" value={intake.suicidal_ideation} />
         <Row label="Self-Harm" value={intake.self_harm} />
         {intake.safety_plan && <Row label="Safety Notes" value={intake.safety_plan} wide />}
