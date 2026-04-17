@@ -98,7 +98,7 @@ export default function EHR({ onBack }) {
         padding: "0 2rem", height: 58,
         background: localStorage.getItem('msw_theme') === 'dark' ? "rgba(8,12,24,0.94)" : "var(--ehr-surface)",
         backdropFilter: "blur(20px)",
-        borderBottom: `1px solid ${rgba(226,232,240,0.8)}`,
+        borderBottom: `1px solid rgba(226,232,240,0.8)`,
         boxShadow: "var(--ehr-shadow)",
       }}>
         {/* Logo */}
@@ -155,7 +155,7 @@ export default function EHR({ onBack }) {
           <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--ehr-grad)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "#fff", boxShadow: `0 4px 12px #3b5bdb35` }}>
             {clinician.full_name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2)}
           </div>
-          <button onClick={signOut} style={{ background: localStorage.getItem('msw_theme') === 'dark' ? "rgba(255,255,255,0.04)" : "#f1f5f9", border: `1px solid ${rgba(226,232,240,0.8)}`, borderRadius: 8, padding: "7px 14px", color: "var(--ehr-muted)", fontSize: 12, cursor: "pointer", fontFamily: "inherit", transition: "all .15s" }}>
+          <button onClick={signOut} style={{ background: localStorage.getItem('msw_theme') === 'dark' ? "rgba(255,255,255,0.04)" : "#f1f5f9", border: `1px solid rgba(226,232,240,0.8)`, borderRadius: 8, padding: "7px 14px", color: "var(--ehr-muted)", fontSize: 12, cursor: "pointer", fontFamily: "inherit", transition: "all .15s" }}>
             Sign Out
           </button>
         </div>

@@ -96,7 +96,7 @@ export default function EHRIntakes({ clinician, onOpenChart }) {
       </div>
 
       {/* Filters */}
-      <div style={{ display: "flex", gap: 6, marginBottom: "1.2rem", background: "rgba(255,255,255,0.03)", border: `1px solid ${rgba(226,232,240,0.8)}`, borderRadius: 12, padding: "4px", width: "fit-content" }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: "1.2rem", background: "rgba(255,255,255,0.03)", border: `1px solid rgba(226,232,240,0.8)`, borderRadius: 12, padding: "4px", width: "fit-content" }}>
         {[["pending", "Pending"], ["reviewed", "Reviewed"], ["chart_created", "Chart Created"], ["all", "All"]].map(([v, l]) => (
           <button key={v} onClick={() => setFilter(v)} style={{
             background: filter === v ? "rgba(124,111,247,0.2)" : "transparent",
@@ -121,7 +121,7 @@ export default function EHRIntakes({ clinician, onOpenChart }) {
           {filtered.map(i => (
             <div key={i.id} onClick={() => setSelected(i)} style={{
               display: "flex", alignItems: "center", gap: 14,
-              background: "rgba(255,255,255,0.03)", border: `1px solid ${rgba(226,232,240,0.8)}`,
+              background: "rgba(255,255,255,0.03)", border: `1px solid rgba(226,232,240,0.8)`,
               borderRadius: 16, padding: "1rem 1.2rem", cursor: "pointer",
               borderLeft: i.status === "pending" ? `3px solid #f0a500` : i.status === "reviewed" ? `3px solid #0ea5a0` : `3px solid #16a34a`,
               transition: "background .15s, border-color .15s",

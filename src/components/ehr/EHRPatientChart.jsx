@@ -75,7 +75,7 @@ export default function EHRPatientChart({ chartId, clinician, onBack, isNew = fa
         background: localStorage.getItem('msw_theme') === 'dark'
           ? "linear-gradient(135deg,rgba(124,111,247,0.1),rgba(78,205,196,0.05))"
           : `linear-gradient(135deg,#3b5bdb10,#0ea5a008)`,
-        borderBottom: `1px solid ${rgba(226,232,240,0.8)}`,
+        borderBottom: `1px solid rgba(226,232,240,0.8)`,
         padding: "1.2rem 2rem",
         display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap",
       }}>
@@ -95,7 +95,7 @@ export default function EHRPatientChart({ chartId, clinician, onBack, isNew = fa
       </div>
 
       {/* Tabs */}
-      <div style={{ display: "flex", gap: 4, padding: "0.6rem 2rem", borderBottom: `1px solid ${rgba(226,232,240,0.8)}`, background: "var(--ehr-surface)", overflowX: "auto" }}>
+      <div style={{ display: "flex", gap: 4, padding: "0.6rem 2rem", borderBottom: `1px solid rgba(226,232,240,0.8)`, background: "var(--ehr-surface)", overflowX: "auto" }}>
         {TABS.map(tb => (
           <button key={tb.id} onClick={() => setTab(tb.id)} className="ehr-tab-btn" style={{
             background: tab === tb.id ? `#3b5bdb15` : "transparent",
