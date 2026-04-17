@@ -212,17 +212,32 @@ function Avatar({ name="P", size=36 }) {
 }
 
 export default function Portal({ onExit }) {
-  const [session, setSession] = useState(undefined); // undefined = loading
+  const [session, setSession] = useState(undefined);
   const [page, setPage] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [intakeStatus, setIntakeStatus] = useState(null); // null | "pending" | "reviewed" | "chart_created"
+  const [intakeStatus, setIntakeStatus] = useState(null);
+  const [userId, setUserId] = useState(null);
 
-  // Portal has its own independent auth session check
+  // Auth session — always runs
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s);
+      setUserId(s?.user?.id ?? null);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
+      setSession(s);
+      setUserId(s?.user?.id ?? null);
+    });
     return () => subscription.unsubscribe();
   }, []);
+
+  // Load intake status — always runs, guards internally
+  useEffect(() => {
+    if (!userId) return;
+    getMyIntake(userId).then(({ data }) => {
+      setIntakeStatus(data?.status ?? "none");
+    });
+  }, [userId]);
 
   // Loading
   if (session === undefined) return (
@@ -234,22 +249,11 @@ export default function Portal({ onExit }) {
     </div>
   );
 
-  // Not logged in — show inline auth form
-  if (!session) return (
-    <PortalAuthScreen onBack={onExit}/>
-  );
+  // Not logged in
+  if (!session) return <PortalAuthScreen onBack={onExit}/>;
 
   const user = session.user;
   const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Patient";
-
-  // Load intake status when user is known
-  useEffect(() => {
-    if (!user?.id) return;
-    getMyIntake(user.id).then(({ data }) => {
-      setIntakeStatus(data?.status ?? "none");
-    });
-  }, [user?.id]);
-
   const intakeComplete = intakeStatus === "pending" || intakeStatus === "reviewed" || intakeStatus === "chart_created";
 
   const handleSignOut = async () => {
