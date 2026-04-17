@@ -552,6 +552,8 @@ function Mia(){
         })
       });
       const data = await res.json();
+      console.log("[Mia] API response:", JSON.stringify(data).slice(0, 300));
+      if(data.error) throw new Error(`API error: ${JSON.stringify(data.error)}`);
       const reply = data.content?.find(c=>c.type==="text")?.text || "I'm here with you. Take a breath — what would feel most helpful right now?";
       setMessages(m=>[...m,{role:"assistant",content:reply}]);
 
@@ -561,7 +563,8 @@ function Mia(){
         await saveMiaMessage(authUser.id, "assistant", reply);
       }
     } catch(e){
-      const fallback = "I'm here with you. Take a gentle breath — and tell me what's on your mind.";
+      console.error("[Mia] Error:", e.message);
+      const fallback = `Something went wrong: ${e.message}`;
       setMessages(m=>[...m,{role:"assistant",content:fallback}]);
       if(authUser){
         const { saveMiaMessage } = await import("./lib/db.js");
