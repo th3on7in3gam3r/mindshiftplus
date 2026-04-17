@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mindshift-plus-v1';
+const CACHE_NAME = 'mindshift-plus-v3';
 
 // Assets to cache on install
 const PRECACHE_ASSETS = [
