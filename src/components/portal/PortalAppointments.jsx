@@ -83,20 +83,20 @@ function AppointmentCalendar({ appointments, onDayClick, selectedDate, fullDays 
             const isPast = new Date(ds) < today;
 
             return (
-              <button key={d} onClick={() => !isFull && onDayClick(hasAppt ? ds : null)} style={{
+              <button key={d} onClick={() => onDayClick(ds)} style={{
                 position:"relative", aspectRatio:"1", borderRadius:10, border:"none",
                 background: isSel ? T.accent : isFull ? "#fef2f2" : isToday ? `${T.accent}12` : "transparent",
-                color: isSel ? "#fff" : isFull ? "#fca5a5" : isToday ? T.accent : T.text,
+                color: isSel ? "#fff" : isFull ? "#fca5a5" : isToday ? T.accent : isPast ? T.muted2 : T.text,
                 fontWeight: isSel || isToday ? 700 : 400,
-                fontSize:13, cursor: hasAppt && !isFull ? "pointer" : "default",
+                fontSize:13, cursor: "pointer",
                 outline: isToday && !isSel ? `2px solid ${T.accent}40` : "none",
                 transition:"all .15s",
                 display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:2,
-                opacity: isPast && !hasAppt ? 0.35 : 1,
+                opacity: isPast && !hasAppt ? 0.4 : 1,
               }}
-                onMouseOver={e=>{ if(hasAppt&&!isSel&&!isFull) e.currentTarget.style.background=`${T.accent}10`; }}
-                onMouseOut={e=>{ if(hasAppt&&!isSel&&!isFull) e.currentTarget.style.background="transparent"; }}
-                title={isFull ? "This day is fully booked" : undefined}
+                onMouseOver={e=>{ if(!isSel) e.currentTarget.style.background = isFull ? "#fee2e2" : `${T.accent}10`; }}
+                onMouseOut={e=>{ if(!isSel) e.currentTarget.style.background = isFull ? "#fef2f2" : isToday ? `${T.accent}12` : "transparent"; }}
+                title={isFull ? "Fully booked — choose another day" : hasAppt ? "View appointment" : isAvailDay && !isPast ? "Available for booking" : ""}
               >
                 {d}
                 {isFull && !hasAppt && (
@@ -133,26 +133,51 @@ function AppointmentCalendar({ appointments, onDayClick, selectedDate, fullDays 
 }
 
 // ── Selected day detail panel ──────────────────────────────────────────────────
-function DayDetail({ date, appointments, onCancel, onClose }) {
+function DayDetail({ date, appointments, onCancel, onClose, isFull }) {
   const dayAppts = appointments.filter(a => a.scheduled_at?.startsWith(date));
-  const fmtTime = iso => new Date(iso).toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
-  const fmtDay  = d => new Date(d+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"});
+  const today = new Date(); today.setHours(0,0,0,0);
+  const isPast = new Date(date+"T12:00:00") < today;
+
+  // Format time properly in local timezone
+  const fmtTime = iso => {
+    const d = new Date(iso);
+    return d.toLocaleTimeString("en-US", { hour:"numeric", minute:"2-digit", hour12:true, timeZoneName:"short" });
+  };
+  const fmtDay = d => new Date(d+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"});
+  const dow = new Date(date+"T12:00:00").getDay();
+  const isAvailDay = AVAIL_DAYS.includes(dow);
 
   return (
     <div style={{ background:`linear-gradient(135deg,${T.accent}08,${T.teal}05)`, border:`1px solid ${T.accent}20`, borderRadius:16, padding:"1.2rem 1.4rem", marginTop:16 }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
         <div>
           <div style={{ fontSize:13, fontWeight:700, color:T.accent }}>📅 {fmtDay(date)}</div>
-          <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>{dayAppts.length} appointment{dayAppts.length!==1?"s":""}</div>
+          <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>
+            {dayAppts.length > 0 ? `${dayAppts.length} appointment${dayAppts.length!==1?"s":""}` : isPast ? "No appointments" : isAvailDay ? "Available for booking" : "Not a clinic day"}
+          </div>
         </div>
         <button onClick={onClose} style={{ background:"transparent", border:"none", color:T.muted, cursor:"pointer", fontSize:18, lineHeight:1 }}>✕</button>
       </div>
+
+      {dayAppts.length === 0 && !isPast && isAvailDay && !isFull && (
+        <div style={{ background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:10, padding:"0.9rem 1rem", fontSize:13, color:"#166534", display:"flex", gap:8, alignItems:"center" }}>
+          <span style={{ fontSize:16 }}>✅</span>
+          <div>This day has available slots. Use the <strong>+ Request Appointment</strong> button above to book.</div>
+        </div>
+      )}
+
+      {dayAppts.length === 0 && !isPast && !isAvailDay && (
+        <div style={{ background:"#f9fafb", border:`1px solid ${T.border}`, borderRadius:10, padding:"0.9rem 1rem", fontSize:13, color:T.muted }}>
+          The clinic is not open on this day. Available days: <strong>Mon & Thu evenings, Fri & Sat all day</strong>.
+        </div>
+      )}
+
       {dayAppts.map(a => (
         <div key={a.id} style={{ background:"#fff", borderRadius:12, padding:"0.9rem 1rem", marginBottom:8, border:`1px solid ${T.border}`, display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10 }}>
           <div>
             <div style={{ fontWeight:700, fontSize:13, color:T.text, marginBottom:4 }}>{a.appointment_type?.replace(/_/g," ")||"Appointment"}</div>
             <div style={{ fontSize:12, color:T.muted, display:"flex", flexDirection:"column", gap:2 }}>
-              <span>🕐 {fmtTime(a.scheduled_at)}</span>
+              <span>🕐 {a.scheduled_at ? fmtTime(a.scheduled_at) : "Time TBD"}</span>
               <span>📍 {a.location||"TBD"}</span>
               <span>👨‍⚕️ {a.provider_name||"Clinician"}</span>
             </div>
@@ -249,6 +274,13 @@ export default function PortalAppointments({ userId, P }) {
   const upcoming = appointments.filter(a=>["upcoming","requested","confirmed","pending"].includes(a.status));
   const past     = appointments.filter(a=>["completed","cancelled"].includes(a.status));
 
+  // Block new requests if patient already has a confirmed/upcoming future appointment
+  const now = new Date().toISOString();
+  const confirmedUpcoming = appointments.find(a =>
+    ["confirmed","upcoming"].includes(a.status) &&
+    a.scheduled_at && a.scheduled_at > now
+  );
+
   return (
     <div style={{ padding:"2rem", maxWidth:900, margin:"0 auto" }}>
       <Toast message={toast}/>
@@ -258,7 +290,11 @@ export default function PortalAppointments({ userId, P }) {
         title="Your Appointments"
         subtitle="View your schedule and request new appointments"
         gradient={`linear-gradient(135deg,${T.accent}15,${T.teal}10)`}
-        action={<Btn onClick={()=>setShowForm(true)}>+ Request Appointment</Btn>}
+        action={
+          confirmedUpcoming
+            ? <span style={{ fontSize:12, color:T.teal, fontWeight:600, background:`${T.teal}12`, border:`1px solid ${T.teal}30`, borderRadius:20, padding:"8px 16px" }}>✓ Appointment Confirmed</span>
+            : <Btn onClick={()=>setShowForm(true)}>+ Request Appointment</Btn>
+        }
       />
 
       {/* View toggle */}
@@ -275,8 +311,22 @@ export default function PortalAppointments({ userId, P }) {
         ))}
       </div>
 
-      {/* Request modal */}
-      {showForm && (
+      {/* Confirmed appointment block banner */}
+      {confirmedUpcoming && (
+        <div style={{ background:`linear-gradient(135deg,${T.teal}12,${T.accent}08)`, border:`1px solid ${T.teal}30`, borderRadius:14, padding:"1rem 1.4rem", marginBottom:"1.2rem", display:"flex", gap:12, alignItems:"flex-start" }}>
+          <span style={{ fontSize:22, flexShrink:0 }}>🔒</span>
+          <div>
+            <div style={{ fontSize:14, fontWeight:700, color:T.teal, marginBottom:3 }}>You already have a confirmed appointment</div>
+            <div style={{ fontSize:13, color:T.muted, lineHeight:1.6 }}>
+              You can request a new appointment after your confirmed visit on <strong>{fmt(confirmedUpcoming.scheduled_at)}</strong> has been completed.
+              To reschedule, please call us at <strong>(508) 306-1128</strong>.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Request modal — only shown when no confirmed upcoming */}
+      {showForm && !confirmedUpcoming && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", zIndex:300, display:"flex", alignItems:"center", justifyContent:"center", padding:"1rem", backdropFilter:"blur(4px)" }}>
           <div style={{ background:"#fff", borderRadius:24, padding:"2rem", maxWidth:480, width:"100%", boxShadow:"0 20px 60px rgba(0,0,0,0.15)" }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"1.5rem" }}>
@@ -326,21 +376,21 @@ export default function PortalAppointments({ userId, P }) {
                 appointments={appointments}
                 onCancel={handleCancel}
                 onClose={() => setSelectedDate(null)}
+                isFull={fullDays.includes(selectedDate)}
               />
             </>
           )}
           {appointments.length === 0 && (
             <EmptyState icon="📅" title="No appointments yet" subtitle="Request your first appointment above or call (508) 306-1128."
               action={<Btn onClick={()=>setShowForm(true)}>Request Appointment</Btn>}/>
-          )}
-        </>
+          )}        </>
       ) : (
         <>
           {/* List view */}
           <SectionDivider label="Upcoming" color={T.accent}/>
           {upcoming.length===0 ? (
             <EmptyState icon="📅" title="No upcoming appointments" subtitle="Request an appointment above or call us at (508) 306-1128."
-              action={<Btn onClick={()=>setShowForm(true)}>Request Appointment</Btn>}/>
+              action={!confirmedUpcoming ? <Btn onClick={()=>setShowForm(true)}>Request Appointment</Btn> : null}/>
           ) : upcoming.map(a=>(
             <Card key={a.id} style={{ marginBottom:"0.75rem" }} accent={a.status==="requested"||a.status==="pending"?T.gold:T.green}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:12 }}>
