@@ -121,7 +121,7 @@ describe('Property 4: endDate is always 24 hours after scheduled_at', () => {
   it('endDate equals scheduledAt + exactly 86400000ms for any valid timestamp', () => {
     fc.assert(
       fc.property(
-        fc.date({ min: new Date('2020-01-01'), max: new Date('2030-12-31') }),
+        fc.date({ min: new Date('2020-01-01'), max: new Date('2030-12-31') }).filter(d => !isNaN(d.getTime())),
         (date) => {
           const scheduledAt = date.toISOString();
           const endDate = computeEndDate(scheduledAt);
