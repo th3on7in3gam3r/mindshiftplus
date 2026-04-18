@@ -4,7 +4,7 @@ import {
   getAvailability, upsertAvailability,
   getBlockedTimes, addBlockedTime, removeBlockedTime,
 } from "../../lib/clinicApi";
-import { emailAppointmentConfirmed, emailAppointmentCancelled } from "../../lib/emailService";
+import { emailAppointmentConfirmed, emailAppointmentCancelled, emailTelehealthReminder } from "../../lib/emailService";
 import { supabase } from "../../lib/supabase";
 
 // Admin emails allowed to access this dashboard
@@ -135,20 +135,41 @@ function AppointmentsTab({ userId }) {
   const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(""),3000); };
 
   const handleStatus = async (id, status) => {
-    try { await updateAppointmentStatus(id, status); } catch {}
-    // Send email notification
     const appt = appointments.find(a=>a.id===id);
-    if (appt) {
-      const emailData = {
-        name: appt.name || "Patient",
-        email: appt.email,
-        date: appt.scheduled_at ? new Date(appt.scheduled_at).toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"}) : "TBD",
-        time: appt.scheduled_at ? new Date(appt.scheduled_at).toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"}) : "TBD",
-        clinician: appt.provider_name || "Kenneth Mutegyeki, PMHNP-BC",
-        location: appt.location || "Milford, MA",
-      };
-      if (status === "confirmed") emailAppointmentConfirmed(emailData);
-      if (status === "cancelled") emailAppointmentCancelled(emailData);
+    if (status === "confirmed" && appt?.appointment_type === "telehealth") {
+      // Telehealth confirmation: call Edge Function to create Whereby room
+      let telehealthUrl = null;
+      try {
+        const { data: response } = await supabase.functions.invoke('telehealth', {
+          body: { appointmentId: appt.id, scheduledAt: appt.scheduled_at },
+        });
+        telehealthUrl = response?.telehealth_url ?? null;
+      } catch {}
+      if (appt) {
+        const emailData = {
+          name: appt.name || "Patient",
+          email: appt.email,
+          date: appt.scheduled_at ? new Date(appt.scheduled_at).toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"}) : "TBD",
+          time: appt.scheduled_at ? new Date(appt.scheduled_at).toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"}) : "TBD",
+          clinician: appt.provider_name || "Kenneth Mutegyeki, PMHNP-BC",
+        };
+        emailTelehealthReminder({ ...emailData, telehealth_url: telehealthUrl });
+      }
+    } else {
+      // Non-telehealth or non-confirmation: standard flow
+      try { await updateAppointmentStatus(id, status); } catch {}
+      if (appt) {
+        const emailData = {
+          name: appt.name || "Patient",
+          email: appt.email,
+          date: appt.scheduled_at ? new Date(appt.scheduled_at).toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"}) : "TBD",
+          time: appt.scheduled_at ? new Date(appt.scheduled_at).toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"}) : "TBD",
+          clinician: appt.provider_name || "Kenneth Mutegyeki, PMHNP-BC",
+          location: appt.location || "Milford, MA",
+        };
+        if (status === "confirmed") emailAppointmentConfirmed(emailData);
+        if (status === "cancelled") emailAppointmentCancelled(emailData);
+      }
     }
     showToast(`✓ Appointment ${status}`);
     load();
@@ -191,6 +212,7 @@ function AppointmentsTab({ userId }) {
               <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
                 <div style={{ fontWeight:700, fontSize:14, color:P.text }}>{a.name || "Portal Patient"}</div>
                 <StatusBadge status={a.status}/>
+                {a.appointment_type === "telehealth" && <span title="Telehealth" style={{ fontSize:14 }}>📹</span>}
               </div>
               <div style={{ color:P.muted, fontSize:12 }}>📅 {fmt(a.scheduled_at)} · {a.location||"—"}</div>
               {a.email&&<div style={{ color:P.muted, fontSize:12, marginTop:2 }}>✉️ {a.email}</div>}
@@ -215,6 +237,14 @@ function AppointmentsTab({ userId }) {
               )}
             </div>
           </div>
+          {a.appointment_type === "telehealth" && a.status === "confirmed" && (
+            <div style={{ marginTop:"0.75rem", paddingTop:"0.75rem", borderTop:`1px solid ${P.border}` }}>
+              {a.telehealth_url
+                ? <button onClick={() => window.open(a.telehealth_url, "_blank")} style={{ background:"linear-gradient(135deg,#4a6cf7,#0ea5a0)", border:"none", borderRadius:20, padding:"7px 16px", color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer" }}>📹 Join Video Session</button>
+                : <span style={{ fontSize:12, color:P.muted, fontStyle:"italic" }}>Generating link…</span>
+              }
+            </div>
+          )}
         </Card>
       ))}
     </div>

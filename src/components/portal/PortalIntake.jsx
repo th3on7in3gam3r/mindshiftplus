@@ -169,7 +169,6 @@ export default function PortalIntake({ userId, displayName, onComplete }) {
         }).catch(() => {});
       });
       setSubmitted(true);
-      onComplete?.();
     }
   };
 
@@ -419,27 +418,43 @@ function StepHeading({ icon, title, desc }) {
 
 function SubmittedScreen({ displayName, onBack }) {
   return (
-    <div style={{ padding: "2rem", maxWidth: 600, margin: "0 auto", textAlign: "center" }}>
-      <div style={{ background: `linear-gradient(135deg,${T.accent}15,${T.teal}10)`, borderRadius: 24, padding: "3rem 2rem" }}>
-        <div style={{ fontSize: 60, marginBottom: "1rem" }}>🎉</div>
-        <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: T.text, marginBottom: 8 }}>Intake Complete!</h1>
-        <p style={{ fontSize: 15, color: T.muted, lineHeight: 1.7, marginBottom: "1.5rem" }}>
-          Thank you, <strong>{displayName}</strong>. Your intake has been received and will be reviewed by your clinician before your first appointment.
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 500,
+      background: "rgba(0,0,0,0.5)", backdropFilter: "blur(6px)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: "1.5rem",
+    }}>
+      <div style={{
+        background: "#fff", borderRadius: 28, padding: "2.5rem 2rem",
+        maxWidth: 520, width: "100%", textAlign: "center",
+        boxShadow: "0 24px 80px rgba(74,108,247,0.18)",
+        animation: "fadeUp .35s ease",
+      }}>
+        <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}`}</style>
+        <div style={{ fontSize: 64, marginBottom: "1rem" }}>🌱</div>
+        <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: T.text, marginBottom: 10 }}>
+          Thank you for taking this step, {displayName}
+        </h1>
+        <p style={{ fontSize: 14, color: T.muted, lineHeight: 1.8, marginBottom: "1.5rem" }}>
+          Taking care of yourself takes courage — and you just did something meaningful.
+          Your intake has been received and your care team will review it before your first visit.
         </p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: "1.5rem", textAlign: "left" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: "1.8rem", textAlign: "left" }}>
           {[
-            ["📋", "Your intake has been securely submitted"],
+            ["📋", "Your intake is securely on file"],
             ["👨‍⚕️", "Your clinician will review it before your visit"],
-            ["📅", "No further action needed — just show up!"],
+            ["📅", "No further action needed — just show up"],
             ["💬", "Questions? Message us through the portal"],
           ].map(([icon, text]) => (
-            <div key={text} style={{ display: "flex", gap: 10, alignItems: "center", background: "#fff", borderRadius: 10, padding: "10px 14px" }}>
+            <div key={text} style={{ display: "flex", gap: 10, alignItems: "center", background: `${T.accent}08`, borderRadius: 10, padding: "10px 14px" }}>
               <span style={{ fontSize: 18 }}>{icon}</span>
               <span style={{ fontSize: 13, color: T.text }}>{text}</span>
             </div>
           ))}
         </div>
-        <Btn onClick={onBack} style={{ width: "100%", justifyContent: "center" }}>Back to Dashboard →</Btn>
+        <Btn onClick={onBack} style={{ width: "100%", justifyContent: "center" }}>
+          Back to Dashboard →
+        </Btn>
       </div>
     </div>
   );

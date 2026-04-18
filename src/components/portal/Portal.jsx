@@ -9,6 +9,7 @@ import PortalVisitNotes from "./PortalVisitNotes";
 import PortalProfile from "./PortalProfile";
 import PortalJournal from "./PortalJournal";
 import PortalIntake from "./PortalIntake";
+import PortalBilling from "./PortalBilling";
 import { getMyIntake } from "../../lib/intakeDb";
 
 // ── Inline auth screen — stays on portal, no redirect ─────────────────────────
@@ -199,6 +200,7 @@ const NAV = [
   { id:"documents",     icon:"📄", label:"Documents" },
   { id:"prescriptions", icon:"💊", label:"Medications" },
   { id:"visit-notes",   icon:"📋", label:"Visit Notes" },
+  { id:"billing",       icon:"💳", label:"Billing" },
   { id:"profile",       icon:"👤", label:"My Profile" },
 ];
 
@@ -433,6 +435,7 @@ export default function Portal({ onExit }) {
           {page==="documents"     && <PortalDocuments userId={user?.id} P={P}/>}
           {page==="prescriptions" && <PortalPrescriptions userId={user?.id} P={P}/>}
           {page==="visit-notes"   && <PortalVisitNotes userId={user?.id} P={P}/>}
+          {page==="billing"       && <PortalBilling userId={user?.id} P={P}/>}
           {page==="profile"       && <PortalProfile userId={user?.id} displayName={displayName} P={P}/>}
         </div>
 

@@ -29,3 +29,4 @@ export const emailAppointmentCancelled  = (data) => send("appointment_cancelled"
 export const emailNewMessage            = (data) => send("new_message",            data);
 export const emailAppointmentReminder   = (data) => send("appointment_reminder",   data);
 export const emailIntakeSubmitted       = (data) => send("intake_submitted",       data);
+export const emailTelehealthReminder    = (data) => send("telehealth_reminder",    data);

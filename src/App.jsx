@@ -977,7 +977,7 @@ function Programs(){
 
 // ── INSIGHTS ───────────────────────────────────────────────────────────────────
 // ── INSIGHTS ───────────────────────────────────────────────────────────────────
-function Insights(){
+function Insights({ setPage }){
   const { user: authUser } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -1115,6 +1115,53 @@ function Insights(){
           )}
         </GlassCard>
       </div>
+
+      {/* Mia Reflection — emotional pattern detection from journal tags */}
+      <GlassCard style={{marginTop:"1.2rem",background:"linear-gradient(135deg,rgba(124,111,247,0.12),rgba(78,205,196,0.07))",border:"1px solid rgba(124,111,247,0.25)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+          <div style={{width:36,height:36,borderRadius:"50%",background:"var(--grad2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>◎</div>
+          <div>
+            <div style={{fontWeight:700,fontSize:14}}>Mia's Reflection</div>
+            <div style={{fontSize:12,color:"var(--muted)"}}>Emotional patterns from your journal</div>
+          </div>
+        </div>
+        {data.topTags.length === 0 ? (
+          <p style={{color:"var(--muted)",fontSize:13,lineHeight:1.7}}>
+            Start adding tags to your journal entries and I'll reflect on the emotional patterns I notice. Tags like <em>Anxiety</em>, <em>Gratitude</em>, and <em>Stress</em> help me understand what you're working through.
+          </p>
+        ) : (
+          <>
+            <p style={{color:"var(--muted)",fontSize:13,lineHeight:1.7,marginBottom:12}}>
+              {(()=>{
+                const topTag = data.topTags[0]?.name;
+                const stressTags = data.topTags.filter(t=>["Anxiety","Stress"].includes(t.name));
+                const positiveTags = data.topTags.filter(t=>["Gratitude","Joy","Breakthrough","Healing"].includes(t.name));
+                const hasStress = stressTags.length > 0;
+                const hasPositive = positiveTags.length > 0;
+                if(hasStress && hasPositive){
+                  return `I'm noticing a mix of tension and growth in your entries — you're carrying some ${stressTags.map(t=>t.name.toLowerCase()).join(" and ")}, but also moments of ${positiveTags.map(t=>t.name.toLowerCase()).join(" and ")}. That balance takes real awareness.`;
+                } else if(hasStress){
+                  return `Your recent entries show a pattern around ${stressTags.map(t=>t.name.toLowerCase()).join(" and ")}. That's worth acknowledging — you're not ignoring it, and that matters. Consider bringing this up with your clinician or exploring it with me.`;
+                } else if(hasPositive){
+                  return `There's a lot of ${positiveTags.map(t=>t.name.toLowerCase()).join(" and ")} showing up in your journal lately. That's meaningful — you're actively noticing the good, even when things are hard.`;
+                } else {
+                  return `Your most frequent theme is "${topTag}" — you're showing up consistently and that's the foundation of real growth. Keep writing.`;
+                }
+              })()}
+            </p>
+            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>
+              {data.topTags.slice(0,5).map(t=>(
+                <span key={t.name} style={{padding:"4px 12px",borderRadius:20,fontSize:12,background:"rgba(124,111,247,0.15)",color:"var(--lavender)",border:"1px solid rgba(124,111,247,0.25)"}}>
+                  {t.name} <span style={{opacity:0.6}}>×{t.count}</span>
+                </span>
+              ))}
+            </div>
+            <button onClick={()=>{ if(typeof setPage==="function") setPage("mia"); }} style={{background:"transparent",border:"1px solid rgba(124,111,247,0.4)",borderRadius:20,padding:"6px 16px",color:"var(--lavender)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+              Talk to Mia about this →
+            </button>
+          </>
+        )}
+      </GlassCard>
     </div>
   );
 }
@@ -1748,7 +1795,7 @@ export default function App(){
           {user && page==="constellation" && <Constellation/>}
           {user && page==="dailyLight" && <DailyLight/>}
           {user && page==="programs" && <Programs/>}
-          {user && page==="insights" && <Insights/>}
+          {user && page==="insights" && <Insights setPage={setPage}/>}
           {user && page==="premium" && <Premium/>}
           {user && page==="settings" && <Settings user={appUser} setPage={setPage} onSignOut={signOut}/>}        </main>
         {/* Mobile bottom nav */}

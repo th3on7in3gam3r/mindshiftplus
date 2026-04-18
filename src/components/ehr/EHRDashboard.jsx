@@ -4,6 +4,7 @@ import {
   EhrCard, EhrBtn, EhrBadge, StatusBadge,
   Spinner, EhrStyles, formatDate, formatDateTime, age,
 } from "./EHRUI";
+import { EHRBillingAggregate } from "./EHRBilling";
 
 export default function EHRDashboard({ clinician, onOpenChart, onNewChart }) {
   const [charts, setCharts]   = useState([]);
@@ -97,8 +98,10 @@ export default function EHRDashboard({ clinician, onOpenChart, onNewChart }) {
           ))}
         </div>
 
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 320px", gap:20, alignItems:"start" }}>
+        {/* Billing aggregate */}
+        <EHRBillingAggregate />
 
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 320px", gap:20, alignItems:"start" }}>
           {/* Left: Patient list */}
           <div>
             {/* Search + filters */}

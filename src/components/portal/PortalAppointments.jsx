@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { getAppointments, bookAppointment, cancelAppointment } from "../../lib/clinicApi";
 import { PageHeader, Card, SectionDivider, Badge, EmptyState, Alert, Btn, Toast, Input, T } from "./PortalUI";
 
-const TYPES = ["Follow-up","Medication Review","Telehealth","Initial Evaluation"];
+const TYPES = ["Follow-up","Medication Review","Telehealth","Initial Evaluation","Telehealth (Video)"];
 const LOCATIONS = ["Milford — 31 Granite St. Suite #2","Telehealth (Video)"];
 
 const STATUS_DOT = {
@@ -22,6 +22,16 @@ const SLOTS_BY_DOW = {
   6: 8,  // Saturday: 8 slots
 };
 const AVAIL_DAYS = [1, 4, 5, 6];
+
+export function sessionWindowState(scheduledAt, telehealthUrl) {
+  if (!telehealthUrl) return "no_url";
+  const now = Date.now();
+  const start = new Date(scheduledAt).getTime() - 10 * 60 * 1000;
+  const end   = new Date(scheduledAt).getTime() + 60 * 60 * 1000;
+  if (now < start) return "before_window";
+  if (now > end)   return "after_window";
+  return "in_window";
+}
 
 // ── Mini Calendar ──────────────────────────────────────────────────────────────
 function AppointmentCalendar({ appointments, onDayClick, selectedDate, fullDays }) {
@@ -172,24 +182,46 @@ function DayDetail({ date, appointments, onCancel, onClose, isFull }) {
         </div>
       )}
 
-      {dayAppts.map(a => (
-        <div key={a.id} style={{ background:"#fff", borderRadius:12, padding:"0.9rem 1rem", marginBottom:8, border:`1px solid ${T.border}`, display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10 }}>
-          <div>
-            <div style={{ fontWeight:700, fontSize:13, color:T.text, marginBottom:4 }}>{a.appointment_type?.replace(/_/g," ")||"Appointment"}</div>
-            <div style={{ fontSize:12, color:T.muted, display:"flex", flexDirection:"column", gap:2 }}>
-              <span>🕐 {a.scheduled_at ? fmtTime(a.scheduled_at) : "Time TBD"}</span>
-              <span>📍 {a.location||"TBD"}</span>
-              <span>👨‍⚕️ {a.provider_name||"Clinician"}</span>
+      {dayAppts.map(a => {
+        const isTelehealth = a.appointment_type === "telehealth";
+        const winState = isTelehealth ? sessionWindowState(a.scheduled_at, a.telehealth_url) : null;
+        return (
+          <div key={a.id} style={{ background:"#fff", borderRadius:12, padding:"0.9rem 1rem", marginBottom:8, border:`1px solid ${T.border}` }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10 }}>
+              <div>
+                <div style={{ fontWeight:700, fontSize:13, color:T.text, marginBottom:4, display:"flex", alignItems:"center", gap:6 }}>
+                  {a.appointment_type?.replace(/_/g," ")||"Appointment"}
+                  {isTelehealth && <span title="Telehealth">📹</span>}
+                </div>
+                <div style={{ fontSize:12, color:T.muted, display:"flex", flexDirection:"column", gap:2 }}>
+                  <span>🕐 {a.scheduled_at ? fmtTime(a.scheduled_at) : "Time TBD"}</span>
+                  <span>📍 {a.location||"TBD"}</span>
+                  <span>👨‍⚕️ {a.provider_name||"Clinician"}</span>
+                </div>
+              </div>
+              <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6 }}>
+                <Badge status={a.status}/>
+                {a.status==="upcoming"&&(
+                  <button onClick={()=>onCancel(a.id)} style={{ background:"#fee2e2", border:"none", borderRadius:20, padding:"4px 12px", color:"#991b1b", fontSize:11, fontWeight:600, cursor:"pointer" }}>Cancel</button>
+                )}
+              </div>
             </div>
-          </div>
-          <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6 }}>
-            <Badge status={a.status}/>
-            {a.status==="upcoming"&&(
-              <button onClick={()=>onCancel(a.id)} style={{ background:"#fee2e2", border:"none", borderRadius:20, padding:"4px 12px", color:"#991b1b", fontSize:11, fontWeight:600, cursor:"pointer" }}>Cancel</button>
+            {isTelehealth && (
+              <div style={{ marginTop:8 }}>
+                {winState === "in_window" && (
+                  <button onClick={() => window.open(a.telehealth_url, "_blank")} style={{ background:T.accent, border:"none", borderRadius:20, padding:"6px 16px", color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer" }}>📹 Join Video Session</button>
+                )}
+                {winState === "before_window" && (
+                  <span style={{ fontSize:12, color:T.muted }}>Session opens 10 min before your appointment</span>
+                )}
+                {winState === "no_url" && (
+                  <span style={{ fontSize:12, color:T.muted }}>Video link coming soon</span>
+                )}
+              </div>
             )}
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -256,7 +288,10 @@ export default function PortalAppointments({ userId, P }) {
     if(!form.appointment_type) return;
     setSubmitting(true);
     try {
-      await bookAppointment({ patient_id:userId, appointment_type:form.appointment_type.toLowerCase().replace(/ /g,"_"), location:form.location, notes:form.notes, status:"requested" });
+      const normalizedType = form.appointment_type === "Telehealth (Video)"
+        ? "telehealth"
+        : form.appointment_type.toLowerCase().replace(/ /g,"_");
+      await bookAppointment({ patient_id:userId, appointment_type:normalizedType, location:form.location, notes:form.notes, status:"requested" });
       showToast("✓ Request sent! We'll confirm within 1 business day.");
       setShowForm(false); setForm({appointment_type:"",location:"",notes:""}); load();
     } catch { showToast("Something went wrong. Please call (508) 306-1128."); }
@@ -339,6 +374,24 @@ export default function PortalAppointments({ userId, P }) {
             <form onSubmit={handleRequest} style={{ display:"flex", flexDirection:"column", gap:14 }}>
               <Input label="Appointment Type" value={form.appointment_type} onChange={v=>setForm(f=>({...f,appointment_type:v}))} options={TYPES} required/>
               <Input label="Preferred Location" value={form.location} onChange={v=>setForm(f=>({...f,location:v}))} options={LOCATIONS}/>
+              {/* Available times info */}
+              <div style={{ background:`${T.accent}08`, border:`1px solid ${T.accent}20`, borderRadius:12, padding:"12px 14px" }}>
+                <div style={{ fontSize:12, fontWeight:700, color:T.accent, marginBottom:8, textTransform:"uppercase", letterSpacing:"0.05em" }}>📅 Available Days & Times</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                  {[
+                    { day:"Monday",    times:"6:00 PM – 8:00 PM" },
+                    { day:"Thursday",  times:"6:00 PM – 8:00 PM" },
+                    { day:"Friday",    times:"8:00 AM – 5:00 PM" },
+                    { day:"Saturday",  times:"8:00 AM – 5:00 PM" },
+                  ].map(({day,times})=>(
+                    <div key={day} style={{ display:"flex", justifyContent:"space-between", fontSize:12, color:T.text }}>
+                      <span style={{ fontWeight:600 }}>{day}</span>
+                      <span style={{ color:T.muted }}>{times}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ fontSize:11, color:T.muted, marginTop:8 }}>Sessions are 60 minutes. Your clinician will confirm the exact time.</div>
+              </div>
               <Input label="Notes (optional)" value={form.notes} onChange={v=>setForm(f=>({...f,notes:v}))} placeholder="Any specific concerns or requests…" rows={3}/>
               <Alert type="info" icon="ℹ️" title="For urgent needs, call (508) 306-1128 directly."/>
               <div style={{ display:"flex", gap:10 }}>
@@ -391,25 +444,45 @@ export default function PortalAppointments({ userId, P }) {
           {upcoming.length===0 ? (
             <EmptyState icon="📅" title="No upcoming appointments" subtitle="Request an appointment above or call us at (508) 306-1128."
               action={!confirmedUpcoming ? <Btn onClick={()=>setShowForm(true)}>Request Appointment</Btn> : null}/>
-          ) : upcoming.map(a=>(
-            <Card key={a.id} style={{ marginBottom:"0.75rem" }} accent={a.status==="requested"||a.status==="pending"?T.gold:T.green}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:12 }}>
-                <div>
-                  <div style={{ fontWeight:700, fontSize:14, color:T.text, marginBottom:6 }}>{a.appointment_type?.replace(/_/g," ")||"Appointment"}</div>
-                  <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
-                    <span style={{ fontSize:12, color:T.muted }}>📅 {fmt(a.scheduled_at)}</span>
-                    <span style={{ fontSize:12, color:T.muted }}>📍 {a.location||"Location TBD"}</span>
-                    <span style={{ fontSize:12, color:T.muted }}>👨‍⚕️ {a.provider_name}</span>
-                    {a.notes&&<span style={{ fontSize:11, color:T.muted2, fontStyle:"italic", marginTop:2 }}>"{a.notes}"</span>}
+          ) : upcoming.map(a=>{
+            const isTelehealth = a.appointment_type === "telehealth";
+            const winState = isTelehealth ? sessionWindowState(a.scheduled_at, a.telehealth_url) : null;
+            return (
+              <Card key={a.id} style={{ marginBottom:"0.75rem" }} accent={a.status==="requested"||a.status==="pending"?T.gold:T.green}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:12 }}>
+                  <div>
+                    <div style={{ fontWeight:700, fontSize:14, color:T.text, marginBottom:6, display:"flex", alignItems:"center", gap:6 }}>
+                      {a.appointment_type?.replace(/_/g," ")||"Appointment"}
+                      {isTelehealth && <span title="Telehealth">📹</span>}
+                    </div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+                      <span style={{ fontSize:12, color:T.muted }}>📅 {fmt(a.scheduled_at)}</span>
+                      <span style={{ fontSize:12, color:T.muted }}>📍 {a.location||"Location TBD"}</span>
+                      <span style={{ fontSize:12, color:T.muted }}>👨‍⚕️ {a.provider_name}</span>
+                      {a.notes&&<span style={{ fontSize:11, color:T.muted2, fontStyle:"italic", marginTop:2 }}>"{a.notes}"</span>}
+                    </div>
+                    {isTelehealth && (
+                      <div style={{ marginTop:8 }}>
+                        {winState === "in_window" && (
+                          <button onClick={() => window.open(a.telehealth_url, "_blank")} style={{ background:T.accent, border:"none", borderRadius:20, padding:"6px 16px", color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer" }}>📹 Join Video Session</button>
+                        )}
+                        {winState === "before_window" && (
+                          <span style={{ fontSize:12, color:T.muted }}>Session opens 10 min before your appointment</span>
+                        )}
+                        {winState === "no_url" && (
+                          <span style={{ fontSize:12, color:T.muted }}>Video link coming soon</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:8 }}>
+                    <Badge status={a.status}/>
+                    {a.status==="upcoming"&&<Btn variant="danger" small onClick={()=>handleCancel(a.id)}>Cancel</Btn>}
                   </div>
                 </div>
-                <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:8 }}>
-                  <Badge status={a.status}/>
-                  {a.status==="upcoming"&&<Btn variant="danger" small onClick={()=>handleCancel(a.id)}>Cancel</Btn>}
-                </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
 
           {past.length>0&&(
             <>

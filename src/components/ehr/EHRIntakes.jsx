@@ -15,6 +15,7 @@ export default function EHRIntakes({ clinician, onOpenChart }) {
   const [selected, setSelected] = useState(null);
   const [working, setWorking]   = useState(false);
   const [filter, setFilter]     = useState("pending");
+  const [toast, setToast]       = useState("");
 
   useEffect(() => { loadData(); }, []);
 
@@ -27,6 +28,8 @@ export default function EHRIntakes({ clinician, onOpenChart }) {
 
   const filtered = intakes.filter(i => filter === "all" || i.status === filter);
   const pendingCount = intakes.filter(i => i.status === "pending").length;
+
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(""), 4000); };
 
   async function handleMarkReviewed(intake) {
     setWorking(true);
@@ -59,26 +62,34 @@ export default function EHRIntakes({ clinician, onOpenChart }) {
       status:                   "active",
       created_by:               clinician.user_id,
     };
-    const { data: chart } = await upsertChart(chartData);
+    const { data: chart, error } = await upsertChart(chartData);
     if (chart) {
       await markIntakeChartCreated(intake.id);
       setIntakes(prev => prev.map(i => i.id === intake.id ? { ...i, status: "chart_created" } : i));
       setSelected(s => s?.id === intake.id ? { ...s, status: "chart_created" } : s);
       if (onOpenChart) onOpenChart(chart.id);
+    } else {
+      showToast(`❌ Failed to create chart: ${error?.message || "Unknown error"}`);
     }
     setWorking(false);
   }
 
   if (selected) {
-    return <IntakeDetail intake={selected} clinician={clinician} working={working}
-      onBack={() => setSelected(null)}
-      onReview={() => handleMarkReviewed(selected)}
-      onCreateChart={() => handleCreateChart(selected)} />;
+    return (
+      <>
+        {toast && <div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"#1a1f36", borderRadius:30, padding:"10px 20px", fontSize:13, color:"#fff", zIndex:9999, whiteSpace:"nowrap" }}>{toast}</div>}
+        <IntakeDetail intake={selected} clinician={clinician} working={working}
+          onBack={() => setSelected(null)}
+          onReview={() => handleMarkReviewed(selected)}
+          onCreateChart={() => handleCreateChart(selected)} />
+      </>
+    );
   }
 
   return (
     <div className="ehr-root" style={{ padding: "1.8rem 2.5rem", maxWidth: 1000 }}>
       <EhrStyles />
+      {toast && <div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"#1a1f36", borderRadius:30, padding:"10px 20px", fontSize:13, color:"#fff", zIndex:9999, whiteSpace:"nowrap" }}>{toast}</div>}
 
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem", flexWrap: "wrap", gap: 12 }}>

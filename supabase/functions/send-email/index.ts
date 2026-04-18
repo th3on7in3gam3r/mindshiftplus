@@ -217,6 +217,27 @@ Deno.serve(async (req) => {
         break;
       }
 
+      // ── Telehealth reminder ───────────────────────────────────────────────
+      case "telehealth_reminder": {
+        const { name, email, date, time, clinician, telehealth_url } = data;
+        if (!email) break;
+        await sendEmail(email, "Your Telehealth Session is Tomorrow — MindShift Wellness Clinic", base(`
+          <span class="badge badge-purple">Telehealth Reminder</span>
+          <h1>Your video session is tomorrow</h1>
+          <p class="sub">Hi ${name}, here is your join link for tomorrow's telehealth appointment.</p>
+          <table class="dt">
+            <tr><td>📅 Date &amp; Time</td><td>${date} at ${time}</td></tr>
+            <tr><td>👨‍⚕️ Clinician</td><td>${clinician}</td></tr>
+            <tr><td>📍 Location</td><td>Telehealth (Video)</td></tr>
+          </table>
+          <a href="${telehealth_url}" class="btn">📹 Join Video Session</a>
+          <div class="info">• Join from any device with a camera and microphone<br/>
+          • The link opens 10 minutes before your appointment<br/>
+          • Need to reschedule? Call <strong>(508) 306-1128</strong></div>
+        `, "Telehealth reminder — MindShift Wellness Clinic."));
+        break;
+      }
+
       default:
         return new Response(JSON.stringify({ error: `Unknown type: ${type}` }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },

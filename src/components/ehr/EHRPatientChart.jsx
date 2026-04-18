@@ -12,6 +12,7 @@ import {
 } from "./EHRUI";
 import { useTokens } from "../../lib/ThemeContext";
 import EHRClinicalAI from "./EHRClinicalAI";
+import EHRBilling, { CptPicker } from "./EHRBilling";
 
 const TABS = [
   { id: "overview",     label: "Overview",     icon: "🏠" },
@@ -20,6 +21,7 @@ const TABS = [
   { id: "appointments", label: "Appointments", icon: "📅" },
   { id: "messages",     label: "Messages",     icon: "💬" },
   { id: "documents",    label: "Documents",    icon: "📄" },
+  { id: "billing",      label: "Billing",      icon: "💰" },
   { id: "ai",           label: "AI Assistant", icon: "🤖" },
 ];
 
@@ -172,6 +174,8 @@ export default function EHRPatientChart({ chartId, clinician, onBack, isNew = fa
           />
         ) : tab === "documents" ? (
           <DocumentsTab docs={docs} />
+        ) : tab === "billing" ? (
+          <EHRBilling patientId={chart.patient_id} chartId={chart.id} clinician={clinician} />
         ) : tab === "ai" ? (
           <EHRClinicalAI
             chart={chart}
@@ -457,14 +461,16 @@ function NoteForm({ note, chart, clinician, onSaved, onCancel }) {
     follow_up_instructions: note?.follow_up_instructions ?? "",
     follow_up_date: note?.follow_up_date ?? "",
     diagnoses: note?.diagnoses ?? [],
+    cpt_codes: note?.cpt_codes ?? [],
     risk_assessment: note?.risk_assessment ?? { suicidal_ideation: "", homicidal_ideation: "", self_harm: "", substance_use: "", protective_factors: "" },
   });
   const [saving, setSaving] = useState(false);
   const [icdSearch, setIcdSearch] = useState(null);
+  const [cptWarn, setCptWarn] = useState(false);
   const set = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }));
   const setRisk = (key) => (e) => setForm(f => ({ ...f, risk_assessment: { ...f.risk_assessment, [key]: e.target.value } }));
 
-  const handleSubmit = async (e) => { e.preventDefault(); setSaving(true); await onSaved(form); setSaving(false); };
+  const handleSubmit = async (e) => { e.preventDefault(); setSaving(true); if (form.cpt_codes.length === 0) setCptWarn(true); await onSaved(form); setSaving(false); };
 
   return (
     <form onSubmit={handleSubmit}>
@@ -491,8 +497,7 @@ function NoteForm({ note, chart, clinician, onSaved, onCancel }) {
           <EhrInput label="Plan (P)"       value={form.plan}       onChange={set("plan")}       rows={4} placeholder="Interventions, medications, referrals…" />
         </div>
         <EhrCard style={{ padding: "1rem" }}>
-          <SectionHeader title="Note Diagnoses (ICD-10)" action={<EhrBtn small variant="secondary" type="button" onClick={() => setIcdSearch({})}>+ Add</EhrBtn>} />
-          {icdSearch !== null && (
+          <SectionHeader title="Note Diagnoses (ICD-10)" action={<EhrBtn small variant="secondary" type="button" onClick={() => setIcdSearch({})}>+ Add</EhrBtn>} />          {icdSearch !== null && (
             <div style={{ marginBottom: 10 }}>
               <ICD10Picker label="" value={icdSearch} onChange={(item) => { if (item) setForm(f => ({ ...f, diagnoses: [...(f.diagnoses ?? []).filter(d => d.code !== item.code), item] })); setIcdSearch(null); }} />
             </div>
@@ -506,6 +511,19 @@ function NoteForm({ note, chart, clinician, onSaved, onCancel }) {
               </span>
             ))}
           </div>
+        </EhrCard>
+        <EhrCard style={{ padding: "1rem" }}>
+          <div style={{ marginBottom: 8 }}>
+            <CptPicker
+              value={form.cpt_codes}
+              onChange={codes => setForm(f => ({ ...f, cpt_codes: codes }))}
+            />
+          </div>
+          {cptWarn && form.cpt_codes.length === 0 && (
+            <div style={{ fontSize: 12, color: "var(--ehr-gold)", marginTop: 4 }}>
+              ⚠️ No CPT codes selected. Consider adding billing codes before saving.
+            </div>
+          )}
         </EhrCard>
         <EhrCard style={{ padding: "1rem" }}>
           <h3 style={{ fontSize: 14, fontWeight: 700, color: "var(--ehr-rose)", marginBottom: "1rem" }}>Risk Assessment</h3>
@@ -639,7 +657,10 @@ function AppointmentsTab({ appts }) {
         <EhrCard key={a.id} style={{ marginBottom: 8 }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: "var(--ehr-text)" }}>{formatDateTime(a.scheduled_at)}</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "var(--ehr-text)", display: "flex", alignItems: "center", gap: 6 }}>
+                {formatDateTime(a.scheduled_at)}
+                {a.appointment_type === "telehealth" && <span title="Telehealth">📹</span>}
+              </div>
               <div style={{ fontSize: 12, color: "var(--ehr-muted2)", marginTop: 3, display: "flex", gap: 10 }}>
                 {a.appointment_type && <span>{a.appointment_type.replace(/_/g, " ")}</span>}
                 {a.location && <span>{a.location}</span>}
@@ -647,6 +668,14 @@ function AppointmentsTab({ appts }) {
               </div>
               {a.reason && <div style={{ fontSize: 13, color: "var(--ehr-muted)", marginTop: 5 }}>{a.reason}</div>}
               {a.notes  && <div style={{ fontSize: 12, color: "var(--ehr-muted2)", marginTop: 4, fontStyle: "italic" }}>{a.notes}</div>}
+              {a.appointment_type === "telehealth" && a.status === "confirmed" && a.telehealth_url && (
+                <button
+                  onClick={() => window.open(a.telehealth_url, "_blank")}
+                  style={{ marginTop: 8, background: "#3b5bdb", color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit" }}
+                >
+                  📹 Join Video Session
+                </button>
+              )}
             </div>
             <StatusBadge status={a.status} />
           </div>
