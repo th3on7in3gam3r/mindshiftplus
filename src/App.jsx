@@ -1663,7 +1663,7 @@ export default function App(){
       }catch{}
       setPage("dashboard");
       setShowAuth(false);
-    }    if(!user && !["landing"].includes(page)){
+    }    if(!user && !["landing","portal","schedule"].includes(page)){
       setPage("landing");
     }
   },[user, loading]);
