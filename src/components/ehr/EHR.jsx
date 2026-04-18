@@ -1,11 +1,17 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../lib/supabase";
-import { getClinicianRole, isAdminEmail } from "../../lib/ehrDb";
+import { getClinicianRole, isAdminEmail, getTasks, getEhrMessages } from "../../lib/ehrDb";
 import { getPendingIntakes } from "../../lib/intakeDb";
 import EHRLogin from "./EHRLogin";
 import EHRDashboard from "./EHRDashboard";
 import EHRPatientChart from "./EHRPatientChart";
 import EHRIntakes from "./EHRIntakes";
+import EHRSchedule from "./EHRSchedule";
+import EHRTasks from "./EHRTasks";
+import EHRMessages from "./EHRMessages";
+import EHRReports from "./EHRReports";
+import EHRGiftCards from "./EHRGiftCards";
+import EHRInvoices from "./EHRInvoices";
 import { Spinner, EhrStyles } from "./EHRUI";
 
 export default function EHR({ onBack }) {
@@ -16,6 +22,8 @@ export default function EHR({ onBack }) {
   const [view, setView]               = useState("dashboard");
   const [activeChartId, setActiveChartId] = useState(null);
   const [pendingIntakes, setPendingIntakes] = useState(0);
+  const [taskCount, setTaskCount]     = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -50,6 +58,8 @@ export default function EHR({ onBack }) {
         email:     user.email,
       });
       getPendingIntakes().then(({ data }) => { if (mounted) setPendingIntakes(data?.length ?? 0); });
+      getTasks({ status: "open" }).then(({ data }) => { if (mounted) setTaskCount(data?.length ?? 0); });
+      getEhrMessages().then(({ data }) => { if (mounted) setUnreadCount((data ?? []).filter(m => !m.is_read).length); });
       setAuthLoading(false);
       return;
     }
@@ -58,6 +68,8 @@ export default function EHR({ onBack }) {
     if (data) {
       setClinician({ ...data, email: user.email });
       getPendingIntakes().then(({ data: d }) => { if (mounted) setPendingIntakes(d?.length ?? 0); });
+      getTasks({ status: "open" }).then(({ data: d }) => { if (mounted) setTaskCount(d?.length ?? 0); });
+      getEhrMessages().then(({ data: d }) => { if (mounted) setUnreadCount((d ?? []).filter(m => !m.is_read).length); });
     } else {
       // Not authorized — clear session locally without calling signOut (avoids 403)
       setClinician(null);
@@ -133,6 +145,51 @@ export default function EHR({ onBack }) {
               <span style={{ background: "var(--ehr-gold)", color: "#000", fontSize: 10, fontWeight: 800, borderRadius: 20, padding: "1px 7px" }}>{pendingIntakes}</span>
             )}
           </button>
+
+          {/* Phase 9 nav items */}
+          {[
+            { key: "schedule",  label: "Schedule",   color: "teal" },
+            { key: "reports",   label: "Reports",    color: "purple" },
+            { key: "giftcards", label: "Gift Cards", color: "green" },
+            { key: "invoices",  label: "Invoices",   color: "accent" },
+          ].map(({ key, label, color }) => (
+            <button key={key} onClick={() => setView(key)} style={{
+              background: view === key ? `color-mix(in srgb,var(--ehr-${color}) 14%,transparent)` : "transparent",
+              border: view === key ? `1px solid color-mix(in srgb,var(--ehr-${color}) 30%,transparent)` : "1px solid transparent",
+              borderRadius: 8, padding: "5px 12px", cursor: "pointer",
+              color: view === key ? `var(--ehr-${color})` : "var(--ehr-muted)",
+              fontWeight: view === key ? 600 : 400, fontFamily: "inherit", fontSize: 13,
+            }}>{label}</button>
+          ))}
+
+          <button onClick={() => setView("tasks")} style={{
+            background: view === "tasks" ? "color-mix(in srgb,var(--ehr-rose) 14%,transparent)" : "transparent",
+            border: view === "tasks" ? "1px solid color-mix(in srgb,var(--ehr-rose) 30%,transparent)" : "1px solid transparent",
+            borderRadius: 8, padding: "5px 12px", cursor: "pointer",
+            color: view === "tasks" ? "var(--ehr-rose)" : "var(--ehr-muted)",
+            fontWeight: view === "tasks" ? 600 : 400, fontFamily: "inherit", fontSize: 13,
+            display: "flex", alignItems: "center", gap: 6,
+          }}>
+            Tasks
+            {taskCount > 0 && (
+              <span style={{ background: "var(--ehr-rose)", color: "#fff", fontSize: 10, fontWeight: 800, borderRadius: 20, padding: "1px 7px" }}>{taskCount}</span>
+            )}
+          </button>
+
+          <button onClick={() => setView("messages")} style={{
+            background: view === "messages" ? "color-mix(in srgb,var(--ehr-teal) 14%,transparent)" : "transparent",
+            border: view === "messages" ? "1px solid color-mix(in srgb,var(--ehr-teal) 30%,transparent)" : "1px solid transparent",
+            borderRadius: 8, padding: "5px 12px", cursor: "pointer",
+            color: view === "messages" ? "var(--ehr-teal)" : "var(--ehr-muted)",
+            fontWeight: view === "messages" ? 600 : 400, fontFamily: "inherit", fontSize: 13,
+            display: "flex", alignItems: "center", gap: 6,
+          }}>
+            Messages
+            {unreadCount > 0 && (
+              <span style={{ background: "var(--ehr-teal)", color: "#fff", fontSize: 10, fontWeight: 800, borderRadius: 20, padding: "1px 7px" }}>{unreadCount}</span>
+            )}
+          </button>
+
           {(view === "chart" || view === "new-chart") && (
             <>
               <span style={{ color: "var(--ehr-muted2)", fontSize: 16 }}>›</span>
@@ -196,6 +253,12 @@ export default function EHR({ onBack }) {
             onBack={() => setView("dashboard")}
           />
         )}
+        {view === "schedule"  && <EHRSchedule  clinician={clinician} />}
+        {view === "tasks"     && <EHRTasks     clinician={clinician} />}
+        {view === "messages"  && <EHRMessages  clinician={clinician} />}
+        {view === "reports"   && <EHRReports   clinician={clinician} />}
+        {view === "giftcards" && <EHRGiftCards clinician={clinician} />}
+        {view === "invoices"  && <EHRInvoices  clinician={clinician} />}
       </div>
     </div>
   );

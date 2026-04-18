@@ -213,3 +213,65 @@ export async function getDashboardStats() {
     error: charts.error || appts.error,
   };
 }
+
+// ── TASKS ──────────────────────────────────────────────────────────────────────
+export async function getTasks(filters = {}) {
+  let q = supabase.from("ehr_tasks").select("*").order("due_date", { ascending: true, nullsFirst: false });
+  if (filters.status) q = q.eq("status", filters.status);
+  if (filters.patient_id) q = q.eq("patient_id", filters.patient_id);
+  const { data, error } = await q;
+  return { data, error };
+}
+export async function upsertTask(task) {
+  const { data, error } = await supabase.from("ehr_tasks").upsert({ ...task, updated_at: new Date().toISOString() }).select().single();
+  return { data, error };
+}
+export async function deleteTask(id) {
+  const { error } = await supabase.from("ehr_tasks").delete().eq("id", id);
+  return { error };
+}
+
+// ── EHR MESSAGES ───────────────────────────────────────────────────────────────
+export async function getEhrMessages() {
+  const { data, error } = await supabase.from("ehr_messages").select("*").order("created_at", { ascending: false });
+  return { data, error };
+}
+export async function sendEhrMessage(payload) {
+  const { data, error } = await supabase.from("ehr_messages").insert(payload).select().single();
+  return { data, error };
+}
+export async function markEhrMessageRead(id) {
+  const { error } = await supabase.from("ehr_messages").update({ is_read: true }).eq("id", id);
+  return { error };
+}
+
+// ── GIFT CARDS ─────────────────────────────────────────────────────────────────
+export async function getGiftCards() {
+  const { data, error } = await supabase.from("gift_cards").select("*").order("created_at", { ascending: false });
+  return { data, error };
+}
+export async function createGiftCard(payload) {
+  const code = "GC-" + Math.random().toString(36).toUpperCase().slice(2, 10);
+  const { data, error } = await supabase.from("gift_cards").insert({ ...payload, code, balance_cents: payload.amount_cents }).select().single();
+  return { data, error };
+}
+export async function updateGiftCard(id, patch) {
+  const { data, error } = await supabase.from("gift_cards").update(patch).eq("id", id).select().single();
+  return { data, error };
+}
+
+// ── REPORTING ──────────────────────────────────────────────────────────────────
+export async function getReportingData() {
+  const [charts, appts, claims, tasks] = await Promise.all([
+    supabase.from("ehr_charts").select("id, status, created_at, gender, primary_diagnosis"),
+    supabase.from("appointments").select("id, status, scheduled_at, appointment_type").order("scheduled_at", { ascending: false }).limit(200),
+    supabase.from("billing_claims").select("id, claim_status, amount_billed_cents, amount_paid_insurance_cents, patient_responsibility_cents, service_date").order("service_date", { ascending: false }).limit(200),
+    supabase.from("ehr_tasks").select("id, status, priority"),
+  ]);
+  return {
+    charts: charts.data ?? [],
+    appointments: appts.data ?? [],
+    claims: claims.data ?? [],
+    tasks: tasks.data ?? [],
+  };
+}
