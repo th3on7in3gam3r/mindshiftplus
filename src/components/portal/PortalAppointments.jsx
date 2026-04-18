@@ -157,22 +157,56 @@ function DayDetail({ date, appointments, onCancel, onClose, isFull }) {
   const dow = new Date(date+"T12:00:00").getDay();
   const isAvailDay = AVAIL_DAYS.includes(dow);
 
+  // Generate available time slots for this day
+  const getAvailableSlots = () => {
+    if (isPast || !isAvailDay) return [];
+    const slots = [];
+    const dayConfig = { 1: {start:18, end:20}, 4: {start:18, end:20}, 5: {start:8, end:17}, 6: {start:8, end:17} };
+    const config = dayConfig[dow];
+    if (!config) return [];
+    
+    const bookedTimes = dayAppts.map(a => new Date(a.scheduled_at).getHours());
+    for (let h = config.start; h < config.end; h++) {
+      if (!bookedTimes.includes(h)) {
+        slots.push({ hour: h, time: `${h % 12 || 12}:00 ${h >= 12 ? "PM" : "AM"}` });
+      }
+    }
+    return slots;
+  };
+
+  const availableSlots = getAvailableSlots();
+
   return (
     <div style={{ background:`linear-gradient(135deg,${T.accent}08,${T.teal}05)`, border:`1px solid ${T.accent}20`, borderRadius:16, padding:"1.2rem 1.4rem", marginTop:16 }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
         <div>
           <div style={{ fontSize:13, fontWeight:700, color:T.accent }}>📅 {fmtDay(date)}</div>
           <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>
-            {dayAppts.length > 0 ? `${dayAppts.length} appointment${dayAppts.length!==1?"s":""}` : isPast ? "No appointments" : isAvailDay ? "Available for booking" : "Not a clinic day"}
+            {dayAppts.length > 0 ? `${dayAppts.length} appointment${dayAppts.length!==1?"s":""}` : isPast ? "No appointments" : isAvailDay ? `${availableSlots.length} slot${availableSlots.length!==1?"s":""}` : "Not a clinic day"}
           </div>
         </div>
         <button onClick={onClose} style={{ background:"transparent", border:"none", color:T.muted, cursor:"pointer", fontSize:18, lineHeight:1 }}>✕</button>
       </div>
 
-      {dayAppts.length === 0 && !isPast && isAvailDay && !isFull && (
-        <div style={{ background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:10, padding:"0.9rem 1rem", fontSize:13, color:"#166534", display:"flex", gap:8, alignItems:"center" }}>
-          <span style={{ fontSize:16 }}>✅</span>
-          <div>This day has available slots. Use the <strong>+ Request Appointment</strong> button above to book.</div>
+      {dayAppts.length === 0 && !isPast && isAvailDay && !isFull && availableSlots.length > 0 && (
+        <div style={{ background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:10, padding:"0.9rem 1rem", marginBottom:"1rem" }}>
+          <div style={{ fontSize:12, fontWeight:600, color:"#166534", marginBottom:8 }}>✅ Available Times</div>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(80px, 1fr))", gap:6 }}>
+            {availableSlots.map(slot => (
+              <button key={slot.hour} style={{ background:"#dcfce7", border:"1px solid #86efac", borderRadius:8, padding:"6px 8px", fontSize:12, fontWeight:600, color:"#166534", cursor:"pointer", transition:"all .2s" }}
+                onMouseOver={e => { e.currentTarget.style.background="#bbf7d0"; e.currentTarget.style.borderColor="#4ade80"; }}
+                onMouseOut={e => { e.currentTarget.style.background="#dcfce7"; e.currentTarget.style.borderColor="#86efac"; }}
+              >{slot.time}</button>
+            ))}
+          </div>
+          <div style={{ fontSize:11, color:"#166534", marginTop:8, fontStyle:"italic" }}>Select a time above or use the <strong>+ Request Appointment</strong> button to book.</div>
+        </div>
+      )}
+
+      {dayAppts.length === 0 && !isPast && isAvailDay && !isFull && availableSlots.length === 0 && (
+        <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:10, padding:"0.9rem 1rem", fontSize:13, color:"#991b1b", display:"flex", gap:8, alignItems:"center" }}>
+          <span style={{ fontSize:16 }}>🚫</span>
+          <div>All time slots are booked for this day. Please select another date.</div>
         </div>
       )}
 
