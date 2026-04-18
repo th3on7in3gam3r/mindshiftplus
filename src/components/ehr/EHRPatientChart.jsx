@@ -97,22 +97,24 @@ export default function EHRPatientChart({ chartId, clinician, onBack, isNew = fa
         {!editChart && <EhrBtn variant="secondary" small onClick={() => setEditChart(true)}>✏️ Edit Chart</EhrBtn>}
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: 4, padding: "0.6rem 2rem", borderBottom: `1px solid rgba(226,232,240,0.8)`, background: "var(--ehr-surface)", overflowX: "auto" }}>
-        {TABS.map(tb => (
-          <button key={tb.id} onClick={() => setTab(tb.id)} className="ehr-tab-btn" style={{
-            background: tab === tb.id ? `#3b5bdb15` : "transparent",
-            border: tab === tb.id ? `1px solid #3b5bdb35` : "1px solid transparent",
-            borderRadius: 10, padding: "8px 16px",
-            color: tab === tb.id ? "var(--ehr-accent)" : "var(--ehr-muted)",
-            fontSize: 13, fontWeight: tab === tb.id ? 700 : 400,
-            cursor: "pointer", whiteSpace: "nowrap",
-            display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit",
-          }}>
-            <span>{tb.icon}</span>{tb.label}
-          </button>
-        ))}
-      </div>
+      {/* Tabs — hidden when creating a new chart (no chart ID yet) */}
+      {!isNew && (
+        <div style={{ display: "flex", gap: 4, padding: "0.6rem 2rem", borderBottom: `1px solid rgba(226,232,240,0.8)`, background: "var(--ehr-surface)", overflowX: "auto" }}>
+          {TABS.map(tb => (
+            <button key={tb.id} onClick={() => setTab(tb.id)} className="ehr-tab-btn" style={{
+              background: tab === tb.id ? `#3b5bdb15` : "transparent",
+              border: tab === tb.id ? `1px solid #3b5bdb35` : "1px solid transparent",
+              borderRadius: 10, padding: "8px 16px",
+              color: tab === tb.id ? "var(--ehr-accent)" : "var(--ehr-muted)",
+              fontSize: 13, fontWeight: tab === tb.id ? 700 : 400,
+              cursor: "pointer", whiteSpace: "nowrap",
+              display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit",
+            }}>
+              <span>{tb.icon}</span>{tb.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Content */}
       <div style={{ padding: "1.8rem 2.5rem", maxWidth: 1100 }}>
