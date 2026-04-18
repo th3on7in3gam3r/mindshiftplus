@@ -259,7 +259,7 @@ export default function PortalAppointments({ userId, P }) {
   const [showForm, setShowForm]         = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const [fullDays, setFullDays]         = useState([]);
-  const [form, setForm]                 = useState({ appointment_type:"", location:"", notes:"" });
+  const [form, setForm]                 = useState({ appointment_type:"", location:"", notes:"", date:"", time:"" });
   const [submitting, setSubmitting]     = useState(false);
   const [toast, setToast]               = useState("");
   const [view, setView]                 = useState("calendar"); // calendar | list
@@ -418,21 +418,26 @@ export default function PortalAppointments({ userId, P }) {
               {/* Step 1: Select Date */}
               <div>
                 <label style={{ fontSize:12, fontWeight:600, color:T.text, display:"block", marginBottom:8 }}>📅 Preferred Date *</label>
-                <input type="date" value={form.date || ""} onChange={v=>setForm(f=>({...f,date:v}))} style={{ width:"100%", padding:"10px 12px", borderRadius:8, border:`1.5px solid ${T.border}`, fontSize:14, color:T.text, background:"#fff", outline:"none", fontFamily:"inherit" }} required/>
+                <input type="date" value={form.date} onChange={v=>setForm(f=>({...f,date:v}))} style={{ width:"100%", padding:"10px 12px", borderRadius:8, border:`1.5px solid ${T.border}`, fontSize:14, color:T.text, background:"#fff", outline:"none", fontFamily:"inherit" }} required/>
               </div>
 
               {/* Step 2: Select Time (only if date is selected) */}
               {form.date && (() => {
-                const dow = new Date(form.date+"T12:00:00").getDay();
+                const dateObj = new Date(form.date + "T12:00:00");
+                const dow = dateObj.getDay();
                 const dayConfig = { 1: {start:18, end:20}, 4: {start:18, end:20}, 5: {start:8, end:17}, 6: {start:8, end:17} };
                 const config = dayConfig[dow];
-                const slots = [];
-                if (config) {
-                  for (let h = config.start; h < config.end; h++) {
-                    slots.push({ hour: h, time: `${h % 12 || 12}:00 ${h >= 12 ? "PM" : "AM"}` });
-                  }
+                
+                if (!config) {
+                  return <div style={{ background:"#f9fafb", border:`1px solid ${T.border}`, borderRadius:10, padding:"0.9rem 1rem", fontSize:13, color:T.muted }}>The clinic is not open on this day. Available days: <strong>Mon & Thu evenings, Fri & Sat all day</strong>.</div>;
                 }
-                return slots.length > 0 ? (
+                
+                const slots = [];
+                for (let h = config.start; h < config.end; h++) {
+                  slots.push({ hour: h, time: `${h % 12 || 12}:00 ${h >= 12 ? "PM" : "AM"}` });
+                }
+                
+                return (
                   <div>
                     <label style={{ fontSize:12, fontWeight:600, color:T.text, display:"block", marginBottom:8 }}>🕐 Preferred Time *</label>
                     <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(90px, 1fr))", gap:8 }}>
@@ -454,7 +459,7 @@ export default function PortalAppointments({ userId, P }) {
                       ))}
                     </div>
                   </div>
-                ) : null;
+                );
               })()}
 
               <Input label="Appointment Type" value={form.appointment_type} onChange={v=>setForm(f=>({...f,appointment_type:v}))} options={TYPES} required/>
