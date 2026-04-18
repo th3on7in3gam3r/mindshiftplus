@@ -83,36 +83,15 @@ footer p{font-size:.78rem;color:var(--muted2)}
     <h1>Patient <em>Portal</em></h1>
     <p class="sub">Securely access your appointments, records, and care team — all in one place.</p>
 
-    <div class="coming-soon">Coming Soon</div>
-
-    <div class="divider"></div>
-
-    <p style="font-size:.82rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.75rem">In the meantime, reach us directly</p>
-
-    <div class="info-row">
-      <div class="info-item">
-        <span>📞</span>
-        <div>Call or text us at <a href="tel:5083061128">(508) 306-1128</a> to schedule, reschedule, or ask questions.</div>
-      </div>
-      <div class="info-item">
-        <span>✉️</span>
-        <div>Email us at <a href="mailto:info@mindshiftwellnessclinic.org">info@mindshiftwellnessclinic.org</a></div>
-      </div>
-      <div class="info-item">
-        <span>📅</span>
-        <div>Book online using our <a href="#" onclick="window.parent&&window.parent!==window?window.parent.postMessage({type:'mindshift-plus:navigate',page:'schedule'},'*'):window.location.href='/';return false;" style="color:#4a6cf7">scheduling system</a> — free 15-min intro call available.</div>
-      </div>
-    </div>
-
-    <a href="/" class="btn">
-      Open Patient Portal →
+    <a href="/" onclick="try{sessionStorage.setItem('ms_intent','portal')}catch(e){}return true;" class="btn" style="margin-top:1.5rem">
+      Sign In to Patient Portal →
     </a>
     <a href="site-main.html" class="btn-ghost">Return to Clinic Site</a>
   </div>
 </main>
 
 <footer>
-  <p>© 2026 MindShift Wellness Clinic · Patient Portal coming soon</p>
+  <p>© 2026 MindShift Wellness Clinic · Patient Portal</p>
 </footer>
 
 </body>
