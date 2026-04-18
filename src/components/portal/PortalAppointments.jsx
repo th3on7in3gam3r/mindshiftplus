@@ -188,18 +188,10 @@ function DayDetail({ date, appointments, onCancel, onClose, isFull }) {
         <button onClick={onClose} style={{ background:"transparent", border:"none", color:T.muted, cursor:"pointer", fontSize:18, lineHeight:1 }}>✕</button>
       </div>
 
-      {dayAppts.length === 0 && !isPast && isAvailDay && !isFull && availableSlots.length > 0 && (
-        <div style={{ background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:10, padding:"0.9rem 1rem", marginBottom:"1rem" }}>
-          <div style={{ fontSize:12, fontWeight:600, color:"#166534", marginBottom:8 }}>✅ Available Times</div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(80px, 1fr))", gap:6 }}>
-            {availableSlots.map(slot => (
-              <button key={slot.hour} style={{ background:"#dcfce7", border:"1px solid #86efac", borderRadius:8, padding:"6px 8px", fontSize:12, fontWeight:600, color:"#166534", cursor:"pointer", transition:"all .2s" }}
-                onMouseOver={e => { e.currentTarget.style.background="#bbf7d0"; e.currentTarget.style.borderColor="#4ade80"; }}
-                onMouseOut={e => { e.currentTarget.style.background="#dcfce7"; e.currentTarget.style.borderColor="#86efac"; }}
-              >{slot.time}</button>
-            ))}
-          </div>
-          <div style={{ fontSize:11, color:"#166534", marginTop:8, fontStyle:"italic" }}>Select a time above or use the <strong>+ Request Appointment</strong> button to book.</div>
+      {dayAppts.length === 0 && !isPast && isAvailDay && !isFull && availableSlots.length === 0 && (
+        <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:10, padding:"0.9rem 1rem", fontSize:13, color:"#991b1b", display:"flex", gap:8, alignItems:"center" }}>
+          <span style={{ fontSize:16 }}>🚫</span>
+          <div>All time slots are booked for this day. Please select another date.</div>
         </div>
       )}
 
@@ -325,9 +317,26 @@ export default function PortalAppointments({ userId, P }) {
       const normalizedType = form.appointment_type === "Telehealth (Video)"
         ? "telehealth"
         : form.appointment_type.toLowerCase().replace(/ /g,"_");
-      await bookAppointment({ patient_id:userId, appointment_type:normalizedType, location:form.location, notes:form.notes, status:"requested" });
+      
+      // Build scheduled_at from date and time if provided
+      let scheduled_at = null;
+      if (form.date && form.time) {
+        const [hour] = form.time.split(':');
+        scheduled_at = new Date(`${form.date}T${hour}:00:00`).toISOString();
+      }
+      
+      await bookAppointment({ 
+        patient_id:userId, 
+        appointment_type:normalizedType, 
+        location:form.location, 
+        notes:form.notes, 
+        status:"requested",
+        scheduled_at: scheduled_at
+      });
       showToast("✓ Request sent! We'll confirm within 1 business day.");
-      setShowForm(false); setForm({appointment_type:"",location:"",notes:""}); load();
+      setShowForm(false); 
+      setForm({appointment_type:"",location:"",notes:"",date:"",time:""}); 
+      load();
     } catch { showToast("Something went wrong. Please call (508) 306-1128."); }
     setSubmitting(false);
   };
@@ -397,7 +406,7 @@ export default function PortalAppointments({ userId, P }) {
       {/* Request modal — only shown when no confirmed upcoming */}
       {showForm && !confirmedUpcoming && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", zIndex:300, display:"flex", alignItems:"center", justifyContent:"center", padding:"1rem", backdropFilter:"blur(4px)" }}>
-          <div style={{ background:"#fff", borderRadius:24, padding:"2rem", maxWidth:480, width:"100%", boxShadow:"0 20px 60px rgba(0,0,0,0.15)" }}>
+          <div style={{ background:"#fff", borderRadius:24, padding:"2rem", maxWidth:520, width:"100%", boxShadow:"0 20px 60px rgba(0,0,0,0.15)", maxHeight:"90vh", overflowY:"auto" }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"1.5rem" }}>
               <div>
                 <h2 style={{ fontSize:"1.2rem", fontWeight:700, color:T.text, margin:0 }}>Request an Appointment</h2>
@@ -406,26 +415,50 @@ export default function PortalAppointments({ userId, P }) {
               <button onClick={()=>setShowForm(false)} style={{ background:"#f3f4f6", border:"none", borderRadius:"50%", width:32, height:32, fontSize:16, cursor:"pointer", color:T.muted }}>✕</button>
             </div>
             <form onSubmit={handleRequest} style={{ display:"flex", flexDirection:"column", gap:14 }}>
+              {/* Step 1: Select Date */}
+              <div>
+                <label style={{ fontSize:12, fontWeight:600, color:T.text, display:"block", marginBottom:8 }}>📅 Preferred Date *</label>
+                <input type="date" value={form.date || ""} onChange={v=>setForm(f=>({...f,date:v}))} style={{ width:"100%", padding:"10px 12px", borderRadius:8, border:`1.5px solid ${T.border}`, fontSize:14, color:T.text, background:"#fff", outline:"none", fontFamily:"inherit" }} required/>
+              </div>
+
+              {/* Step 2: Select Time (only if date is selected) */}
+              {form.date && (() => {
+                const dow = new Date(form.date+"T12:00:00").getDay();
+                const dayConfig = { 1: {start:18, end:20}, 4: {start:18, end:20}, 5: {start:8, end:17}, 6: {start:8, end:17} };
+                const config = dayConfig[dow];
+                const slots = [];
+                if (config) {
+                  for (let h = config.start; h < config.end; h++) {
+                    slots.push({ hour: h, time: `${h % 12 || 12}:00 ${h >= 12 ? "PM" : "AM"}` });
+                  }
+                }
+                return slots.length > 0 ? (
+                  <div>
+                    <label style={{ fontSize:12, fontWeight:600, color:T.text, display:"block", marginBottom:8 }}>🕐 Preferred Time *</label>
+                    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(90px, 1fr))", gap:8 }}>
+                      {slots.map(slot => (
+                        <button key={slot.hour} type="button" onClick={()=>setForm(f=>({...f,time:`${slot.hour}:00`}))} style={{
+                          background: form.time === `${slot.hour}:00` ? T.accent : "#f3f4f6",
+                          border: form.time === `${slot.hour}:00` ? `2px solid ${T.accent}` : `1.5px solid ${T.border}`,
+                          borderRadius:8,
+                          padding:"10px 8px",
+                          fontSize:13,
+                          fontWeight: form.time === `${slot.hour}:00` ? 700 : 500,
+                          color: form.time === `${slot.hour}:00` ? "#fff" : T.text,
+                          cursor:"pointer",
+                          transition:"all .2s",
+                        }}
+                          onMouseOver={e => { if(form.time !== `${slot.hour}:00`) e.currentTarget.style.background = `${T.accent}15`; }}
+                          onMouseOut={e => { if(form.time !== `${slot.hour}:00`) e.currentTarget.style.background = "#f3f4f6"; }}
+                        >{slot.time}</button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+
               <Input label="Appointment Type" value={form.appointment_type} onChange={v=>setForm(f=>({...f,appointment_type:v}))} options={TYPES} required/>
               <Input label="Preferred Location" value={form.location} onChange={v=>setForm(f=>({...f,location:v}))} options={LOCATIONS}/>
-              {/* Available times info */}
-              <div style={{ background:`${T.accent}08`, border:`1px solid ${T.accent}20`, borderRadius:12, padding:"12px 14px" }}>
-                <div style={{ fontSize:12, fontWeight:700, color:T.accent, marginBottom:8, textTransform:"uppercase", letterSpacing:"0.05em" }}>📅 Available Days & Times</div>
-                <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-                  {[
-                    { day:"Monday",    times:"6:00 PM – 8:00 PM" },
-                    { day:"Thursday",  times:"6:00 PM – 8:00 PM" },
-                    { day:"Friday",    times:"8:00 AM – 5:00 PM" },
-                    { day:"Saturday",  times:"8:00 AM – 5:00 PM" },
-                  ].map(({day,times})=>(
-                    <div key={day} style={{ display:"flex", justifyContent:"space-between", fontSize:12, color:T.text }}>
-                      <span style={{ fontWeight:600 }}>{day}</span>
-                      <span style={{ color:T.muted }}>{times}</span>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ fontSize:11, color:T.muted, marginTop:8 }}>Sessions are 60 minutes. Your clinician will confirm the exact time.</div>
-              </div>
               <Input label="Notes (optional)" value={form.notes} onChange={v=>setForm(f=>({...f,notes:v}))} placeholder="Any specific concerns or requests…" rows={3}/>
               <Alert type="info" icon="ℹ️" title="For urgent needs, call (508) 306-1128 directly."/>
               <div style={{ display:"flex", gap:10 }}>
