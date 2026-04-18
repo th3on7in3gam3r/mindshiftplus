@@ -185,17 +185,17 @@ export async function sendClinicianMessage(patientId, subject, body, threadId = 
 // ── DASHBOARD STATS ────────────────────────────────────────────────────────────
 export async function getDashboardStats() {
   const [charts, appts] = await Promise.all([
-    supabase.from("ehr_charts").select("id, status", { count: "exact" }),
+    supabase.from("ehr_charts").select("id, status"),
     supabase
       .from("appointments")
-      .select("id, status, scheduled_at")
+      .select("id, status, scheduled_at, name, appointment_type")
       .gte("scheduled_at", new Date().toISOString())
       .order("scheduled_at", { ascending: true })
       .limit(10),
   ]);
 
   return {
-    totalPatients: charts.count ?? 0,
+    totalPatients: (charts.data ?? []).length,
     activePatients: (charts.data ?? []).filter((c) => c.status === "active").length,
     upcomingAppointments: appts.data ?? [],
     error: charts.error || appts.error,

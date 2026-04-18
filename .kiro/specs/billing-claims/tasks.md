@@ -74,7 +74,7 @@ Implement the full billing lifecycle on top of the existing React 19 + Vite + Su
 - [ ] 4. Checkpoint — Ensure all `billingDb.js` tests pass
   - Run `npm test` and confirm all property tests and unit tests in `src/tests/` pass. Ask the user if any test failures arise.
 
-- [-] 5. Implement `src/components/ehr/EHRBilling.jsx` — `CptPicker` and `BalanceSummary`
+- [x] 5. Implement `src/components/ehr/EHRBilling.jsx` — `CptPicker` and `BalanceSummary`
   - Create `EHRBilling.jsx` with a named export `CptPicker` and a named export `BalanceSummary`
   - `CptPicker`: multi-select picker backed by `CPT_CODES`; renders a search input using `filterCptCodes`; selected codes shown as removable chips displaying both code and description; accepts `value` (array of CptCode) and `onChange` props
   - `BalanceSummary`: displays `computePatientBalance(claims)` formatted via `formatCents`; amber/red color when balance > 0; "No Balance Due" indicator when balance ≤ 0

@@ -186,7 +186,9 @@ function IntakeDetail({ intake, clinician, working, onBack, onReview, onCreateCh
   const Row = ({ label, value, wide }) => (
     <div style={{ gridColumn: wide ? "1 / -1" : "auto" }}>
       <div style={{ fontSize: 10, fontWeight: 600, color: "var(--ehr-muted2)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>{label}</div>
-      <div style={{ fontSize: 13, color: value ? "var(--ehr-text)" : "var(--ehr-muted2)", fontStyle: !value ? "italic" : "normal" }}>{value || "Not provided"}</div>
+      <div style={{ fontSize: 13, color: (value !== null && value !== undefined && value !== "") ? "var(--ehr-text)" : "var(--ehr-muted2)", fontStyle: (value === null || value === undefined || value === "") ? "italic" : "normal" }}>
+        {(value === null || value === undefined || value === "") ? "Not provided" : String(value)}
+      </div>
     </div>
   );
 
@@ -267,8 +269,8 @@ function IntakeDetail({ intake, clinician, working, onBack, onReview, onCreateCh
       <Section title="Mental Health History" color="var(--ehr-purple)">
         <Row label="Reason for Visit" value={intake.reason_for_visit} wide />
         <Row label="Duration of Symptoms" value={intake.symptoms_duration} />
-        <Row label="Previous Therapy" value={intake.previous_therapy ? "Yes" : "No"} />
-        <Row label="Previous Psychiatry" value={intake.previous_psychiatry ? "Yes" : "No"} />
+        <Row label="Previous Therapy" value={intake.previous_therapy === true ? "Yes" : intake.previous_therapy === false ? "No" : null} />
+        <Row label="Previous Psychiatry" value={intake.previous_psychiatry === true ? "Yes" : intake.previous_psychiatry === false ? "No" : null} />
         <Row label="Prior Treatment Notes" value={intake.previous_treatment_notes} wide />
         <Row label="Prior Diagnoses" value={intake.previous_diagnoses} wide />
         <Row label="Family Mental Health History" value={intake.family_mental_health} wide />
