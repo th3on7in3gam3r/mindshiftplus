@@ -10,6 +10,8 @@ import {
   StatusBadge, SectionHeader, Divider, Spinner, EhrStyles,
   formatDate, formatDateTime, age,
 } from "./EHRUI";
+import { useTokens } from "../../lib/ThemeContext";
+import EHRClinicalAI from "./EHRClinicalAI";
 
 const TABS = [
   { id: "overview",     label: "Overview",     icon: "🏠" },
@@ -18,6 +20,7 @@ const TABS = [
   { id: "appointments", label: "Appointments", icon: "📅" },
   { id: "messages",     label: "Messages",     icon: "💬" },
   { id: "documents",    label: "Documents",    icon: "📄" },
+  { id: "ai",           label: "AI Assistant", icon: "🤖" },
 ];
 
 export default function EHRPatientChart({ chartId, clinician, onBack, isNew = false, newPatientId = null }) {
@@ -167,6 +170,14 @@ export default function EHRPatientChart({ chartId, clinician, onBack, isNew = fa
           />
         ) : tab === "documents" ? (
           <DocumentsTab docs={docs} />
+        ) : tab === "ai" ? (
+          <EHRClinicalAI
+            chart={chart}
+            notes={notes}
+            meds={meds}
+            appts={appts}
+            clinician={clinician}
+          />
         ) : null}
       </div>
     </div>
