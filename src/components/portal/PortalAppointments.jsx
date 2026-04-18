@@ -416,10 +416,7 @@ export default function PortalAppointments({ userId, P }) {
             </div>
             <form onSubmit={handleRequest} style={{ display:"flex", flexDirection:"column", gap:14 }}>
               {/* Step 1: Select Date */}
-              <div>
-                <label style={{ fontSize:12, fontWeight:600, color:T.text, display:"block", marginBottom:8 }}>📅 Preferred Date *</label>
-                <input type="date" value={form.date} onChange={v=>setForm(f=>({...f,date:v}))} style={{ width:"100%", padding:"10px 12px", borderRadius:8, border:`1.5px solid ${T.border}`, fontSize:14, color:T.text, background:"#fff", outline:"none", fontFamily:"inherit" }} required/>
-              </div>
+              <Input label="📅 Preferred Date" type="date" value={form.date} onChange={v=>setForm(f=>({...f,date:v}))} required/>
 
               {/* Step 2: Select Time (only if date is selected) */}
               {form.date && (() => {
