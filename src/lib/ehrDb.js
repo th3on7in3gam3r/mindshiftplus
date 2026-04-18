@@ -49,9 +49,21 @@ export async function getChartByPatient(patientId) {
 }
 
 export async function upsertChart(chartData) {
+  // Allowed columns in ehr_charts — strip anything else to avoid 400 errors
+  const ALLOWED = new Set([
+    "id","patient_id","mrn","full_name","date_of_birth","gender","pronouns",
+    "phone","address","emergency_contact_name","emergency_contact_phone",
+    "insurance_provider","insurance_member_id","insurance_group",
+    "primary_diagnosis","primary_diagnosis_label","secondary_diagnoses",
+    "allergies","pharmacy","referral_source","intake_date","status","flags",
+    "created_by","created_at","updated_at",
+  ]);
+  const safe = Object.fromEntries(
+    Object.entries(chartData).filter(([k]) => ALLOWED.has(k))
+  );
   const { data, error } = await supabase
     .from("ehr_charts")
-    .upsert({ ...chartData, updated_at: new Date().toISOString() })
+    .upsert({ ...safe, updated_at: new Date().toISOString() })
     .select()
     .single();
   return { data, error };
