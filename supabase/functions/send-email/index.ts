@@ -32,7 +32,8 @@ body{background:#f0f4ff;font-family:'Helvetica Neue',Arial,sans-serif;color:#1a1
 .outer{padding:40px 16px}.container{max-width:560px;margin:0 auto}
 .header{text-align:center;margin-bottom:24px}
 .logo{display:inline-flex;align-items:center;gap:10px;background:#fff;border-radius:14px;padding:10px 18px;box-shadow:0 2px 8px rgba(74,108,247,0.1)}
-.logo-icon{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,#4a6cf7,#0ea5a0);display:flex;align-items:center;justify-content:center;font-size:18px}
+.logo-icon{width:36px;height:36px;border-radius:9px;background:transparent;display:flex;align-items:center;justify-content:center;font-size:18px;overflow:hidden}
+.logo-icon img{width:100%;height:100%;object-fit:contain}
 .logo-name{font-size:14px;font-weight:700;color:#1a1f36}.logo-sub{font-size:11px;color:#6b7280}
 .card{background:#fff;border-radius:20px;padding:36px 32px;box-shadow:0 4px 24px rgba(74,108,247,0.08);margin-bottom:16px}
 .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:16px}
@@ -54,7 +55,7 @@ table.dt td:last-child{font-weight:600;color:#1a1f36;text-align:right}
 </style></head><body>
 <div class="outer"><div class="container">
 <div class="header"><div class="logo">
-  <div class="logo-icon">🏥</div>
+  <div class="logo-icon"><img src="https://www.mindshiftwellnessclinic.org/logo.png" alt="MindShift Wellness Clinic" style="width:36px;height:36px;border-radius:9px;object-fit:contain"/></div>
   <div><div class="logo-name">MindShift Wellness Clinic</div><div class="logo-sub">Where Minds Shift and Healing Begins</div></div>
 </div></div>
 <div class="card">${content}</div>
