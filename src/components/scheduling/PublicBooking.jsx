@@ -294,7 +294,7 @@ export default function PublicBooking({ onBack }) {
       {/* Header */}
       <div style={{ background:"#fff", borderBottom:`1px solid ${C.border}`, padding:"1rem 5%", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <div style={{ width:36, height:36, borderRadius:9, background:`linear-gradient(135deg,${C.violet},${C.teal})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>🏥</div>
+          <img src="/logo.png" alt="MindShift Wellness Clinic" style={{ width:36, height:36, borderRadius:9, objectFit:"contain" }}/>
           <div>
             <div style={{ fontSize:14, fontWeight:700, color:C.txt }}>MindShift Wellness Clinic</div>
             <div style={{ fontSize:11, color:C.muted }}>Book an Appointment</div>
