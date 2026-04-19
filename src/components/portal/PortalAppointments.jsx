@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { getAppointments, bookAppointment, cancelAppointment } from "../../lib/clinicApi";
 import { PageHeader, Card, SectionDivider, Badge, EmptyState, Alert, Btn, Toast, Input, T } from "./PortalUI";
+import { useAuth } from "../../lib/AuthContext";
 
 const TYPES = ["Follow-up","Medication Review","Telehealth","Initial Evaluation","Telehealth (Video)"];
 const LOCATIONS = ["Milford — 31 Granite St. Suite #2","Telehealth (Video)"];
@@ -254,6 +255,7 @@ function DayDetail({ date, appointments, onCancel, onClose, isFull }) {
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 export default function PortalAppointments({ userId, P }) {
+  const { user } = useAuth();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading]           = useState(true);
   const [showForm, setShowForm]         = useState(false);
@@ -325,8 +327,13 @@ export default function PortalAppointments({ userId, P }) {
         scheduled_at = new Date(`${form.date}T${hour}:00:00`).toISOString();
       }
       
+      // Get patient name from user email or user metadata
+      const patientName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || "Patient";
+      
       await bookAppointment({ 
-        patient_id:userId, 
+        patient_id:userId,
+        name: patientName,
+        email: user?.email,
         appointment_type:normalizedType, 
         location:form.location, 
         notes:form.notes, 
