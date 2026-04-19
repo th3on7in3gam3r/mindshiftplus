@@ -826,22 +826,496 @@ function Journal(){
 
 // ── BREATHE ────────────────────────────────────────────────────────────────────
 function Breathe(){
-  const [key,setKey]=useState(0);
-  const reload=useCallback(()=>setKey(k=>k+1),[]);
-  return(
-    <div style={{height:"calc(100vh - 60px)",display:"flex",flexDirection:"column"}}>
-      <div style={{padding:"1rem 1.5rem",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
-        <div style={{fontWeight:700,fontSize:16}}>Breathe</div>
-        <div style={{color:"var(--muted)",fontSize:13}}>Immersive breathing session</div>
-        <div style={{marginLeft:"auto"}}><Btn variant="secondary" small onClick={reload}>Reload</Btn></div>
+  const [selectedMode, setSelectedMode] = useState('box');
+  const [selectedDuration, setSelectedDuration] = useState(3);
+  const [isActive, setIsActive] = useState(false);
+  const [currentPhase, setCurrentPhase] = useState(0);
+  const [countdown, setCountdown] = useState(0);
+  const [cycles, setCycles] = useState(0);
+  const [timeElapsed, setTimeElapsed] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+
+  const breathingModes = {
+    box: {
+      name: 'Box Breathing',
+      pattern: '4 · 4 · 4 · 4',
+      phases: [
+        { name: 'Inhale', duration: 4, color: '#6b5fcf' },
+        { name: 'Hold', duration: 4, color: '#9d8ff0' },
+        { name: 'Exhale', duration: 4, color: '#c5bff8' },
+        { name: 'Hold', duration: 4, color: '#9d8ff0' }
+      ],
+      description: 'Equal sides. Builds focus and grounding. Used by Navy SEALs.',
+      icon: '◻'
+    },
+    '478': {
+      name: '4-7-8 Breathing',
+      pattern: '4 · 7 · 8',
+      phases: [
+        { name: 'Inhale', duration: 4, color: '#2a9d8f' },
+        { name: 'Hold', duration: 7, color: '#4ecdc4' },
+        { name: 'Exhale', duration: 8, color: '#a8e6e2' }
+      ],
+      description: 'Deep calm. Activates the parasympathetic nervous system instantly.',
+      icon: '◑'
+    },
+    calm: {
+      name: 'Calm Reset',
+      pattern: '4 · 6',
+      phases: [
+        { name: 'Inhale', duration: 4, color: '#8b5cf6' },
+        { name: 'Exhale', duration: 6, color: '#a78bfa' }
+      ],
+      description: 'Extended exhale. Slows the heart rate. Best for anxiety.',
+      icon: '〜'
+    },
+    sleep: {
+      name: 'Sleep Wind-Down',
+      pattern: '4 · 4 · 8',
+      phases: [
+        { name: 'Inhale', duration: 4, color: '#1e3a5f' },
+        { name: 'Hold', duration: 4, color: '#2d6a9f' },
+        { name: 'Exhale', duration: 8, color: '#7eb8e8' }
+      ],
+      description: 'Wind down the mind. Prepares body for deep rest.',
+      icon: '◌'
+    }
+  };
+
+  const currentMode = breathingModes[selectedMode];
+  const currentPhaseData = currentMode.phases[currentPhase];
+
+  useEffect(() => {
+    let interval;
+    if (isActive && !isPaused) {
+      interval = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            // Move to next phase
+            setCurrentPhase(prevPhase => {
+              const nextPhase = (prevPhase + 1) % currentMode.phases.length;
+              if (nextPhase === 0) {
+                setCycles(prevCycles => prevCycles + 1);
+              }
+              return nextPhase;
+            });
+            return currentMode.phases[(currentPhase + 1) % currentMode.phases.length].duration;
+          }
+          return prev - 1;
+        });
+        
+        setTimeElapsed(prev => prev + 1);
+        
+        // Check if session is complete
+        if (timeElapsed >= selectedDuration * 60) {
+          setIsActive(false);
+          setCurrentPhase(0);
+          setCountdown(0);
+        }
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isActive, isPaused, currentPhase, currentMode.phases, selectedDuration, timeElapsed]);
+
+  const startSession = () => {
+    setIsActive(true);
+    setCurrentPhase(0);
+    setCountdown(currentMode.phases[0].duration);
+    setCycles(0);
+    setTimeElapsed(0);
+    setIsPaused(false);
+  };
+
+  const stopSession = () => {
+    setIsActive(false);
+    setCurrentPhase(0);
+    setCountdown(0);
+    setCycles(0);
+    setTimeElapsed(0);
+    setIsPaused(false);
+  };
+
+  const togglePause = () => {
+    setIsPaused(!isPaused);
+  };
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getOrbScale = () => {
+    if (!isActive) return 1;
+    if (currentPhaseData.name === 'Inhale') return 1.3;
+    if (currentPhaseData.name === 'Exhale') return 0.7;
+    return 1.1;
+  };
+
+  if (isActive) {
+    return (
+      <div style={{
+        height: "100vh",
+        background: "linear-gradient(135deg, #04060f, #0d1228)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "#fff",
+        padding: "1rem",
+        position: "relative"
+      }}>
+        {/* Header */}
+        <div style={{
+          position: "absolute",
+          top: "1.5rem",
+          left: "1.5rem",
+          right: "1.5rem",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          zIndex: 10
+        }}>
+          <div style={{ fontSize: "1.2rem", fontWeight: 600, opacity: 0.7 }}>
+            MindShift<span style={{ color: "#9d8ff0" }}>+</span>
+          </div>
+          <button
+            onClick={stopSession}
+            style={{
+              background: "rgba(255,255,255,0.1)",
+              border: "1px solid rgba(255,255,255,0.2)",
+              color: "rgba(255,255,255,0.7)",
+              padding: "0.5rem 1rem",
+              borderRadius: "2rem",
+              fontSize: "0.8rem",
+              cursor: "pointer"
+            }}
+          >
+            ← End Session
+          </button>
+        </div>
+
+        {/* Phase Indicators */}
+        <div style={{
+          display: "flex",
+          gap: "0.5rem",
+          marginBottom: "2rem",
+          flexWrap: "wrap",
+          justifyContent: "center"
+        }}>
+          {currentMode.phases.map((phase, index) => (
+            <div
+              key={index}
+              style={{
+                width: "8px",
+                height: "8px",
+                borderRadius: "50%",
+                background: index === currentPhase ? phase.color : "rgba(255,255,255,0.2)",
+                transition: "all 0.3s ease"
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Main Orb */}
+        <div style={{
+          width: "min(60vw, 280px)",
+          height: "min(60vw, 280px)",
+          borderRadius: "50%",
+          background: `radial-gradient(circle at 40% 35%, ${currentPhaseData.color}aa, ${currentPhaseData.color}66, ${currentPhaseData.color}33)`,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          transform: `scale(${getOrbScale()})`,
+          transition: "all 1s ease-in-out",
+          boxShadow: `0 0 60px ${currentPhaseData.color}44`,
+          marginBottom: "2rem",
+          position: "relative"
+        }}>
+          <div style={{
+            fontSize: "clamp(1.2rem, 4vw, 1.8rem)",
+            fontWeight: 300,
+            marginBottom: "0.5rem",
+            opacity: 0.9
+          }}>
+            {currentPhaseData.name}
+          </div>
+          <div style={{
+            fontSize: "clamp(2.5rem, 8vw, 4rem)",
+            fontWeight: 300,
+            lineHeight: 1
+          }}>
+            {countdown}
+          </div>
+        </div>
+
+        {/* Phase Strip */}
+        <div style={{
+          display: "flex",
+          background: "rgba(255,255,255,0.05)",
+          borderRadius: "2rem",
+          overflow: "hidden",
+          marginBottom: "2rem",
+          border: "1px solid rgba(255,255,255,0.1)"
+        }}>
+          {currentMode.phases.map((phase, index) => (
+            <div
+              key={index}
+              style={{
+                padding: "0.5rem 1rem",
+                fontSize: "0.75rem",
+                color: index === currentPhase ? "#fff" : "rgba(255,255,255,0.4)",
+                background: index === currentPhase ? "rgba(107,95,207,0.3)" : "transparent",
+                transition: "all 0.3s ease",
+                whiteSpace: "nowrap"
+              }}
+            >
+              {phase.name}
+            </div>
+          ))}
+        </div>
+
+        {/* Stats */}
+        <div style={{
+          display: "flex",
+          gap: "2rem",
+          alignItems: "center",
+          justifyContent: "center",
+          opacity: 0.7,
+          flexWrap: "wrap"
+        }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: "1.4rem", fontWeight: 300 }}>{cycles}</div>
+            <div style={{ fontSize: "0.7rem", opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.1em" }}>Cycles</div>
+          </div>
+          <div style={{ width: "1px", height: "28px", background: "rgba(255,255,255,0.2)" }} />
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: "1.4rem", fontWeight: 300 }}>{formatTime(timeElapsed)}</div>
+            <div style={{ fontSize: "0.7rem", opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.1em" }}>Elapsed</div>
+          </div>
+          <div style={{ width: "1px", height: "28px", background: "rgba(255,255,255,0.2)" }} />
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: "1.4rem", fontWeight: 300 }}>{formatTime(Math.max(0, selectedDuration * 60 - timeElapsed))}</div>
+            <div style={{ fontSize: "0.7rem", opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.1em" }}>Remaining</div>
+          </div>
+        </div>
+
+        {/* Controls */}
+        <div style={{
+          position: "absolute",
+          bottom: "2rem",
+          right: "2rem",
+          display: "flex",
+          gap: "0.5rem"
+        }}>
+          <button
+            onClick={togglePause}
+            style={{
+              width: "40px",
+              height: "40px",
+              borderRadius: "50%",
+              background: "rgba(255,255,255,0.1)",
+              border: "1px solid rgba(255,255,255,0.2)",
+              color: "rgba(255,255,255,0.7)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "0.9rem"
+            }}
+          >
+            {isPaused ? '▶' : '⏸'}
+          </button>
+        </div>
+
+        {/* Instruction */}
+        <div style={{
+          position: "absolute",
+          bottom: "4rem",
+          left: "50%",
+          transform: "translateX(-50%)",
+          fontSize: "1rem",
+          fontStyle: "italic",
+          color: "rgba(255,255,255,0.3)",
+          textAlign: "center",
+          maxWidth: "80%"
+        }}>
+          Follow the orb. Let your breath do the rest.
+        </div>
       </div>
-      <div style={{flex:1,minHeight:0,height:"calc(100vh - 140px)"}}>
-        <iframe key={key} title="MindShift+ Breathe" src="/breathe.html"
-          style={{border:"none",width:"100%",height:"100%",display:"block",background:"#04060f"}}
-          allow="autoplay"/>
+    );
+  }
+
+  return (
+    <div style={{
+      minHeight: "100vh",
+      background: "linear-gradient(135deg, #04060f, #0d1228)",
+      color: "#fff",
+      padding: "2rem 1rem",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center"
+    }}>
+      {/* Header */}
+      <div style={{
+        textAlign: "center",
+        marginBottom: "3rem",
+        maxWidth: "600px"
+      }}>
+        <div style={{
+          fontSize: "0.7rem",
+          fontWeight: 600,
+          letterSpacing: "0.2em",
+          textTransform: "uppercase",
+          color: "#9d8ff0",
+          marginBottom: "1rem",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "0.5rem"
+        }}>
+          <div style={{ flex: 1, height: "1px", background: "rgba(157,143,240,0.3)" }} />
+          Breathe
+          <div style={{ flex: 1, height: "1px", background: "rgba(157,143,240,0.3)" }} />
+        </div>
+        <h1 style={{
+          fontSize: "clamp(2rem, 5vw, 3.2rem)",
+          fontWeight: 300,
+          lineHeight: 1.1,
+          marginBottom: "0.5rem",
+          letterSpacing: "-0.02em"
+        }}>
+          Choose your <em style={{ fontStyle: "italic", color: "#c5bff8" }}>breath</em>
+        </h1>
+        <p style={{
+          fontSize: "0.9rem",
+          color: "rgba(255,255,255,0.5)",
+          lineHeight: 1.7,
+          marginBottom: "0"
+        }}>
+          Each technique is a different doorway to calm.<br />
+          Pick what your body is asking for right now.
+        </p>
       </div>
+
+      {/* Mode Selection */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+        gap: "1rem",
+        maxWidth: "900px",
+        width: "100%",
+        marginBottom: "2rem"
+      }}>
+        {Object.entries(breathingModes).map(([key, mode]) => (
+          <div
+            key={key}
+            onClick={() => setSelectedMode(key)}
+            style={{
+              background: selectedMode === key ? "rgba(107,95,207,0.15)" : "rgba(255,255,255,0.04)",
+              border: selectedMode === key ? "1px solid rgba(157,143,240,0.7)" : "1px solid rgba(255,255,255,0.08)",
+              borderRadius: "20px",
+              padding: "1.5rem",
+              textAlign: "center",
+              cursor: "pointer",
+              transition: "all 0.3s ease",
+              transform: selectedMode === key ? "translateY(-2px)" : "translateY(0)"
+            }}
+          >
+            <div style={{ fontSize: "1.8rem", marginBottom: "0.75rem" }}>{mode.icon}</div>
+            <div style={{
+              fontSize: "1.1rem",
+              fontWeight: 400,
+              color: "rgba(255,255,255,0.9)",
+              marginBottom: "0.3rem"
+            }}>
+              {mode.name}
+            </div>
+            <div style={{
+              fontSize: "0.72rem",
+              color: "rgba(255,255,255,0.4)",
+              letterSpacing: "0.05em",
+              marginBottom: "0.5rem"
+            }}>
+              {mode.pattern}
+            </div>
+            <div style={{
+              fontSize: "0.75rem",
+              color: "rgba(255,255,255,0.5)",
+              lineHeight: 1.5
+            }}>
+              {mode.description}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Duration Selection */}
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "0.75rem",
+        marginBottom: "2.5rem",
+        flexWrap: "wrap",
+        justifyContent: "center"
+      }}>
+        <span style={{
+          fontSize: "0.8rem",
+          color: "rgba(255,255,255,0.5)",
+          marginRight: "0.5rem"
+        }}>
+          Duration
+        </span>
+        {[3, 5, 10].map(duration => (
+          <button
+            key={duration}
+            onClick={() => setSelectedDuration(duration)}
+            style={{
+              background: selectedDuration === duration ? "rgba(107,95,207,0.25)" : "rgba(255,255,255,0.05)",
+              border: selectedDuration === duration ? "1px solid rgba(157,143,240,0.5)" : "1px solid rgba(255,255,255,0.1)",
+              color: selectedDuration === duration ? "#c5bff8" : "rgba(255,255,255,0.6)",
+              padding: "0.5rem 1.2rem",
+              borderRadius: "2rem",
+              fontSize: "0.8rem",
+              cursor: "pointer",
+              transition: "all 0.2s ease"
+            }}
+          >
+            {duration} min
+          </button>
+        ))}
+      </div>
+
+      {/* Start Button */}
+      <button
+        onClick={startSession}
+        style={{
+          background: "linear-gradient(135deg, #6b5fcf, #9d8ff0)",
+          color: "#fff",
+          border: "none",
+          padding: "1rem 3rem",
+          borderRadius: "3rem",
+          fontSize: "1rem",
+          fontWeight: 500,
+          cursor: "pointer",
+          transition: "all 0.3s ease",
+          letterSpacing: "0.02em",
+          boxShadow: "0 8px 32px rgba(107,95,207,0.4)"
+        }}
+        onMouseOver={(e) => {
+          e.target.style.transform = "translateY(-3px) scale(1.03)";
+          e.target.style.boxShadow = "0 16px 40px rgba(107,95,207,0.5)";
+        }}
+        onMouseOut={(e) => {
+          e.target.style.transform = "translateY(0) scale(1)";
+          e.target.style.boxShadow = "0 8px 32px rgba(107,95,207,0.4)";
+        }}
+      >
+        Begin Session →
+      </button>
     </div>
-  )
+  );
 }
 
 // ── CONSTELLATION ──────────────────────────────────────────────────────────────
