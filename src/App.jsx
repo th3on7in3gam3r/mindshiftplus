@@ -834,6 +834,11 @@ function Breathe(){
   const [cycles, setCycles] = useState(0);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [showCustomBuilder, setShowCustomBuilder] = useState(false);
+  const [customModes, setCustomModes] = useState([]);
+  const [audioContext, setAudioContext] = useState(null);
+  const [currentDrone, setCurrentDrone] = useState(null);
 
   const breathingModes = {
     box: {
@@ -846,7 +851,8 @@ function Breathe(){
         { name: 'Hold', duration: 4, color: '#9d8ff0' }
       ],
       description: 'Equal sides. Builds focus and grounding. Used by Navy SEALs.',
-      icon: '◻'
+      icon: '◻',
+      frequencies: [174, 220, 262]
     },
     '478': {
       name: '4-7-8 Breathing',
@@ -857,7 +863,8 @@ function Breathe(){
         { name: 'Exhale', duration: 8, color: '#a8e6e2' }
       ],
       description: 'Deep calm. Activates the parasympathetic nervous system instantly.',
-      icon: '◑'
+      icon: '◑',
+      frequencies: [136, 174, 207]
     },
     calm: {
       name: 'Calm Reset',
@@ -867,7 +874,8 @@ function Breathe(){
         { name: 'Exhale', duration: 6, color: '#a78bfa' }
       ],
       description: 'Extended exhale. Slows the heart rate. Best for anxiety.',
-      icon: '〜'
+      icon: '〜',
+      frequencies: [396, 440, 528]
     },
     sleep: {
       name: 'Sleep Wind-Down',
@@ -878,12 +886,111 @@ function Breathe(){
         { name: 'Exhale', duration: 8, color: '#7eb8e8' }
       ],
       description: 'Wind down the mind. Prepares body for deep rest.',
-      icon: '◌'
-    }
+      icon: '◌',
+      frequencies: [174, 196, 220]
+    },
+    ...customModes.reduce((acc, mode) => ({ ...acc, [mode.id]: mode }), {})
   };
 
   const currentMode = breathingModes[selectedMode];
   const currentPhaseData = currentMode.phases[currentPhase];
+
+  // Audio functions
+  const initAudio = () => {
+    if (!audioContext) {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      setAudioContext(ctx);
+      return ctx;
+    }
+    return audioContext;
+  };
+
+  const startDrone = (mode) => {
+    if (!soundEnabled) return;
+    stopDrone();
+    
+    const ctx = initAudio();
+    const frequencies = mode.frequencies || [174, 220, 262];
+    
+    const masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(0, ctx.currentTime);
+    masterGain.gain.linearRampToValueAtTime(0.05, ctx.currentTime + 2);
+    masterGain.connect(ctx.destination);
+
+    const oscillators = frequencies.map((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.value = i === 0 ? 1 : 0.3 - i * 0.1;
+      osc.connect(gain);
+      gain.connect(masterGain);
+      osc.start();
+      return { osc, gain };
+    });
+
+    // Add subtle LFO
+    const lfo = ctx.createOscillator();
+    const lfoGain = ctx.createGain();
+    lfo.frequency.value = 0.1;
+    lfoGain.gain.value = 1.5;
+    lfo.connect(lfoGain);
+    oscillators.forEach(({ osc }) => lfoGain.connect(osc.frequency));
+    lfo.start();
+
+    setCurrentDrone({ oscillators, masterGain, lfo });
+  };
+
+  const stopDrone = () => {
+    if (!currentDrone) return;
+    try {
+      const ctx = audioContext || initAudio();
+      currentDrone.masterGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 1);
+      setTimeout(() => {
+        try {
+          currentDrone.oscillators.forEach(({ osc }) => osc.stop());
+          currentDrone.lfo.stop();
+        } catch (e) {}
+      }, 1100);
+    } catch (e) {}
+    setCurrentDrone(null);
+  };
+
+  const playTick = (phaseName) => {
+    if (!soundEnabled) return;
+    const ctx = initAudio();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    const freqMap = { Inhale: 528, Hold: 396, Exhale: 396 };
+    osc.frequency.value = freqMap[phaseName] || 440;
+    osc.type = 'sine';
+    
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.08, ctx.currentTime + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+  };
+
+  // Load custom modes from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('breathe_custom_modes');
+      if (saved) {
+        setCustomModes(JSON.parse(saved));
+      }
+    } catch (e) {}
+  }, []);
+
+  // Save custom modes to localStorage
+  const saveCustomModes = (modes) => {
+    setCustomModes(modes);
+    localStorage.setItem('breathe_custom_modes', JSON.stringify(modes));
+  };
 
   useEffect(() => {
     let interval;
@@ -897,6 +1004,8 @@ function Breathe(){
               if (nextPhase === 0) {
                 setCycles(prevCycles => prevCycles + 1);
               }
+              // Play tick sound for new phase
+              playTick(currentMode.phases[nextPhase].name);
               return nextPhase;
             });
             return currentMode.phases[(currentPhase + 1) % currentMode.phases.length].duration;
@@ -911,11 +1020,12 @@ function Breathe(){
           setIsActive(false);
           setCurrentPhase(0);
           setCountdown(0);
+          stopDrone();
         }
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isActive, isPaused, currentPhase, currentMode.phases, selectedDuration, timeElapsed]);
+  }, [isActive, isPaused, currentPhase, currentMode.phases, selectedDuration, timeElapsed, soundEnabled]);
 
   const startSession = () => {
     setIsActive(true);
@@ -924,6 +1034,8 @@ function Breathe(){
     setCycles(0);
     setTimeElapsed(0);
     setIsPaused(false);
+    startDrone(currentMode);
+    playTick(currentMode.phases[0].name);
   };
 
   const stopSession = () => {
@@ -933,10 +1045,16 @@ function Breathe(){
     setCycles(0);
     setTimeElapsed(0);
     setIsPaused(false);
+    stopDrone();
   };
 
   const togglePause = () => {
     setIsPaused(!isPaused);
+    if (!isPaused) {
+      stopDrone();
+    } else {
+      startDrone(currentMode);
+    }
   };
 
   const formatTime = (seconds) => {
@@ -950,6 +1068,242 @@ function Breathe(){
     if (currentPhaseData.name === 'Inhale') return 1.3;
     if (currentPhaseData.name === 'Exhale') return 0.7;
     return 1.1;
+  };
+
+  // Custom Builder Component
+  const CustomBuilder = () => {
+    const [name, setName] = useState('');
+    const [phases, setPhases] = useState([
+      { name: 'Inhale', duration: 4, enabled: true },
+      { name: 'Hold', duration: 4, enabled: true },
+      { name: 'Exhale', duration: 4, enabled: true },
+      { name: 'Hold 2', duration: 4, enabled: false }
+    ]);
+    const [selectedColor, setSelectedColor] = useState(0);
+
+    const colors = [
+      { colors: ['#6b5fcf', '#9d8ff0', '#c5bff8'], frequencies: [174, 220, 262] },
+      { colors: ['#2a9d8f', '#4ecdc4', '#a8e6e2'], frequencies: [136, 174, 207] },
+      { colors: ['#be185d', '#f472b6', '#fce7f3'], frequencies: [396, 440, 528] },
+      { colors: ['#b45309', '#f59e0b', '#fef3c7'], frequencies: [174, 196, 220] }
+    ];
+
+    const saveCustom = () => {
+      if (!name.trim()) return;
+      
+      const enabledPhases = phases.filter(p => p.enabled).map((p, i) => ({
+        name: p.name === 'Hold 2' ? 'Hold' : p.name,
+        duration: p.duration,
+        color: colors[selectedColor].colors[i % colors[selectedColor].colors.length]
+      }));
+
+      const newMode = {
+        id: `custom-${Date.now()}`,
+        name: name.trim(),
+        pattern: enabledPhases.map(p => p.duration).join(' · '),
+        phases: enabledPhases,
+        description: 'Your custom pattern.',
+        icon: '✦',
+        frequencies: colors[selectedColor].frequencies,
+        isCustom: true
+      };
+
+      const updated = [...customModes, newMode];
+      saveCustomModes(updated);
+      setShowCustomBuilder(false);
+      setName('');
+    };
+
+    return (
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(4,6,15,0.95)',
+        backdropFilter: 'blur(20px)',
+        zIndex: 1000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem'
+      }}>
+        <div style={{
+          background: '#0d1228',
+          border: '1px solid rgba(157,143,240,0.3)',
+          borderRadius: '24px',
+          maxWidth: '500px',
+          width: '100%',
+          padding: '2rem'
+        }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '2rem'
+          }}>
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 600, color: '#fff', margin: 0 }}>
+              Create Custom Pattern
+            </h2>
+            <button
+              onClick={() => setShowCustomBuilder(false)}
+              style={{
+                background: 'rgba(255,255,255,0.1)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                color: 'rgba(255,255,255,0.7)',
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                cursor: 'pointer',
+                fontSize: '0.8rem'
+              }}
+            >
+              ✕
+            </button>
+          </div>
+
+          <input
+            type="text"
+            placeholder="Pattern name..."
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            style={{
+              width: '100%',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '12px',
+              padding: '0.75rem 1rem',
+              color: '#fff',
+              fontSize: '1rem',
+              marginBottom: '1.5rem'
+            }}
+          />
+
+          {phases.map((phase, i) => (
+            <div key={i} style={{
+              display: 'grid',
+              gridTemplateColumns: '100px 1fr 60px 40px',
+              alignItems: 'center',
+              gap: '1rem',
+              marginBottom: '1rem'
+            }}>
+              <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>
+                {phase.name}
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="12"
+                value={phase.duration}
+                onChange={(e) => {
+                  const updated = [...phases];
+                  updated[i].duration = parseInt(e.target.value);
+                  setPhases(updated);
+                }}
+                disabled={!phase.enabled}
+                style={{
+                  width: '100%',
+                  accentColor: '#9d8ff0'
+                }}
+              />
+              <div style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)', textAlign: 'right' }}>
+                {phase.duration}s
+              </div>
+              <button
+                onClick={() => {
+                  const updated = [...phases];
+                  updated[i].enabled = !updated[i].enabled;
+                  setPhases(updated);
+                }}
+                style={{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  background: phase.enabled ? 'rgba(107,95,207,0.3)' : 'rgba(255,255,255,0.1)',
+                  border: phase.enabled ? '1px solid rgba(157,143,240,0.5)' : '1px solid rgba(255,255,255,0.2)',
+                  color: phase.enabled ? '#c5bff8' : 'rgba(255,255,255,0.4)',
+                  cursor: 'pointer',
+                  fontSize: '0.7rem'
+                }}
+              >
+                {phase.enabled ? '✓' : '+'}
+              </button>
+            </div>
+          ))}
+
+          <div style={{
+            textAlign: 'center',
+            fontSize: '1.2rem',
+            color: '#9d8ff0',
+            padding: '0.75rem',
+            background: 'rgba(157,143,240,0.1)',
+            borderRadius: '12px',
+            margin: '1.5rem 0',
+            letterSpacing: '0.1em'
+          }}>
+            {phases.filter(p => p.enabled).map(p => p.duration).join(' · ')}
+          </div>
+
+          <div style={{
+            display: 'flex',
+            gap: '0.5rem',
+            justifyContent: 'center',
+            marginBottom: '2rem'
+          }}>
+            {colors.map((color, i) => (
+              <div
+                key={i}
+                onClick={() => setSelectedColor(i)}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: color.colors[1],
+                  cursor: 'pointer',
+                  border: selectedColor === i ? '3px solid #fff' : '2px solid transparent',
+                  transform: selectedColor === i ? 'scale(1.1)' : 'scale(1)',
+                  transition: 'all 0.2s ease'
+                }}
+              />
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button
+              onClick={saveCustom}
+              disabled={!name.trim()}
+              style={{
+                flex: 1,
+                background: name.trim() ? 'linear-gradient(135deg, #6b5fcf, #9d8ff0)' : 'rgba(255,255,255,0.1)',
+                border: 'none',
+                borderRadius: '12px',
+                color: '#fff',
+                padding: '0.75rem',
+                fontSize: '0.9rem',
+                fontWeight: 600,
+                cursor: name.trim() ? 'pointer' : 'not-allowed',
+                opacity: name.trim() ? 1 : 0.5
+              }}
+            >
+              Save Pattern
+            </button>
+            <button
+              onClick={() => setShowCustomBuilder(false)}
+              style={{
+                flex: 1,
+                background: 'transparent',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: '12px',
+                color: 'rgba(255,255,255,0.7)',
+                padding: '0.75rem',
+                fontSize: '0.9rem',
+                cursor: 'pointer'
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   if (isActive) {
@@ -1127,7 +1481,51 @@ function Breathe(){
           >
             {isPaused ? '▶' : '⏸'}
           </button>
+          <button
+            onClick={() => setSoundEnabled(!soundEnabled)}
+            style={{
+              width: "40px",
+              height: "40px",
+              borderRadius: "50%",
+              background: soundEnabled ? "rgba(107,95,207,0.3)" : "rgba(255,255,255,0.1)",
+              border: soundEnabled ? "1px solid rgba(157,143,240,0.5)" : "1px solid rgba(255,255,255,0.2)",
+              color: soundEnabled ? "#c5bff8" : "rgba(255,255,255,0.7)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "0.9rem"
+            }}
+          >
+            {soundEnabled ? '♪' : '♩'}
+          </button>
         </div>
+
+        {/* Ambient Sound Label */}
+        {soundEnabled && (
+          <div style={{
+            position: "absolute",
+            bottom: "4.5rem",
+            left: "50%",
+            transform: "translateX(-50%)",
+            fontSize: "0.7rem",
+            color: "rgba(255,255,255,0.3)",
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem"
+          }}>
+            <div style={{
+              width: "5px",
+              height: "5px",
+              borderRadius: "50%",
+              background: "rgba(157,143,240,0.6)",
+              animation: "pulse 2s ease-in-out infinite"
+            }} />
+            Ambient tones active
+          </div>
+        )}
 
         {/* Instruction */}
         <div style={{
@@ -1206,7 +1604,7 @@ function Breathe(){
         gap: "1rem",
         maxWidth: "900px",
         width: "100%",
-        marginBottom: "2rem"
+        marginBottom: "1rem"
       }}>
         {Object.entries(breathingModes).map(([key, mode]) => (
           <div
@@ -1220,9 +1618,38 @@ function Breathe(){
               textAlign: "center",
               cursor: "pointer",
               transition: "all 0.3s ease",
-              transform: selectedMode === key ? "translateY(-2px)" : "translateY(0)"
+              transform: selectedMode === key ? "translateY(-2px)" : "translateY(0)",
+              position: "relative"
             }}
           >
+            {mode.isCustom && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const updated = customModes.filter(m => m.id !== key);
+                  saveCustomModes(updated);
+                  if (selectedMode === key) setSelectedMode('box');
+                }}
+                style={{
+                  position: "absolute",
+                  top: "0.5rem",
+                  right: "0.5rem",
+                  width: "24px",
+                  height: "24px",
+                  borderRadius: "50%",
+                  background: "rgba(220,50,50,0.2)",
+                  border: "1px solid rgba(220,50,50,0.4)",
+                  color: "#ff8080",
+                  cursor: "pointer",
+                  fontSize: "0.7rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center"
+                }}
+              >
+                ✕
+              </button>
+            )}
             <div style={{ fontSize: "1.8rem", marginBottom: "0.75rem" }}>{mode.icon}</div>
             <div style={{
               fontSize: "1.1rem",
@@ -1249,6 +1676,41 @@ function Breathe(){
             </div>
           </div>
         ))}
+        
+        {/* Create Custom Button */}
+        <div
+          onClick={() => setShowCustomBuilder(true)}
+          style={{
+            background: "rgba(255,255,255,0.04)",
+            border: "2px dashed rgba(157,143,240,0.3)",
+            borderRadius: "20px",
+            padding: "1.5rem",
+            textAlign: "center",
+            cursor: "pointer",
+            transition: "all 0.3s ease",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center"
+          }}
+        >
+          <div style={{ fontSize: "1.8rem", marginBottom: "0.75rem", color: "rgba(157,143,240,0.5)" }}>+</div>
+          <div style={{
+            fontSize: "1.1rem",
+            fontWeight: 400,
+            color: "rgba(255,255,255,0.6)",
+            marginBottom: "0.3rem"
+          }}>
+            Create Custom
+          </div>
+          <div style={{
+            fontSize: "0.75rem",
+            color: "rgba(255,255,255,0.4)",
+            lineHeight: 1.5
+          }}>
+            Build your own breathing pattern
+          </div>
+        </div>
       </div>
 
       {/* Duration Selection */}
@@ -1314,6 +1776,17 @@ function Breathe(){
       >
         Begin Session →
       </button>
+
+      {/* Custom Builder Modal */}
+      {showCustomBuilder && <CustomBuilder />}
+
+      {/* CSS Animation */}
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }
