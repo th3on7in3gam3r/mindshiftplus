@@ -835,7 +835,7 @@ function Breathe(){
         <div style={{color:"var(--muted)",fontSize:13}}>Immersive breathing session</div>
         <div style={{marginLeft:"auto"}}><Btn variant="secondary" small onClick={reload}>Reload</Btn></div>
       </div>
-      <div style={{flex:1,minHeight:0,height:"calc(100vh - 120px)"}}>
+      <div style={{flex:1,minHeight:0,height:"calc(100vh - 140px)"}}>
         <iframe key={key} title="MindShift+ Breathe" src="/breathe.html"
           style={{border:"none",width:"100%",height:"100%",display:"block",background:"#04060f"}}
           allow="autoplay"/>
