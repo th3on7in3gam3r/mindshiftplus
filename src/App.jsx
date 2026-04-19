@@ -5,6 +5,7 @@ import Portal from "./components/portal/Portal";
 import PublicBooking from "./components/scheduling/PublicBooking";
 import AdminSchedule from "./components/scheduling/AdminSchedule";
 import DisclaimerModal, { hasAcceptedDisclaimer } from "./components/DisclaimerModal";
+import CrisisModal from "./components/CrisisModal";
 import EHR from "./components/ehr/EHR";
 
 // ── Fonts ──────────────────────────────────────────────────────────────────────
@@ -507,6 +508,7 @@ function Mia(){
   const [loading, setLoading] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [clearing, setClearing] = useState(false);
+  const [showCrisisModal, setShowCrisisModal] = useState(false);
   const bottomRef = useRef(null);
   const prompts = ["Help me calm down","I feel stuck today","Help me process something","Give me a confidence reset","I'm feeling anxious","I need motivation"];
 
@@ -527,6 +529,32 @@ function Mia(){
 
   const send = async (text=input) => {
     if(!text.trim() || loading) return;
+
+    // Crisis detection
+    const { detectCrisisKeywords, logCrisisEvent, alertClinicians } = await import("./lib/crisisDetection.js");
+    const crisisCheck = detectCrisisKeywords(text);
+    
+    if (crisisCheck.detected) {
+      setShowCrisisModal(true);
+      // Log crisis event
+      if (authUser) {
+        await logCrisisEvent(
+          authUser.id,
+          'mia',
+          text,
+          crisisCheck.keywords,
+          crisisCheck.severity
+        );
+        // Alert clinicians
+        await alertClinicians(
+          authUser.id,
+          authUser.user_metadata?.full_name || 'Unknown Patient',
+          'Mia Chat',
+          crisisCheck.severity
+        );
+      }
+    }
+
     const userMsg = { role:"user", content:text };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
@@ -589,6 +617,9 @@ function Mia(){
 
   return(
     <div style={{height:"100vh",display:"flex",flexDirection:"column",padding:"1.5rem",maxWidth:750,margin:"0 auto"}}>
+      {/* Crisis Modal */}
+      {showCrisisModal && <CrisisModal onClose={() => setShowCrisisModal(false)} />}
+      
       {/* ⚠️ Crisis disclaimer — always visible */}
       <div style={{background:"rgba(240,165,0,0.08)",border:"1px solid rgba(240,165,0,0.25)",borderRadius:10,padding:"8px 12px",marginBottom:"0.75rem",fontSize:11,color:"var(--gold)",lineHeight:1.6}}>
         ⚠️ <strong>Mia is an AI wellness tool — not a crisis service.</strong> Conversations are not monitored in real time. If you are in crisis, call <strong>911</strong> or text/call <strong>988</strong>.
@@ -656,6 +687,7 @@ function Journal(){
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showCrisisModal, setShowCrisisModal] = useState(false);
   const [draft, setDraft] = useState({title:"",body:"",mood:"🙂",tags:[]});
   const allTags = ["Gratitude","Anxiety","Prayer","Stress","Breakthrough","Goals","Healing","Joy"];
   const moods = ["😔","😐","🙂","😊","🌟"];
@@ -679,6 +711,30 @@ function Journal(){
 
   const save = async () => {
     if(!draft.body.trim() || !authUser) return;
+
+    // Crisis detection
+    const { detectCrisisKeywords, logCrisisEvent, alertClinicians } = await import("./lib/crisisDetection.js");
+    const crisisCheck = detectCrisisKeywords(draft.body);
+    
+    if (crisisCheck.detected) {
+      setShowCrisisModal(true);
+      // Log crisis event
+      await logCrisisEvent(
+        authUser.id,
+        'journal',
+        draft.body,
+        crisisCheck.keywords,
+        crisisCheck.severity
+      );
+      // Alert clinicians
+      await alertClinicians(
+        authUser.id,
+        authUser.user_metadata?.full_name || 'Unknown Patient',
+        'Journal Entry',
+        crisisCheck.severity
+      );
+    }
+
     setSaving(true);
     const { saveJournalEntry } = await import("./lib/db.js");
     const { data } = await saveJournalEntry(authUser.id, draft);
@@ -703,6 +759,9 @@ function Journal(){
 
   return(
     <div style={{padding:"2rem",maxWidth:800,margin:"0 auto"}}>
+      {/* Crisis Modal */}
+      {showCrisisModal && <CrisisModal onClose={() => setShowCrisisModal(false)} />}
+      
       {/* ⚠️ Mandatory disclaimer */}
       <div style={{background:"rgba(240,165,0,0.1)",border:"1px solid rgba(240,165,0,0.3)",borderRadius:12,padding:"10px 14px",marginBottom:"1.2rem",display:"flex",gap:10,alignItems:"flex-start"}}>
         <span style={{fontSize:16,flexShrink:0}}>⚠️</span>

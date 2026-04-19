@@ -2,11 +2,13 @@ import { useState, useEffect } from "react";
 import { getMessages, sendMessage, markMessageRead } from "../../lib/clinicApi";
 import { emailNewMessage } from "../../lib/emailService";
 import { PageHeader, Card, SectionDivider, EmptyState, Alert, Btn, Toast, Input, T } from "./PortalUI";
+import CrisisModal from "../CrisisModal";
 
 export default function PortalMessages({ userId, P }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCompose, setShowCompose] = useState(false);
+  const [showCrisisModal, setShowCrisisModal] = useState(false);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
@@ -25,6 +27,30 @@ export default function PortalMessages({ userId, P }) {
   const handleSend = async (e) => {
     e.preventDefault();
     if(!body.trim()) return;
+
+    // Crisis detection
+    const { detectCrisisKeywords, logCrisisEvent, alertClinicians } = await import("../../lib/crisisDetection.js");
+    const crisisCheck = detectCrisisKeywords(body);
+    
+    if (crisisCheck.detected) {
+      setShowCrisisModal(true);
+      // Log crisis event
+      await logCrisisEvent(
+        userId,
+        'portal_message',
+        body,
+        crisisCheck.keywords,
+        crisisCheck.severity
+      );
+      // Alert clinicians
+      await alertClinicians(
+        userId,
+        P?.full_name || 'Unknown Patient',
+        'Patient Portal Message',
+        crisisCheck.severity
+      );
+    }
+
     setSending(true);
     try {
       await sendMessage(userId, subject||"General Inquiry", body);
@@ -51,6 +77,9 @@ export default function PortalMessages({ userId, P }) {
   return (
     <div style={{ padding:"2rem", maxWidth:860, margin:"0 auto" }}>
       <Toast message={toast}/>
+      
+      {/* Crisis Modal */}
+      {showCrisisModal && <CrisisModal onClose={() => setShowCrisisModal(false)} />}
 
       <PageHeader
         icon="💬" label="Secure Messaging"

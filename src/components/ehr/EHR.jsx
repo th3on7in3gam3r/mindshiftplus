@@ -12,6 +12,7 @@ import EHRMessages from "./EHRMessages";
 import EHRReports from "./EHRReports";
 import EHRGiftCards from "./EHRGiftCards";
 import EHRInvoices from "./EHRInvoices";
+import EHRCrisisAlerts from "./EHRCrisisAlerts";
 import { Spinner, EhrStyles } from "./EHRUI";
 
 export default function EHR({ onBack }) {
@@ -148,6 +149,7 @@ export default function EHR({ onBack }) {
 
           {/* Phase 9 nav items */}
           {[
+            { key: "crisis",    label: "🚨 Crisis",  color: "rose" },
             { key: "schedule",  label: "Schedule",   color: "teal" },
             { key: "reports",   label: "Reports",    color: "purple" },
             { key: "giftcards", label: "Gift Cards", color: "green" },
@@ -257,6 +259,7 @@ export default function EHR({ onBack }) {
         {view === "tasks"     && <EHRTasks     clinician={clinician} />}
         {view === "messages"  && <EHRMessages  clinician={clinician} />}
         {view === "reports"   && <EHRReports   clinician={clinician} />}
+        {view === "crisis"    && <EHRCrisisAlerts />}
         {view === "giftcards" && <EHRGiftCards clinician={clinician} />}
         {view === "invoices"  && <EHRInvoices  clinician={clinician} />}
       </div>

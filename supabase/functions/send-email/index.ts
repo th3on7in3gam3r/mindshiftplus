@@ -239,6 +239,44 @@ Deno.serve(async (req) => {
         break;
       }
 
+      // ── Crisis Alert ───────────────────────────────────────────────────────
+      case "crisis_alert": {
+        const { userId, patientName, source, severity, timestamp } = data;
+        const severityColor = severity === 'high' ? '#dc2626' : '#f59e0b';
+        const severityLabel = severity === 'high' ? 'HIGH RISK' : 'MODERATE RISK';
+        const formattedTime = new Date(timestamp).toLocaleString('en-US', {
+          month: 'short', day: 'numeric', year: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        });
+        
+        await sendEmail(CLINICIAN_EMAILS, `🚨 CRISIS ALERT — ${patientName}`, base(`
+          <span class="badge badge-red" style="background:#fef2f2;color:${severityColor};border:1px solid ${severityColor}30">${severityLabel}</span>
+          <h1 style="color:${severityColor}">🚨 Crisis Language Detected</h1>
+          <p class="sub">Immediate attention required for patient safety.</p>
+          <table class="dt">
+            <tr><td>👤 Patient</td><td><strong>${patientName}</strong></td></tr>
+            <tr><td>📍 Source</td><td>${source}</td></tr>
+            <tr><td>⚠️ Severity</td><td style="color:${severityColor};font-weight:700">${severityLabel}</td></tr>
+            <tr><td>🕐 Detected</td><td>${formattedTime}</td></tr>
+          </table>
+          <div class="warn" style="background:#fef2f2;border-color:${severityColor}40">
+            <strong style="color:${severityColor}">⚠️ IMMEDIATE ACTION REQUIRED</strong><br/>
+            Crisis keywords were detected in patient communication. The patient has been shown emergency resources (988, 911, Crisis Text Line). 
+            Please review the full content in the EHR and follow your crisis response protocol.
+          </div>
+          <a href="https://www.mindshiftwellnessclinic.org" class="btn" style="background:${severityColor}">Review in EHR Dashboard →</a>
+          <div class="info">
+            <strong>Crisis Response Protocol:</strong><br/>
+            1. Review the flagged content immediately<br/>
+            2. Assess patient risk level<br/>
+            3. Contact patient within 1 hour if high risk<br/>
+            4. Document all actions taken<br/>
+            5. Consider safety planning or hospitalization if needed
+          </div>
+        `, `CRISIS ALERT — ${patientName} — ${source}`));
+        break;
+      }
+
       default:
         return new Response(JSON.stringify({ error: `Unknown type: ${type}` }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
