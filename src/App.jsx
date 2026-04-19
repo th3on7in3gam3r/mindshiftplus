@@ -829,13 +829,13 @@ function Breathe(){
   const [key,setKey]=useState(0);
   const reload=useCallback(()=>setKey(k=>k+1),[]);
   return(
-    <div style={{height:"100vh",display:"flex",flexDirection:"column"}}>
+    <div style={{height:"calc(100vh - 60px)",display:"flex",flexDirection:"column"}}>
       <div style={{padding:"1rem 1.5rem",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
         <div style={{fontWeight:700,fontSize:16}}>Breathe</div>
         <div style={{color:"var(--muted)",fontSize:13}}>Immersive breathing session</div>
         <div style={{marginLeft:"auto"}}><Btn variant="secondary" small onClick={reload}>Reload</Btn></div>
       </div>
-      <div style={{flex:1,minHeight:0,paddingBottom:"80px"}}>
+      <div style={{flex:1,minHeight:0,height:"calc(100vh - 120px)"}}>
         <iframe key={key} title="MindShift+ Breathe" src="/breathe.html"
           style={{border:"none",width:"100%",height:"100%",display:"block",background:"#04060f"}}
           allow="autoplay"/>
