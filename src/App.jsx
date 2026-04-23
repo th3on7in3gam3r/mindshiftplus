@@ -125,7 +125,7 @@ function Avatar({name="U",size=38}){
 }
 
 // ── Nav ────────────────────────────────────────────────────────────────────────
-const ADMIN_EMAILS = ["info@mindshiftwellnessclinic.org", "jerlessm@gmail.com"];
+const ADMIN_EMAILS = ["info@mindshiftwellnessclinic.org", "jerlessm@gmail.com", "kmutegyeki@gmail.com"];
 
 const navItems=[
   {id:"dashboard",icon:"⊞",label:"Dashboard"},
