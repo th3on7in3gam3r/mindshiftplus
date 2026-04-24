@@ -76,7 +76,7 @@ export default function EHRLogin({ onBack }) {
 
         <div style={{ position: "relative", zIndex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "2.5rem" }}>
-            <div style={{ width: 44, height: 44, borderRadius: 12, background: "linear-gradient(135deg,#7c6ff7,#4ecdc4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>🏥</div>
+            <img src="/logo.png" alt="MindShift Wellness Clinic" style={{ width: 44, height: 44, borderRadius: 12, objectFit: "contain", flexShrink: 0 }}/>
             <div>
               <div style={{ fontSize: 15, fontWeight: 700, color: "#e2e8f0", lineHeight: 1.2 }}>MindShift Wellness Clinic</div>
               <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", lineHeight: 1.2 }}>Electronic Health Records</div>
