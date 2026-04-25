@@ -13,9 +13,11 @@ import {
 import { useTokens } from "../../lib/ThemeContext";
 import EHRClinicalAI from "./EHRClinicalAI";
 import EHRBilling, { CptPicker } from "./EHRBilling";
+import EHRClinicalIntake from "./EHRClinicalIntake";
 
 const TABS = [
   { id: "overview",     label: "Overview",     icon: "🏠" },
+  { id: "intake",       label: "Intake",       icon: "📋" },
   { id: "notes",        label: "Notes",        icon: "📝" },
   { id: "medications",  label: "Medications",  icon: "💊" },
   { id: "appointments", label: "Appointments", icon: "📅" },
@@ -132,6 +134,8 @@ export default function EHRPatientChart({ chartId, clinician, onBack, isNew = fa
           />
         ) : tab === "overview" ? (
           <OverviewTab chart={chart} notes={notes} meds={meds} appts={appts} />
+        ) : tab === "intake" ? (
+          <EHRClinicalIntake chart={chart} clinician={clinician} />
         ) : tab === "notes" ? (
           <NotesTab notes={notes} chart={chart} clinician={clinician}
             showForm={showNoteForm} editingNote={editingNote}

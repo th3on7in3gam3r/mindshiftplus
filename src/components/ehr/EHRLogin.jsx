@@ -5,6 +5,7 @@ const CLINICIAN_EMAILS = [
   "info@mindshiftwellnessclinic.org",
   "jerlessm@gmail.com",
   "kmutegyeki@mindshiftwellnessclinic.org",
+  "kmutegyeki@gmail.com",
   "rnakkazi@mindshiftwellnessclinic.org",
 ];
 

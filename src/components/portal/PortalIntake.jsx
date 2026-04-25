@@ -4,14 +4,11 @@ import { emailIntakeSubmitted } from "../../lib/emailService";
 import { supabase } from "../../lib/supabase";
 import { T, PageHeader, Card, Alert, Btn } from "./PortalUI";
 
+// Patient-facing steps: personal info, emergency/insurance, consents & signature
 const STEPS = [
-  { id: "demographics", label: "Personal Info",       icon: "👤", desc: "Basic information about you" },
+  { id: "demographics", label: "Personal Info",         icon: "👤", desc: "Basic information about you" },
   { id: "emergency",    label: "Emergency & Insurance", icon: "🛡️", desc: "Emergency contact & coverage" },
-  { id: "medical",      label: "Medical History",     icon: "🩺", desc: "Health background & medications" },
-  { id: "mentalhealth", label: "Mental Health",        icon: "🧠", desc: "Your mental health history" },
-  { id: "social",       label: "Life Situation",       icon: "🏠", desc: "Your current life & social context" },
-  { id: "financial",    label: "Financial & Benefits", icon: "💳", desc: "Insurance assignment & financial responsibility" },
-  { id: "consent",      label: "Consent & Sign",       icon: "✍️", desc: "Review consents and sign" },
+  { id: "consent",      label: "Consent & Sign",        icon: "✍️", desc: "Review and sign your consent forms" },
 ];
 
 const inp = (extra = {}) => ({
@@ -44,16 +41,6 @@ function TextInput({ label, value, onChange, placeholder, type = "text", require
   );
 }
 
-function TextArea({ label, value, onChange, placeholder, rows = 3, required }) {
-  return (
-    <Field label={label} required={required}>
-      <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-        rows={rows} required={required} style={{ ...inp(), resize: "vertical", minHeight: rows * 24 }}
-        onFocus={focus} onBlur={blur} />
-    </Field>
-  );
-}
-
 function SelectInput({ label, value, onChange, options, required }) {
   return (
     <Field label={label} required={required}>
@@ -65,65 +52,27 @@ function SelectInput({ label, value, onChange, options, required }) {
   );
 }
 
-function YesNo({ label, value, onChange }) {
-  return (
-    <Field label={label}>
-      <div style={{ display: "flex", gap: 10 }}>
-        {[{ v: true, l: "Yes" }, { v: false, l: "No" }].map(({ v, l }) => (
-          <button key={l} type="button" onClick={() => onChange(v)} style={{
-            flex: 1, padding: "10px", borderRadius: 10, border: `1.5px solid ${value === v ? T.accent : T.border}`,
-            background: value === v ? `${T.accent}10` : "#fff",
-            color: value === v ? T.accent : T.muted, fontWeight: value === v ? 700 : 400,
-            cursor: "pointer", fontFamily: "inherit", fontSize: 14, transition: "all .15s",
-          }}>{l}</button>
-        ))}
-      </div>
-    </Field>
-  );
-}
-
 export default function PortalIntake({ userId, displayName, onComplete }) {
-  const [step, setStep]       = useState(0);
-  const [saving, setSaving]   = useState(false);
+  const [step, setStep]             = useState(0);
+  const [saving, setSaving]         = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted]   = useState(false);
   const [autoSaved, setAutoSaved]   = useState(false);
 
-  // Form data — all fields
   const [form, setForm] = useState({
     // Step 1 — Demographics
     full_name: displayName || "", date_of_birth: "", gender: "", pronouns: "", phone: "", address: "",
     // Step 2 — Emergency & Insurance
     emergency_contact_name: "", emergency_contact_phone: "", emergency_contact_relationship: "",
     insurance_provider: "", insurance_member_id: "", insurance_group: "",
-    // Step 3 — Medical History
-    primary_care_provider: "", pharmacy: "", current_medications: "", allergies: "",
-    medical_conditions: "", hospitalizations: "", surgeries: "",
-    // Step 4 — Mental Health
-    reason_for_visit: "", symptoms_duration: "", previous_therapy: false, previous_psychiatry: false,
-    previous_treatment_notes: "", previous_diagnoses: "", family_mental_health: "",
-    // Biopsychosocial — substance use detail
-    substance_alcohol: "no", substance_tobacco: "no", substance_cannabis: "no",
-    substance_cocaine: "no", substance_hallucinogens: "no", substance_opioids: "no",
-    substance_meth: "no", substance_notes: "",
-    // Biopsychosocial — social context
-    social_relationships: "", social_upbringing: "", social_other: "",
-    sex_assigned_at_birth: "",
-    // Step 5 — Life Situation (Your Current Life Situation survey)
-    living_situation: "", housing_concerns: [], financial_struggles: [], food_insecurity: "",
-    transportation_barrier: [], daily_living_help: "", stress_level: "", help_needed: [],
-    survey_completed_by: "Patient alone",
-    // Step 6 — Financial & Benefits
+    // Step 3 — Consents
     consent_assignment_of_benefits: false, consent_financial_responsibility: false,
-    // Step 7 — Safety & Consent
-    suicidal_ideation: "no", self_harm: "no", safety_plan: "",
-    consent_treatment: false, consent_privacy: false, consent_telehealth: false, signature: "",
+    consent_treatment: false, consent_privacy: false, consent_telehealth: false,
+    signature: "",
   });
 
   const set = (key) => (val) => setForm(f => ({ ...f, [key]: val }));
-  const setE = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }));
 
-  // Load existing draft on mount
   useEffect(() => {
     getMyIntake(userId).then(({ data }) => {
       if (data) {
@@ -131,7 +80,6 @@ export default function PortalIntake({ userId, displayName, onComplete }) {
           setSubmitted(true);
           return;
         }
-        // Pre-fill with saved draft
         setForm(f => ({
           ...f,
           ...Object.fromEntries(Object.entries(data).filter(([k, v]) => v !== null && k in f)),
@@ -140,7 +88,6 @@ export default function PortalIntake({ userId, displayName, onComplete }) {
     });
   }, [userId]);
 
-  // Auto-save draft every time step changes
   const autoSave = async (fields = form) => {
     setSaving(true);
     await saveIntake(userId, fields);
@@ -178,13 +125,11 @@ export default function PortalIntake({ userId, displayName, onComplete }) {
     const { error } = await submitIntake(userId, form);
     setSubmitting(false);
     if (!error) {
-      // Get patient email from session for notification
       supabase.auth.getSession().then(({ data: { session } }) => {
         emailIntakeSubmitted({
-          patient_name:     form.full_name || "Patient",
-          patient_email:    session?.user?.email,
-          reason_for_visit: form.reason_for_visit,
-          submitted_at:     new Date().toISOString(),
+          patient_name:  form.full_name || "Patient",
+          patient_email: session?.user?.email,
+          submitted_at:  new Date().toISOString(),
         }).catch(() => {});
       });
       setSubmitted(true);
@@ -200,7 +145,7 @@ export default function PortalIntake({ userId, displayName, onComplete }) {
       <PageHeader
         icon="📋" label="Patient Intake"
         title="New Patient Intake Form"
-        subtitle="Complete your intake before your first appointment. Your answers help us provide the best care."
+        subtitle="Complete your intake before your first appointment. Your clinician will go over the rest with you in person."
         gradient={`linear-gradient(135deg,${T.accent}15,${T.teal}10)`}
       />
 
@@ -213,18 +158,16 @@ export default function PortalIntake({ userId, displayName, onComplete }) {
         <div style={{ height: 6, background: T.border, borderRadius: 99, overflow: "hidden" }}>
           <div style={{ height: "100%", width: `${progress}%`, background: `linear-gradient(90deg,${T.accent},${T.teal})`, borderRadius: 99, transition: "width .4s ease" }} />
         </div>
-        {/* Step dots */}
         <div style={{ display: "flex", gap: 8, marginTop: 12, justifyContent: "center" }}>
           {STEPS.map((s, i) => (
-            <div key={s.id} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, cursor: i <= step ? "pointer" : "default" }} onClick={() => i < step && setStep(i)}>
+            <div key={s.id} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, cursor: i < step ? "pointer" : "default" }} onClick={() => i < step && setStep(i)}>
               <div style={{
                 width: 32, height: 32, borderRadius: "50%",
                 background: i < step ? `linear-gradient(135deg,${T.accent},${T.teal})` : i === step ? `${T.accent}20` : T.border,
                 border: `2px solid ${i <= step ? T.accent : T.border}`,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: 14, transition: "all .2s",
-                color: i < step ? "#fff" : i === step ? T.accent : T.muted,
-                fontWeight: 700,
+                color: i < step ? "#fff" : i === step ? T.accent : T.muted, fontWeight: 700,
               }}>
                 {i < step ? "✓" : s.icon}
               </div>
@@ -290,269 +233,54 @@ export default function PortalIntake({ userId, displayName, onComplete }) {
             </div>
           )}
 
-          {/* ── Step 3: Medical History ── */}
+          {/* ── Step 3: Consents & Signature ── */}
           {step === 2 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <StepHeading icon="🩺" title="Medical History" desc="Help us understand your overall health background" />
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-                <TextInput label="Primary Care Provider" value={form.primary_care_provider} onChange={set("primary_care_provider")} placeholder="Doctor's name (if any)" />
-                <TextInput label="Preferred Pharmacy" value={form.pharmacy} onChange={set("pharmacy")} placeholder="Pharmacy name & location" />
-                <div style={{ gridColumn: "1 / -1" }}>
-                  <TextArea label="Current Medications" value={form.current_medications} onChange={set("current_medications")} placeholder="List all current medications, dosages, and how often you take them. Write 'None' if not applicable." rows={3} />
-                </div>
-                <div style={{ gridColumn: "1 / -1" }}>
-                  <TextArea label="Known Allergies" value={form.allergies} onChange={set("allergies")} placeholder="Medications, foods, environmental allergies. Write 'NKA' if none known." rows={2} />
-                </div>
-                <div style={{ gridColumn: "1 / -1" }}>
-                  <TextArea label="Current / Chronic Medical Conditions" value={form.medical_conditions} onChange={set("medical_conditions")} placeholder="e.g. Diabetes, hypertension, thyroid issues, chronic pain…" rows={3} />
-                </div>
-                <TextArea label="Past Hospitalizations" value={form.hospitalizations} onChange={set("hospitalizations")} placeholder="Include dates and reasons if known" rows={2} />
-                <TextArea label="Past Surgeries" value={form.surgeries} onChange={set("surgeries")} placeholder="Include dates and types if known" rows={2} />
-              </div>
-            </div>
-          )}
-
-          {/* ── Step 4: Mental Health History ── */}
-          {step === 3 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <StepHeading icon="🧠" title="Mental Health History" desc="This helps us understand your needs and provide the right support" />
-              <Alert type="info" icon="💙" title="Everything you share is confidential and protected by HIPAA. There are no wrong answers." />
-              <TextArea label="Primary Reason for Seeking Care" value={form.reason_for_visit} onChange={set("reason_for_visit")} placeholder="What brings you to MindShift Wellness Clinic? What are you hoping to work on?" rows={4} required />
-              <SelectInput label="How long have you been experiencing these concerns?" value={form.symptoms_duration} onChange={set("symptoms_duration")} options={[
-                { value: "", label: "Select…" },
-                { value: "Less than 1 month", label: "Less than 1 month" },
-                { value: "1–3 months", label: "1–3 months" },
-                { value: "3–6 months", label: "3–6 months" },
-                { value: "6–12 months", label: "6–12 months" },
-                { value: "1–2 years", label: "1–2 years" },
-                { value: "More than 2 years", label: "More than 2 years" },
-                { value: "Most of my life", label: "Most of my life" },
-              ]} />
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-                <YesNo label="Have you seen a therapist or counselor before?" value={form.previous_therapy} onChange={set("previous_therapy")} />
-                <YesNo label="Have you seen a psychiatrist or been on psychiatric medication before?" value={form.previous_psychiatry} onChange={set("previous_psychiatry")} />
-              </div>
-              {(form.previous_therapy || form.previous_psychiatry) && (
-                <TextArea label="Tell us about your previous treatment" value={form.previous_treatment_notes} onChange={set("previous_treatment_notes")} placeholder="What worked? What didn't? Any medications tried?" rows={3} />
-              )}
-              <TextArea label="Any prior mental health diagnoses?" value={form.previous_diagnoses} onChange={set("previous_diagnoses")} placeholder="e.g. Depression, anxiety, ADHD… Write 'None' if unknown." rows={2} />
-              <TextArea label="Family mental health history (optional)" value={form.family_mental_health} onChange={set("family_mental_health")} placeholder="Any mental health conditions in immediate family members?" rows={2} />
-
-              <div style={{ height: 1, background: T.border }} />
-              <div style={{ fontSize: 12, fontWeight: 700, color: T.accent, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Alcohol & Substance Use</div>
-              <Alert type="info" icon="💙" title="This information is confidential and helps your provider understand your full health picture." />
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
-                {[
-                  { key: "substance_alcohol", label: "Alcohol" },
-                  { key: "substance_tobacco", label: "Tobacco / Nicotine" },
-                  { key: "substance_cannabis", label: "Cannabis (marijuana)" },
-                  { key: "substance_cocaine", label: "Cocaine" },
-                  { key: "substance_hallucinogens", label: "Hallucinogens (LSD, psilocybin)" },
-                  { key: "substance_opioids", label: "Opioids (heroin, oxycodone)" },
-                  { key: "substance_meth", label: "Methamphetamine" },
-                ].map(({ key, label }) => (
-                  <SelectInput key={key} label={label} value={form[key]} onChange={set(key)} options={[
-                    { value: "no", label: "No / Never" },
-                    { value: "past", label: "Past use only" },
-                    { value: "current", label: "Current use" },
-                  ]} />
-                ))}
-                <SelectInput label="Sex Assigned at Birth" value={form.sex_assigned_at_birth} onChange={set("sex_assigned_at_birth")} options={[
-                  { value: "", label: "Prefer not to say" },
-                  { value: "Female", label: "Female" },
-                  { value: "Male", label: "Male" },
-                ]} />
-              </div>
-              <TextArea label="Additional notes on substance use (optional)" value={form.substance_notes} onChange={set("substance_notes")} placeholder="Frequency, duration, any concerns or context you'd like to share…" rows={2} />
-
-              <div style={{ height: 1, background: T.border }} />
-              <div style={{ fontSize: 12, fontWeight: 700, color: T.teal, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Social Context</div>
-              <TextArea label="Current relationships with important people in your life" value={form.social_relationships} onChange={set("social_relationships")} placeholder="How would you describe your relationships with friends, partners, or family?" rows={3} />
-              <TextArea label="Upbringing or early life experiences (optional)" value={form.social_upbringing} onChange={set("social_upbringing")} placeholder="Anything about your childhood or early life you think your provider should know?" rows={3} />
-              <TextArea label="Anything else you'd like your provider to know? (optional)" value={form.social_other} onChange={set("social_other")} rows={2} />
-            </div>
-          )}
-
-          {/* ── Step 5: Life Situation ── */}
-          {step === 4 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <StepHeading icon="🏠" title="Your Current Life Situation" desc="This helps your provider understand your social and environmental health factors" />
-              <Alert type="info" icon="ℹ️" title="Originally developed by Kaiser Permanente. Your answers help us connect you with the right support." />
-
-              <SelectInput label="1. Which best describes your current living situation?" value={form.living_situation} onChange={set("living_situation")} options={[
-                { value: "", label: "Select…" },
-                { value: "Live alone", label: "Live alone in my own home" },
-                { value: "Live with others", label: "Live in a household with other people" },
-                { value: "Residential facility", label: "Live in a residential facility (nursing home, etc.)" },
-                { value: "Temporarily with family/friend", label: "Temporarily staying with a relative or friend" },
-                { value: "Shelter/homeless", label: "Temporarily staying in a shelter or homeless" },
-                { value: "Other", label: "Other" },
-              ]} />
-
-              <Field label="2. Any concerns about your current living situation?">
-                {["Condition of housing", "Lack of more permanent housing", "Ability to pay for housing or utilities", "Feeling safe"].map(opt => (
-                  <label key={opt} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: T.text, marginTop: 6, cursor: "pointer" }}>
-                    <input type="checkbox" checked={(form.housing_concerns || []).includes(opt)}
-                      onChange={e => setForm(f => ({ ...f, housing_concerns: e.target.checked ? [...(f.housing_concerns||[]), opt] : (f.housing_concerns||[]).filter(x => x !== opt) }))}
-                      style={{ accentColor: T.accent }} />
-                    {opt}
-                  </label>
-                ))}
-              </Field>
-
-              <Field label="3. In the past 3 months, did you have trouble paying for any of the following?">
-                {["Food", "Housing", "Heat and electricity", "Medical needs", "Transportation", "Childcare", "Debts", "None of these"].map(opt => (
-                  <label key={opt} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: T.text, marginTop: 6, cursor: "pointer" }}>
-                    <input type="checkbox" checked={(form.financial_struggles || []).includes(opt)}
-                      onChange={e => setForm(f => ({ ...f, financial_struggles: e.target.checked ? [...(f.financial_struggles||[]), opt] : (f.financial_struggles||[]).filter(x => x !== opt) }))}
-                      style={{ accentColor: T.accent }} />
-                    {opt}
-                  </label>
-                ))}
-              </Field>
-
-              <SelectInput label="4. In the past 3 months, how often did you worry your food would run out before you had money to buy more?" value={form.food_insecurity} onChange={set("food_insecurity")} options={[
-                { value: "", label: "Select…" },
-                { value: "Never", label: "Never" },
-                { value: "Sometimes", label: "Sometimes" },
-                { value: "Often", label: "Often" },
-                { value: "Very often", label: "Very often" },
-              ]} />
-
-              <Field label="5. Has lack of transportation kept you from medical appointments or daily living?">
-                {["Kept me from medical appointments or getting medications", "Kept me from doing things needed for daily living", "Not a problem for me"].map(opt => (
-                  <label key={opt} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: T.text, marginTop: 6, cursor: "pointer" }}>
-                    <input type="checkbox" checked={(form.transportation_barrier || []).includes(opt)}
-                      onChange={e => setForm(f => ({ ...f, transportation_barrier: e.target.checked ? [...(f.transportation_barrier||[]), opt] : (f.transportation_barrier||[]).filter(x => x !== opt) }))}
-                      style={{ accentColor: T.accent }} />
-                    {opt}
-                  </label>
-                ))}
-              </Field>
-
-              <SelectInput label="6. If you need help with daily activities (bathing, meals, shopping, finances), do you get the help you need?" value={form.daily_living_help} onChange={set("daily_living_help")} options={[
-                { value: "", label: "Select…" },
-                { value: "I don't need any help", label: "I don't need any help" },
-                { value: "I get all the help I need", label: "I get all the help I need" },
-                { value: "I could use a little more help", label: "I could use a little more help" },
-                { value: "I need a lot more help", label: "I need a lot more help" },
-              ]} />
-
-              <SelectInput label="7. In the last month, how often have you felt difficulties were piling up so high you could not overcome them?" value={form.stress_level} onChange={set("stress_level")} options={[
-                { value: "", label: "Select…" },
-                { value: "Never", label: "Never" },
-                { value: "Almost never", label: "Almost never" },
-                { value: "Sometimes", label: "Sometimes" },
-                { value: "Fairly often", label: "Fairly often" },
-                { value: "Very often", label: "Very often" },
-              ]} />
-
-              <Field label="8. Which of the following would you like to receive help with at this time?">
-                {["Food", "Housing", "Transportation", "Utilities (heat, electricity, water)", "Medical care / medicine", "Dental services", "Vision services", "Applying for public benefits (WIC, SSI, SNAP)", "More help with daily activities", "Childcare / child-related issues", "Debt / loan repayment", "Legal issues", "Employment", "I don't want help with any of these"].map(opt => (
-                  <label key={opt} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: T.text, marginTop: 6, cursor: "pointer" }}>
-                    <input type="checkbox" checked={(form.help_needed || []).includes(opt)}
-                      onChange={e => setForm(f => ({ ...f, help_needed: e.target.checked ? [...(f.help_needed||[]), opt] : (f.help_needed||[]).filter(x => x !== opt) }))}
-                      style={{ accentColor: T.accent }} />
-                    {opt}
-                  </label>
-                ))}
-              </Field>
-
-              <SelectInput label="9. Who completed these questions?" value={form.survey_completed_by} onChange={set("survey_completed_by")} options={[
-                { value: "Patient alone", label: "Patient alone" },
-                { value: "Patient with help", label: "Patient with someone's help" },
-                { value: "Family/caregiver", label: "Family member, friend, or caregiver of patient" },
-              ]} />
-            </div>
-          )}
-
-          {/* ── Step 6: Financial & Benefits ── */}
-          {step === 5 && (
             <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-              <StepHeading icon="💳" title="Financial Responsibility & Assignment of Benefits" desc="Please read and acknowledge the following financial agreements" />
+              <StepHeading icon="✍️" title="Consents, Policies & Signature" desc="Please read each document carefully, then acknowledge and sign below" />
 
-              <div style={{ background: "#f8faff", border: `1px solid ${T.accent}30`, borderRadius: 14, padding: "1.5rem" }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: T.accent, marginBottom: 12 }}>Assignment of Benefits / Financial Responsibility</div>
-                <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.8, display: "flex", flexDirection: "column", gap: 10 }}>
-                  <p><strong style={{ color: T.text }}>1. Payment of Fees:</strong> I agree to pay for charges for services as described in this agreement. Payment for sessions is due after each session. I will be charged for sessions I do not keep unless I provide sufficient advance notice as required by my provider.</p>
-                  <p><strong style={{ color: T.text }}>2. Insurance and Managed Care Plans:</strong> If MindShift Wellness Clinic participates in my plan, I agree to pay all applicable deductibles, co-payments, co-insurances and any other cost-sharing. If my insurance benefits run out, I will be responsible for all charges from the end of coverage.</p>
-                  <p><strong style={{ color: T.text }}>3. Assignment of Insurance Fees:</strong> I agree to allow my insurance plan to pay MindShift Wellness Clinic directly. I authorize the clinic to provide my insurance plan any information reasonably required to obtain benefits and authorization for services.</p>
-                  <p><strong style={{ color: T.text }}>4. Telehealth Consent:</strong> I consent to participate in telemental health services. I understand I have the right to refuse telehealth and be informed of alternative services. I understand telehealth may involve risks such as technology failure and reduced visibility of non-verbal cues, as well as benefits such as greater flexibility and accessibility.</p>
-                </div>
-              </div>
+              {/* Informed Consent */}
+              <ConsentDoc title="📄 Informed Consent for Psychotherapy Services" color={T.accent}>
+                <p><strong>About Psychotherapy Services</strong><br />Psychotherapy is a working cooperative relationship between you and your therapist. Your therapist will contribute their knowledge, expertise, and clinical skills. You, as the client, have the responsibility to bring an attitude of collaboration and a commitment to the therapeutic process.</p>
+                <p>Please note that psychotherapy is not an emergency service. If you are experiencing suicidal or homicidal thoughts, are in crisis, or need immediate help, please call 911 or go to the nearest emergency department.</p>
+                <p><strong>Benefits and Risks</strong><br />Psychotherapy has both benefits and risks. Risks may include experiencing uncomfortable feelings such as sadness, guilt, anxiety, anger, frustration, loneliness, and helplessness. However, therapy often leads to a significant reduction in feelings of distress, increased satisfaction in interpersonal relationships, greater personal awareness and insight, and increased skills for managing stress.</p>
+                <p><strong>Appointments and Cancellations</strong><br />You may cancel appointments in advance free of charge, as long as sufficient advance notice is provided. For no-shows or last-minute cancellations, a fee may be charged.</p>
+                <p><strong>Confidentiality</strong><br />Communication between you and your counselor is confidential. Your counselor has an ethical and legal obligation to break confidentiality only under specific circumstances: (1) suspected child, elder, or dependent adult abuse or neglect; (2) serious intent to harm yourself, someone else, or property; (3) a court order for release of records.</p>
+                <p><strong>Additional Rights</strong><br />You have the right to end counseling at any time, to question any aspect of your treatment, to expect professional and ethical boundaries, and to considerate and respectful care without discrimination.</p>
+              </ConsentDoc>
 
-              <div style={{ background: "#f0fdfa", border: `1px solid ${T.teal}30`, borderRadius: 14, padding: "1.5rem" }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: T.teal, marginBottom: 12 }}>Telehealth Informed Consent</div>
-                <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.8, display: "flex", flexDirection: "column", gap: 8 }}>
-                  <p>By confirming below, I consent to receive telemental health services and authorize health information to be securely transmitted via interactive video between myself and my provider. I acknowledge:</p>
-                  <ol style={{ paddingLeft: 18, display: "flex", flexDirection: "column", gap: 6 }}>
-                    <li>I have the right to withdraw consent for telehealth at any time without affecting my right to future care.</li>
-                    <li>Benefits include increased accessibility, convenience, and the ability to receive care without an in-office visit.</li>
-                    <li>Risks include technology failures, potential breaches of confidentiality, and limited ability to respond to emergencies.</li>
-                    <li>Sessions will not be recorded by either party unless otherwise disclosed and agreed upon in advance.</li>
-                    <li>If I am experiencing a mental health crisis that cannot be resolved remotely, my provider may require in-person services or a higher level of care.</li>
-                    <li>If there is an emergency during a session, my emergency contact and/or appropriate authorities may be contacted.</li>
-                    <li>I may still elect to receive in-person visits at any time.</li>
-                  </ol>
-                </div>
-              </div>
+              {/* Practice Policies */}
+              <ConsentDoc title="📋 Practice Policies" color={T.teal}>
+                <p><strong>Appointments and Cancellations</strong><br />Appointments are scheduled in advance at a cadence agreed upon based on your goals, treatment needs, and mutual availability. For no-shows or last-minute cancellations, a fee may be charged.</p>
+                <p><strong>Availability and After-Hours Emergencies</strong><br />Providers check voicemail during normal business hours. Messages left outside of normal hours will be picked up the next business day. If you are in crisis, please call 911 or go to the nearest emergency department.</p>
+                <p><strong>Contacting Your Provider</strong><br />Providers are often not immediately available by telephone. You may leave a message on the confidential voicemail and your call will be returned, but it may take a day or two for non-urgent matters.</p>
+                <p><strong>Discharge Process</strong><br />If our professional relationship ends, the reasons will be discussed with you first, and a list of other qualified providers will be offered upon request.</p>
+              </ConsentDoc>
 
-              <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 14, padding: "1.5rem" }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#c2410c", marginBottom: 12 }}>Consent to Treat & Guarantee of Payment</div>
-                <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.8 }}>
-                  <p>I hereby give my consent to receive behavioral health services including counseling, psychotherapy, psychological assessment, medication management and/or psychiatric care from MindShift Wellness Clinic providers. I understand that I am personally responsible for knowing and understanding the coverage and eligibility conditions of my own insurance policy. This consent may be revoked at any time by notifying MindShift Wellness Clinic in writing.</p>
-                </div>
-              </div>
+              {/* Notice of Privacy Practices */}
+              <ConsentDoc title="🔒 Notice of Privacy Practices (HIPAA)" color="#c2410c" subtitle="Last Updated: July 22, 2025">
+                <p>This Notice describes how medical information about you may be used and disclosed. We are required by law to keep your health information private and follow the terms of this notice.</p>
+                <p><strong>How Your Information Is Used</strong><br />We may use and disclose your health information for treatment, payment, and healthcare operations — including referring you to other providers, verifying insurance, submitting claims, and reviewing treatment procedures.</p>
+                <p><strong>Disclosures Without Authorization</strong><br />We may disclose your information without authorization in emergencies, for judicial proceedings, for public health activities, in cases of suspected child or elder abuse, and to business associates under confidentiality agreements.</p>
+                <p><strong>Your Individual Rights</strong><br />(1) Right to inspect and copy your health information. (2) Right to request amendment. (3) Right to an accounting of disclosures. (4) Right to request restrictions. (5) Right to file complaints at compliance@headway.co or (833) 384-1044.</p>
+              </ConsentDoc>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {/* Financial & Telehealth */}
+              <ConsentDoc title="💳 Assignment of Benefits & Financial Responsibility" color="#7c3aed">
+                <p><strong>Payment of Fees:</strong> I agree to pay for charges for services as described. Payment for sessions is due after each session.</p>
+                <p><strong>Insurance:</strong> If MindShift Wellness Clinic participates in my plan, I agree to pay all applicable deductibles, co-payments, and co-insurances.</p>
+                <p><strong>Assignment of Insurance Fees:</strong> I agree to allow my insurance plan to pay MindShift Wellness Clinic directly.</p>
+                <p><strong>Telehealth Consent:</strong> I consent to participate in telemental health services. I understand I have the right to refuse telehealth and be informed of alternative services. Risks include technology failure and reduced visibility of non-verbal cues.</p>
+              </ConsentDoc>
+
+              {/* Checkboxes */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 4 }}>Acknowledgements — please check each box</div>
                 {[
-                  { key: "consent_assignment_of_benefits", label: "Assignment of Benefits & Financial Responsibility", desc: "I have read and agree to the payment terms, insurance assignment, and financial responsibility outlined above.", required: true },
-                  { key: "consent_financial_responsibility", label: "Consent to Treat & Telehealth Informed Consent", desc: "I consent to receive behavioral health services and telehealth services from MindShift Wellness Clinic as described above.", required: true },
-                ].map(c => (
-                  <label key={c.key} style={{ display: "flex", gap: 12, padding: "1rem 1.2rem", borderRadius: 12, border: `1.5px solid ${form[c.key] ? T.accent : T.border}`, background: form[c.key] ? `${T.accent}08` : "#fff", cursor: "pointer", transition: "all .15s" }}>
-                    <input type="checkbox" checked={form[c.key]} onChange={e => setForm(f => ({ ...f, [c.key]: e.target.checked }))} style={{ width: 18, height: 18, marginTop: 2, flexShrink: 0, accentColor: T.accent }} />
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{c.label} <span style={{ color: T.rose }}>*</span></div>
-                      <div style={{ fontSize: 12, color: T.muted, marginTop: 2, lineHeight: 1.5 }}>{c.desc}</div>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ── Step 7: Safety & Consent ── */}
-          {step === 6 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-              <StepHeading icon="✍️" title="Safety Check & Consent" desc="A few important questions and your digital signature" />
-
-              <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 12, padding: "1rem 1.2rem" }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#c2410c", marginBottom: 8 }}>⚠️ Safety Assessment</div>
-                <div style={{ fontSize: 12, color: "#9a3412", marginBottom: 12 }}>If you are in immediate danger, call 911. For mental health crisis, call or text 988 (Suicide & Crisis Lifeline).</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  <SelectInput label="Are you currently experiencing thoughts of suicide or self-harm?" value={form.suicidal_ideation} onChange={set("suicidal_ideation")} options={[
-                    { value: "no", label: "No" },
-                    { value: "past", label: "In the past, but not currently" },
-                    { value: "current", label: "Yes, currently" },
-                  ]} />
-                  <SelectInput label="Do you have a history of self-harm?" value={form.self_harm} onChange={set("self_harm")} options={[
-                    { value: "no", label: "No" },
-                    { value: "past", label: "In the past, but not currently" },
-                    { value: "current", label: "Yes, currently" },
-                  ]} />
-                  {(form.suicidal_ideation === "current" || form.self_harm === "current") && (
-                    <TextArea label="Please share more so your clinician can help you stay safe" value={form.safety_plan} onChange={set("safety_plan")} rows={3} />
-                  )}
-                </div>
-              </div>
-
-              {/* Consents */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>Consents & Agreements</div>
-                {[
-                  { key: "consent_treatment", label: "Consent to Treatment", desc: "I consent to receive psychiatric evaluation and treatment from MindShift Wellness Clinic clinicians.", required: true },
-                  { key: "consent_privacy",   label: "Privacy Policy (HIPAA)", desc: "I acknowledge I have been informed of MindShift Wellness Clinic's HIPAA privacy practices and how my health information is used.", required: true },
-                  { key: "consent_telehealth", label: "Telehealth Consent (Optional)", desc: "I consent to receive telehealth services via secure video platform when applicable.", required: false },
+                  { key: "consent_treatment",              label: "Informed Consent for Psychotherapy",                    desc: "I have read and agree to the Informed Consent for Psychotherapy Services.", required: true },
+                  { key: "consent_privacy",                label: "Practice Policies & Notice of Privacy Practices (HIPAA)", desc: "I have read and acknowledge MindShift Wellness Clinic's Practice Policies and HIPAA Notice of Privacy Practices.", required: true },
+                  { key: "consent_assignment_of_benefits", label: "Assignment of Benefits & Financial Responsibility",      desc: "I have read and agree to the payment terms and insurance assignment.", required: true },
+                  { key: "consent_financial_responsibility", label: "Consent to Treat & Telehealth",                       desc: "I consent to receive behavioral health and telehealth services from MindShift Wellness Clinic.", required: true },
+                  { key: "consent_telehealth",             label: "Telehealth Consent (Optional)",                         desc: "I consent to receive telehealth services via secure video platform when applicable.", required: false },
                 ].map(c => (
                   <label key={c.key} style={{ display: "flex", gap: 12, padding: "1rem 1.2rem", borderRadius: 12, border: `1.5px solid ${form[c.key] ? T.accent : T.border}`, background: form[c.key] ? `${T.accent}08` : "#fff", cursor: "pointer", transition: "all .15s" }}>
                     <input type="checkbox" checked={form[c.key]} onChange={e => setForm(f => ({ ...f, [c.key]: e.target.checked }))} style={{ width: 18, height: 18, marginTop: 2, flexShrink: 0, accentColor: T.accent }} />
@@ -581,7 +309,7 @@ export default function PortalIntake({ userId, displayName, onComplete }) {
             </div>
           )}
 
-          {/* Navigation buttons */}
+          {/* Navigation */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "2rem", paddingTop: "1.5rem", borderTop: `1px solid ${T.border}` }}>
             <Btn variant="secondary" onClick={goPrev} type="button" style={{ visibility: step === 0 ? "hidden" : "visible" }}>← Back</Btn>
             <div style={{ display: "flex", gap: 8 }}>
@@ -592,13 +320,28 @@ export default function PortalIntake({ userId, displayName, onComplete }) {
                 <Btn type="submit">Continue →</Btn>
               ) : (
                 <Btn type="submit" disabled={submitting} style={{ background: `linear-gradient(135deg,${T.accent},${T.teal})` }}>
-                  {submitting ? "Submitting…" : "Submit Intake ✓"}
+                  {submitting ? "Submitting…" : "Submit ✓"}
                 </Btn>
               )}
             </div>
           </div>
         </form>
       </Card>
+    </div>
+  );
+}
+
+function ConsentDoc({ title, color, subtitle, children }) {
+  return (
+    <div style={{ border: `1px solid ${color}30`, borderRadius: 14, overflow: "hidden" }}>
+      <div style={{ background: `${color}0d`, padding: "0.9rem 1.5rem", borderBottom: `1px solid ${color}20` }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color }}>{title}</div>
+        {subtitle && <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{subtitle} · MindShift Wellness Clinic</div>}
+        {!subtitle && <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>MindShift Wellness Clinic</div>}
+      </div>
+      <div style={{ padding: "1.2rem 1.5rem", maxHeight: 240, overflowY: "auto", fontSize: 12, color: T.muted, lineHeight: 1.8, display: "flex", flexDirection: "column", gap: 8, background: "#fff" }}>
+        {children}
+      </div>
     </div>
   );
 }
@@ -617,31 +360,20 @@ function StepHeading({ icon, title, desc }) {
 
 function SubmittedScreen({ displayName, onBack }) {
   return (
-    <div style={{
-      position: "fixed", inset: 0, zIndex: 500,
-      background: "rgba(0,0,0,0.5)", backdropFilter: "blur(6px)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      padding: "1.5rem",
-    }}>
-      <div style={{
-        background: "#fff", borderRadius: 28, padding: "2.5rem 2rem",
-        maxWidth: 520, width: "100%", textAlign: "center",
-        boxShadow: "0 24px 80px rgba(74,108,247,0.18)",
-        animation: "fadeUp .35s ease",
-      }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1.5rem" }}>
+      <div style={{ background: "#fff", borderRadius: 28, padding: "2.5rem 2rem", maxWidth: 520, width: "100%", textAlign: "center", boxShadow: "0 24px 80px rgba(74,108,247,0.18)", animation: "fadeUp .35s ease" }}>
         <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}`}</style>
         <div style={{ fontSize: 64, marginBottom: "1rem" }}>🌱</div>
         <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: T.text, marginBottom: 10 }}>
-          Thank you for taking this step, {displayName}
+          Thank you, {displayName}
         </h1>
         <p style={{ fontSize: 14, color: T.muted, lineHeight: 1.8, marginBottom: "1.5rem" }}>
-          Taking care of yourself takes courage — and you just did something meaningful.
-          Your intake has been received and your care team will review it before your first visit.
+          Your forms have been received. Your clinician will go over the rest with you at your first appointment.
         </p>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: "1.8rem", textAlign: "left" }}>
           {[
-            ["📋", "Your intake is securely on file"],
-            ["👨‍⚕️", "Your clinician will review it before your visit"],
+            ["✅", "Your consents are securely on file"],
+            ["👨‍⚕️", "Your clinician will review before your visit"],
             ["📅", "No further action needed — just show up"],
             ["💬", "Questions? Message us through the portal"],
           ].map(([icon, text]) => (
@@ -651,9 +383,7 @@ function SubmittedScreen({ displayName, onBack }) {
             </div>
           ))}
         </div>
-        <Btn onClick={onBack} style={{ width: "100%", justifyContent: "center" }}>
-          Back to Dashboard →
-        </Btn>
+        <Btn onClick={onBack} style={{ width: "100%" }}>Back to Portal</Btn>
       </div>
     </div>
   );

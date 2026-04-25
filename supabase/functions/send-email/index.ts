@@ -8,6 +8,9 @@ const FROM = "MindShift Wellness Clinic <noreply@mindshiftwellnessclinic.org>";
 const CLINICIAN_EMAILS = [
   "info@mindshiftwellnessclinic.org",
   "jerlessm@gmail.com",
+  "kmutegyeki@mindshiftwellnessclinic.org",
+  "kmutegyeki@gmail.com",
+  "rnakkazi@mindshiftwellnessclinic.org",
 ];
 
 async function sendEmail(to: string | string[], subject: string, html: string) {
