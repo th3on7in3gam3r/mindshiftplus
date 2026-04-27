@@ -14,11 +14,13 @@ import { useTokens } from "../../lib/ThemeContext";
 import EHRClinicalAI from "./EHRClinicalAI";
 import EHRBilling, { CptPicker } from "./EHRBilling";
 import EHRClinicalIntake from "./EHRClinicalIntake";
+import EHRScribeNotes from "./EHRScribeNotes";
 
 const TABS = [
   { id: "overview",     label: "Overview",     icon: "🏠" },
   { id: "intake",       label: "Intake",       icon: "📋" },
   { id: "notes",        label: "Notes",        icon: "📝" },
+  { id: "scribe",       label: "AI Scribe",    icon: "🎙️" },
   { id: "medications",  label: "Medications",  icon: "💊" },
   { id: "appointments", label: "Appointments", icon: "📅" },
   { id: "messages",     label: "Messages",     icon: "💬" },
@@ -178,6 +180,8 @@ export default function EHRPatientChart({ chartId, clinician, onBack, isNew = fa
           />
         ) : tab === "documents" ? (
           <DocumentsTab docs={docs} />
+        ) : tab === "scribe" ? (
+          <EHRScribeNotes patientId={chart.patient_id} patientChartId={chart.id} />
         ) : tab === "billing" ? (
           <EHRBilling patientId={chart.patient_id} chartId={chart.id} clinician={clinician} />
         ) : tab === "ai" ? (

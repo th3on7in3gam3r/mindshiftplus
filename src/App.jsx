@@ -7,6 +7,7 @@ import AdminSchedule from "./components/scheduling/AdminSchedule";
 import DisclaimerModal, { hasAcceptedDisclaimer } from "./components/DisclaimerModal";
 import CrisisModal from "./components/CrisisModal";
 import EHR from "./components/ehr/EHR";
+import AIScribe from "./components/AIScribe";
 
 // ── Fonts ──────────────────────────────────────────────────────────────────────
 const GlobalStyles = () => (
@@ -145,6 +146,7 @@ const navItems=[
 const adminNavItems=[
   {id:"ehr-schedule",icon:"📋",label:"Admin Schedule"},
   {id:"ehr",        icon:"🏥",label:"EHR"},
+  {id:"ai-scribe",  icon:"🎙️",label:"AI Scribe"},
 ];
 
 function Sidebar({page,setPage,user,onSignOut,open,onClose}){
@@ -2750,6 +2752,16 @@ export default function App(){
       <>
         <GlobalStyles/>
         <EHR onBack={()=>setPage("dashboard")}/>
+      </>
+    );
+  }
+
+  // AI Scribe — clinician-only AI-powered clinical documentation
+  if(page==="ai-scribe"){
+    return(
+      <>
+        <GlobalStyles/>
+        <AIScribe/>
       </>
     );
   }
