@@ -145,7 +145,45 @@ export default function PortalLogin({ onBack }) {
               <span style={{ fontSize:13, color:"rgba(255,255,255,0.65)" }}>{text}</span>
             </div>
           ))}
-          <div style={{ marginTop:"2rem", padding:"1rem", background:"rgba(255,255,255,0.06)", borderRadius:12, border:"1px solid rgba(255,255,255,0.1)" }}>
+          
+          {/* HIPAA Compliance Badge */}
+          <div style={{ 
+            marginTop:"2rem", 
+            marginBottom:"1.5rem",
+            padding:"1.25rem", 
+            background:"rgba(255,255,255,0.08)", 
+            borderRadius:12, 
+            border:"1px solid rgba(255,255,255,0.15)",
+            display:"flex",
+            alignItems:"center",
+            gap:"1rem"
+          }}>
+            <div style={{
+              width:60,
+              height:60,
+              borderRadius:12,
+              background:"linear-gradient(135deg, rgba(74,108,247,0.2), rgba(14,165,160,0.2))",
+              border:"2px solid rgba(255,255,255,0.2)",
+              display:"flex",
+              flexDirection:"column",
+              alignItems:"center",
+              justifyContent:"center",
+              flexShrink:0
+            }}>
+              <div style={{ fontSize:20, marginBottom:2 }}>🔒</div>
+              <div style={{ fontSize:8, fontWeight:700, color:"rgba(255,255,255,0.9)", letterSpacing:"0.5px" }}>HIPAA</div>
+            </div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:13, fontWeight:600, color:"rgba(255,255,255,0.95)", marginBottom:4 }}>
+                HIPAA Compliant
+              </div>
+              <div style={{ fontSize:11, color:"rgba(255,255,255,0.6)", lineHeight:1.5 }}>
+                Your health information is protected with bank-level encryption and strict privacy standards.
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginTop:"1rem", padding:"1rem", background:"rgba(255,255,255,0.06)", borderRadius:12, border:"1px solid rgba(255,255,255,0.1)" }}>
             <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", marginBottom:4 }}>Need help? Contact us directly</div>
             <a href="tel:5083061128" style={{ fontSize:13, color:"rgba(255,255,255,0.7)", textDecoration:"none", display:"block" }}>📞 (508) 306-1128</a>
             <a href="mailto:info@mindshiftwellnessclinic.org" style={{ fontSize:12, color:"rgba(255,255,255,0.5)", textDecoration:"none", display:"block", marginTop:3 }}>✉️ info@mindshiftwellnessclinic.org</a>
@@ -242,13 +280,41 @@ export default function PortalLogin({ onBack }) {
             </>
           )}
 
-          {/* HIPAA note */}
+          {/* HIPAA Security Badge */}
           {mode !== "sent" && (
-            <div style={{ marginTop:"2rem", padding:"0.9rem 1rem", background:"rgba(74,108,247,0.05)", border:`1px solid rgba(74,108,247,0.12)`, borderRadius:10, display:"flex", gap:8, alignItems:"flex-start" }}>
-              <span style={{ fontSize:14, flexShrink:0 }}>🔒</span>
-              <p style={{ fontSize:11, color:P.muted, lineHeight:1.6, margin:0 }}>
-                This portal uses secure, encrypted connections. Your health information is protected in accordance with HIPAA privacy standards.
-              </p>
+            <div style={{ 
+              marginTop:"2rem", 
+              padding:"1rem 1.25rem", 
+              background:"linear-gradient(135deg, rgba(74,108,247,0.08), rgba(14,165,160,0.05))", 
+              border:`1.5px solid rgba(74,108,247,0.15)`, 
+              borderRadius:12, 
+              display:"flex", 
+              gap:12, 
+              alignItems:"center" 
+            }}>
+              <div style={{
+                width:48,
+                height:48,
+                borderRadius:10,
+                background:"linear-gradient(135deg, rgba(74,108,247,0.15), rgba(14,165,160,0.1))",
+                border:"1.5px solid rgba(74,108,247,0.2)",
+                display:"flex",
+                flexDirection:"column",
+                alignItems:"center",
+                justifyContent:"center",
+                flexShrink:0
+              }}>
+                <div style={{ fontSize:18, marginBottom:2 }}>🔒</div>
+                <div style={{ fontSize:8, fontWeight:700, color:P.accent, letterSpacing:"0.5px" }}>HIPAA</div>
+              </div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:12, fontWeight:600, color:P.text, marginBottom:3 }}>
+                  HIPAA Compliant & Secure
+                </div>
+                <p style={{ fontSize:11, color:P.muted, lineHeight:1.6, margin:0 }}>
+                  256-bit encryption • Secure authentication • Privacy protected • HIPAA standards
+                </p>
+              </div>
             </div>
           )}
         </div>
