@@ -2,17 +2,179 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../lib/AuthContext";
 import {
   createScribeSession,
-  updateScribeSession,
   saveGeneratedNote,
   updateRecordingMetadata,
   getProviderScribeSessions,
-  getPatientScribeSessions,
   pushToEHR,
-  getScribeTemplates,
   getProviderScribeStats
 } from "../lib/aiScribeDb";
 
-export default function AIScribe() {
+// ── Gallery Templates (from mindshift-ai-scribe templateService) ──────────────
+const GALLERY_TEMPLATES = [
+  {
+    id: 'psych-progress-note',
+    name: 'Psychiatric Progress Note',
+    specialty: 'psychiatry',
+    description: 'Standard psychiatric follow-up note with MSE',
+    icon: '🧠',
+    sections: ['Chief Complaint','Subjective','Mental Status Exam','Assessment','Plan','Risk Assessment'],
+    usageCount: 1250,
+  },
+  {
+    id: 'therapy-session-note',
+    name: 'Therapy Session Note',
+    specialty: 'psychology',
+    description: 'Psychotherapy session documentation',
+    icon: '💭',
+    sections: ['Presenting Problem','Session Content','Interventions Used','Client Response','Plan'],
+    usageCount: 890,
+  },
+  {
+    id: 'initial-psych-eval',
+    name: 'Initial Psychiatric Evaluation',
+    specialty: 'psychiatry',
+    description: 'Comprehensive initial psychiatric assessment',
+    icon: '📋',
+    sections: ['Chief Complaint','History of Present Illness','Psychiatric History','Medical History','Social History','Family History','Mental Status Exam','Assessment','Plan'],
+    usageCount: 650,
+  },
+  {
+    id: 'med-management',
+    name: 'Medication Management Visit',
+    specialty: 'psychiatry',
+    description: 'Brief medication follow-up note',
+    icon: '💊',
+    sections: ['Chief Complaint','Current Medications','Efficacy','Side Effects','Adherence','Mental Status','Plan'],
+    usageCount: 1100,
+  },
+  {
+    id: 'crisis-assessment',
+    name: 'Crisis Assessment Note',
+    specialty: 'psychiatry',
+    description: 'Urgent crisis evaluation and safety planning',
+    icon: '🚨',
+    sections: ['Presenting Crisis','Risk Factors','Protective Factors','Mental Status Exam','Safety Assessment','Safety Plan','Disposition'],
+    usageCount: 420,
+  },
+  {
+    id: 'group-therapy-note',
+    name: 'Group Therapy Note',
+    specialty: 'psychology',
+    description: 'Group psychotherapy session documentation',
+    icon: '👥',
+    sections: ['Group Composition','Session Theme','Patient Participation','Therapeutic Interventions','Group Dynamics','Individual Progress','Plan'],
+    usageCount: 310,
+  },
+  {
+    id: 'intake-assessment',
+    name: 'Intake Assessment',
+    specialty: 'primary-care',
+    description: 'New patient intake and biopsychosocial assessment',
+    icon: '📝',
+    sections: ['Reason for Referral','Presenting Problem','Biopsychosocial History','Mental Status Exam','Diagnostic Impressions','Treatment Recommendations'],
+    usageCount: 580,
+  },
+  {
+    id: 'pediatric-behavioral',
+    name: 'Pediatric Behavioral Health Note',
+    specialty: 'pediatrics',
+    description: 'Child and adolescent behavioral health documentation',
+    icon: '👶',
+    sections: ['Chief Complaint','Developmental History','Behavioral Observations','Parent/Guardian Report','School Functioning','Mental Status Exam','Assessment','Plan'],
+    usageCount: 275,
+  },
+  {
+    id: 'substance-use',
+    name: 'Substance Use Disorder Note',
+    specialty: 'psychiatry',
+    description: 'Substance use evaluation and treatment planning',
+    icon: '🔬',
+    sections: ['Substance Use History','Current Use Pattern','Withdrawal Assessment','Motivation for Change','Mental Status Exam','Assessment','Treatment Plan'],
+    usageCount: 390,
+  },
+  {
+    id: 'discharge-summary',
+    name: 'Discharge Summary',
+    specialty: 'psychiatry',
+    description: 'Inpatient or intensive outpatient discharge documentation',
+    icon: '🏥',
+    sections: ['Admission Information','Reason for Admission','Hospital Course','Medications at Discharge','Discharge Condition','Follow-up Plan','Safety Plan'],
+    usageCount: 215,
+  },
+];
+
+// Map template id → note generator
+function generateNoteFromTemplate(templateId, data) {
+  const base = `PATIENT INFORMATION:
+Patient ID: ${data.patientId}
+Date of Service: ${data.dateOfService}
+Provider: ${data.providerName}
+Session Type: ${data.sessionType}
+Duration: ${data.duration || 'N/A'} minutes
+Modality: ${data.modality}
+${data.icd10Codes?.length ? `\nICD-10 CODES: ${data.icd10Codes.join(', ')}` : ''}`;
+
+  const hpi = data.transcript || 'See transcript.';
+  const ctx = data.patientContext ? `\nCLINICAL CONTEXT:\n${data.patientContext}\n` : '';
+
+  const mse = `MENTAL STATUS EXAMINATION:
+- Appearance: Well-groomed, appropriate dress
+- Behavior: Cooperative, good eye contact
+- Speech: Normal rate and rhythm
+- Mood: As reported by patient
+- Affect: Congruent with stated mood
+- Thought Process: Linear and goal-directed
+- Thought Content: No suicidal or homicidal ideation
+- Perception: No hallucinations reported
+- Cognition: Alert and oriented x3
+- Insight: Good
+- Judgment: Intact`;
+
+  const plan = `PLAN:
+1. Continue current treatment approach
+2. Monitor symptoms and side effects
+3. Follow-up as scheduled
+4. Patient educated on warning signs and when to seek immediate care`;
+
+  const sig = `\nProvider Signature: ${data.providerName}\nDate: ${data.dateOfService}`;
+
+  switch (templateId) {
+    case 'psych-progress-note':
+      return `PSYCHIATRIC PROGRESS NOTE\n\n${base}\n\nCHIEF COMPLAINT:\nPatient presents for ${data.sessionType.toLowerCase()} psychiatric evaluation.\n\nSUBJECTIVE:\n${hpi}\n${ctx}\n${mse}\n\nASSESSMENT:\nPatient demonstrates good engagement in treatment. Symptoms are being monitored closely.\n\nRISK ASSESSMENT:\nNo active suicidal or homicidal ideation. Safety plan reviewed and in place.\n\n${plan}${sig}`;
+
+    case 'therapy-session-note':
+      return `THERAPY SESSION NOTE\n\n${base}\n\nPRESENTING PROBLEM:\n${hpi}\n${ctx}\nINTERVENTIONS USED:\nCognitive-behavioral techniques, psychoeducation, and supportive therapy.\n\nCLIENT RESPONSE:\nPatient engaged actively in session. Demonstrated insight and willingness to apply strategies.\n\nPROGRESS TOWARD GOALS:\nContinued progress noted toward treatment goals.\n\nPLAN FOR NEXT SESSION:\nContinue current therapeutic approach. Review homework assignments.${sig}`;
+
+    case 'initial-psych-eval':
+      return `INITIAL PSYCHIATRIC EVALUATION\n\n${base}\n\nCHIEF COMPLAINT:\nPatient presents for initial psychiatric evaluation.\n\nHISTORY OF PRESENT ILLNESS:\n${hpi}\n${ctx}\nPSYCHIATRIC HISTORY:\nSee clinical context above.\n\nMEDICAL HISTORY:\nTo be reviewed with patient.\n\nSOCIAL HISTORY:\nTo be reviewed with patient.\n\nFAMILY HISTORY:\nTo be reviewed with patient.\n\n${mse}\n\nASSESSMENT:\nDiagnostic formulation pending full evaluation.\n\n${plan}${sig}`;
+
+    case 'med-management':
+      return `MEDICATION MANAGEMENT VISIT\n\n${base}\n\nCHIEF COMPLAINT:\nMedication review and management.\n\nCURRENT MEDICATIONS:\n${hpi}\n${ctx}\nEFFICACY:\nSymptom response to current regimen reviewed.\n\nSIDE EFFECTS:\nNo significant adverse effects reported at this time.\n\nADHERENCE:\nPatient reports compliance with prescribed regimen.\n\n${mse}\n\nMEDICATION CHANGES:\nNo changes at this time. Continue current regimen.\n\n${plan}${sig}`;
+
+    case 'crisis-assessment':
+      return `CRISIS ASSESSMENT NOTE\n\n${base}\n\nPRESENTING CRISIS:\n${hpi}\n${ctx}\nRISK FACTORS:\nTo be assessed during evaluation.\n\nPROTECTIVE FACTORS:\nSupport system, motivation for treatment, no prior attempts.\n\n${mse}\n\nSAFETY ASSESSMENT:\nRisk level assessed. Safety plan developed and reviewed with patient.\n\nSAFETY PLAN:\n1. Identify warning signs\n2. Internal coping strategies\n3. Social contacts for distraction\n4. Crisis contacts\n5. Means restriction\n\nDISPOSITION:\nOutpatient follow-up scheduled. Patient agrees to safety plan.${sig}`;
+
+    case 'group-therapy-note':
+      return `GROUP THERAPY NOTE\n\n${base}\n\nGROUP COMPOSITION:\nClosed group, members present as scheduled.\n\nSESSION THEME:\n${hpi}\n${ctx}\nPATIENT PARTICIPATION:\nPatient engaged appropriately in group discussion.\n\nTHERAPEUTIC INTERVENTIONS:\nPsychoeducation, peer support, and skill-building exercises.\n\nGROUP DYNAMICS:\nGroup cohesion maintained. Supportive environment observed.\n\nINDIVIDUAL PROGRESS:\nPatient demonstrates continued progress toward treatment goals.\n\nPLAN:\nContinue group participation. Next session as scheduled.${sig}`;
+
+    case 'intake-assessment':
+      return `INTAKE ASSESSMENT\n\n${base}\n\nREASON FOR REFERRAL:\nNew patient intake evaluation.\n\nPRESENTING PROBLEM:\n${hpi}\n${ctx}\nBIOPSYCHOSOCIAL HISTORY:\nComprehensive history obtained. See clinical context.\n\n${mse}\n\nDIAGNOSTIC IMPRESSIONS:\nPending full evaluation and collateral information.\n\nTREATMENT RECOMMENDATIONS:\n1. Individual therapy\n2. Medication evaluation if indicated\n3. Psychoeducation\n4. Follow-up in 2 weeks${sig}`;
+
+    case 'pediatric-behavioral':
+      return `PEDIATRIC BEHAVIORAL HEALTH NOTE\n\n${base}\n\nCHIEF COMPLAINT:\n${hpi}\n${ctx}\nDEVELOPMENTAL HISTORY:\nDevelopmental milestones reviewed with parent/guardian.\n\nBEHAVIORAL OBSERVATIONS:\nChild cooperative during session. Age-appropriate behavior noted.\n\nPARENT/GUARDIAN REPORT:\nParent reports concerns as noted above.\n\nSCHOOL FUNCTIONING:\nAcademic and social functioning reviewed.\n\n${mse}\n\nASSESSMENT:\nBehavioral health concerns identified. Treatment plan initiated.\n\n${plan}${sig}`;
+
+    case 'substance-use':
+      return `SUBSTANCE USE DISORDER NOTE\n\n${base}\n\nSUBSTANCE USE HISTORY:\n${hpi}\n${ctx}\nCURRENT USE PATTERN:\nFrequency, quantity, and route of administration reviewed.\n\nWITHDRAWAL ASSESSMENT:\nNo acute withdrawal symptoms noted at this time.\n\nMOTIVATION FOR CHANGE:\nPatient expresses motivation for recovery.\n\n${mse}\n\nASSESSMENT:\nSubstance use disorder identified. Treatment plan initiated.\n\nTREATMENT PLAN:\n1. Outpatient treatment program\n2. Medication-assisted treatment if indicated\n3. Peer support referral\n4. Follow-up in 1 week${sig}`;
+
+    case 'discharge-summary':
+      return `DISCHARGE SUMMARY\n\n${base}\n\nADMISSION INFORMATION:\nAdmission date and reason documented.\n\nREASON FOR ADMISSION:\n${hpi}\n${ctx}\nHOSPITAL COURSE:\nPatient responded to treatment. Stabilized for discharge.\n\nMEDICATIONS AT DISCHARGE:\nSee current medication list.\n\nDISCHARGE CONDITION:\nPatient stable, safety plan in place, follow-up arranged.\n\nFOLLOW-UP PLAN:\n1. Outpatient psychiatry in 1 week\n2. Therapy as scheduled\n3. Medication management\n\nSAFETY PLAN:\nReviewed and signed by patient prior to discharge.${sig}`;
+
+    default:
+      return generateClinicalNote(data);
+  }
+}
+
+export default function AIScribe({ onBack }) {
   const { user } = useAuth();
   const [scribeState, setScribeState] = useState('setup'); // 'setup' | 'during' | 'after'
   const [currentSessionId, setCurrentSessionId] = useState(null);
@@ -75,50 +237,37 @@ export default function AIScribe() {
           marginBottom: "1rem",
           flexWrap: "wrap"
         }}>
+          {/* Left: logo + title */}
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{
-              width: 48,
-              height: 48,
-              borderRadius: 12,
-              background: "var(--grad1)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 24
-            }}>
-              🎙️
-            </div>
+            <img
+              src="/logo.png"
+              alt="MindShift"
+              style={{ width: 40, height: 40, borderRadius: 10, objectFit: "contain", background: "#fff", padding: 3, flexShrink: 0 }}
+            />
             <div>
-              <h1 style={{
-                fontSize: "clamp(1.5rem, 4vw, 2rem)",
-                fontWeight: 700,
-                marginBottom: 4
-              }}>
+              <h1 style={{ fontSize: "clamp(1.2rem, 3vw, 1.7rem)", fontWeight: 700, marginBottom: 2 }}>
                 MindShift AI Scribe
               </h1>
-              <p style={{
-                color: "var(--muted)",
-                fontSize: 14
-              }}>
-                Transform clinical sessions into comprehensive, billing-ready progress notes
+              <p style={{ color: "var(--muted)", fontSize: 13 }}>
+                Transform clinical sessions into billing-ready progress notes
               </p>
             </div>
           </div>
 
-          {/* Stats & Archive Toggle */}
-          <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+          {/* Right: stats + archive + back */}
+          <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
             {stats && (
-              <GlassCard style={{ padding: "0.75rem 1rem", display: "flex", gap: "1.5rem" }}>
+              <GlassCard style={{ padding: "0.6rem 1rem", display: "flex", gap: "1.25rem" }}>
                 <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: "var(--teal)" }}>{stats.total_sessions}</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: "var(--teal)" }}>{stats.total_sessions}</div>
                   <div style={{ fontSize: 10, color: "var(--muted)" }}>Total</div>
                 </div>
                 <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: "var(--purple)" }}>{stats.this_week}</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: "var(--purple)" }}>{stats.this_week}</div>
                   <div style={{ fontSize: 10, color: "var(--muted)" }}>This Week</div>
                 </div>
                 <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: "var(--gold)" }}>{Math.round(stats.average_quality_score)}%</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: "var(--gold)" }}>{Math.round(stats.average_quality_score || 0)}%</div>
                   <div style={{ fontSize: 10, color: "var(--muted)" }}>Avg Quality</div>
                 </div>
               </GlassCard>
@@ -126,6 +275,11 @@ export default function AIScribe() {
             <Btn variant="secondary" small onClick={() => setShowArchive(!showArchive)}>
               📁 {showArchive ? "Hide" : "Archive"} ({savedSessions.length})
             </Btn>
+            {onBack && (
+              <Btn variant="secondary" small onClick={onBack}>
+                ← Dashboard
+              </Btn>
+            )}
           </div>
         </div>
       </div>
@@ -259,105 +413,71 @@ function AIScribeContent({ state, setState, data, setData, sessionId, setSession
 
 // Session Setup Component
 function SessionSetup({ data, setData, onStart }) {
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [templateFilter, setTemplateFilter] = useState('all');
+
   const specialties = [
-    { id: 'psychiatry', name: 'Psychiatry', icon: '🧠' },
-    { id: 'psychology', name: 'Psychology', icon: '💭' },
+    { id: 'psychiatry',   name: 'Psychiatry',   icon: '🧠' },
+    { id: 'psychology',   name: 'Psychology',   icon: '💭' },
     { id: 'primary-care', name: 'Primary Care', icon: '🏥' },
-    { id: 'pediatrics', name: 'Pediatrics', icon: '👶' },
+    { id: 'pediatrics',   name: 'Pediatrics',   icon: '👶' },
   ];
 
   const sessionTypes = ['Initial Evaluation', 'Follow-up', 'Medication Management', 'Therapy', 'Combined'];
-  const modalities = ['Telehealth', 'In-Person'];
+  const modalities   = ['Telehealth', 'In-Person'];
+
+  const filteredTemplates = templateFilter === 'all'
+    ? GALLERY_TEMPLATES
+    : GALLERY_TEMPLATES.filter(t => t.specialty === templateFilter);
+
+  const handleSelectTemplate = (tpl) => {
+    setSelectedTemplate(tpl);
+    setData(d => ({ ...d, templateId: tpl.id }));
+    setShowTemplates(false);
+  };
+
+  const clearTemplate = () => {
+    setSelectedTemplate(null);
+    setData(d => ({ ...d, templateId: undefined }));
+  };
 
   return (
-    <div style={{
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-      gap: "1.5rem"
-    }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "1.5rem" }}>
+
       {/* Patient Information */}
       <GlassCard>
-        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: "1rem" }}>
-          Patient Information
-        </h3>
+        <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: "1rem" }}>Patient Information</h3>
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <InputField
-            label="Patient ID"
-            value={data.patientId}
-            onChange={(e) => setData({ ...data, patientId: e.target.value })}
-            placeholder="Enter patient ID"
-          />
-          <InputField
-            label="Date of Service"
-            type="date"
-            value={data.dateOfService}
-            onChange={(e) => setData({ ...data, dateOfService: e.target.value })}
-          />
-          <InputField
-            label="Provider Name"
-            value={data.providerName}
-            onChange={(e) => setData({ ...data, providerName: e.target.value })}
-            placeholder="Your name"
-          />
+          <InputField label="Patient ID *" value={data.patientId} onChange={e => setData({ ...data, patientId: e.target.value })} placeholder="e.g. PT-12345" />
+          <InputField label="Date of Service" type="date" value={data.dateOfService} onChange={e => setData({ ...data, dateOfService: e.target.value })} />
+          <InputField label="Provider Name *" value={data.providerName} onChange={e => setData({ ...data, providerName: e.target.value })} placeholder="Dr. Jane Smith" />
         </div>
       </GlassCard>
 
       {/* Session Details */}
       <GlassCard>
-        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: "1rem" }}>
-          Session Details
-        </h3>
+        <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: "1rem" }}>Session Details</h3>
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <SelectField
-            label="Session Type"
-            value={data.sessionType}
-            onChange={(e) => setData({ ...data, sessionType: e.target.value })}
-            options={sessionTypes}
-          />
-          <SelectField
-            label="Modality"
-            value={data.modality}
-            onChange={(e) => setData({ ...data, modality: e.target.value })}
-            options={modalities}
-          />
-          <InputField
-            label="Duration (minutes)"
-            type="number"
-            value={data.duration}
-            onChange={(e) => setData({ ...data, duration: e.target.value })}
-            placeholder="45"
-          />
+          <SelectField label="Session Type" value={data.sessionType} onChange={e => setData({ ...data, sessionType: e.target.value })} options={sessionTypes} />
+          <SelectField label="Modality" value={data.modality} onChange={e => setData({ ...data, modality: e.target.value })} options={modalities} />
+          <InputField label="Duration (minutes)" type="number" value={data.duration} onChange={e => setData({ ...data, duration: e.target.value })} placeholder="45" />
         </div>
       </GlassCard>
 
       {/* Medical Specialty */}
       <GlassCard style={{ gridColumn: "1 / -1" }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: "1rem" }}>
-          Medical Specialty
-        </h3>
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-          gap: "0.75rem"
-        }}>
+        <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: "1rem" }}>Medical Specialty</h3>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "0.75rem" }}>
           {specialties.map(spec => (
-            <button
-              key={spec.id}
-              onClick={() => setData({ ...data, specialty: spec.id })}
-              style={{
-                padding: "1rem",
-                borderRadius: 12,
-                border: `2px solid ${data.specialty === spec.id ? 'var(--purple)' : 'var(--border)'}`,
-                background: data.specialty === spec.id ? 'rgba(124,111,247,0.15)' : 'var(--glass)',
-                color: data.specialty === spec.id ? 'var(--lavender)' : 'var(--muted)',
-                cursor: "pointer",
-                transition: "all 0.2s",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 8
-              }}
-            >
+            <button key={spec.id} onClick={() => setData({ ...data, specialty: spec.id })} style={{
+              padding: "1rem", borderRadius: 12,
+              border: `2px solid ${data.specialty === spec.id ? 'var(--purple)' : 'var(--border)'}`,
+              background: data.specialty === spec.id ? 'rgba(124,111,247,0.15)' : 'var(--glass)',
+              color: data.specialty === spec.id ? 'var(--lavender)' : 'var(--muted)',
+              cursor: "pointer", transition: "all 0.2s",
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 8
+            }}>
               <span style={{ fontSize: 24 }}>{spec.icon}</span>
               <span style={{ fontSize: 13, fontWeight: 500 }}>{spec.name}</span>
             </button>
@@ -365,26 +485,108 @@ function SessionSetup({ data, setData, onStart }) {
         </div>
       </GlassCard>
 
+      {/* Note Template Gallery */}
+      <GlassCard style={{ gridColumn: "1 / -1" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+          <h3 style={{ fontSize: 15, fontWeight: 600 }}>Note Template <span style={{ color: "var(--muted)", fontWeight: 400, fontSize: 13 }}>(optional)</span></h3>
+          {selectedTemplate && (
+            <button onClick={clearTemplate} style={{ background: "transparent", border: "none", color: "var(--rose)", fontSize: 12, cursor: "pointer" }}>
+              ✕ Clear
+            </button>
+          )}
+        </div>
+
+        {/* Selected template chip */}
+        {selectedTemplate && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 10, padding: "0.75rem 1rem",
+            background: "rgba(124,111,247,0.15)", border: "1px solid rgba(124,111,247,0.3)",
+            borderRadius: 12, marginBottom: "1rem"
+          }}>
+            <span style={{ fontSize: 20 }}>{selectedTemplate.icon}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--lavender)" }}>{selectedTemplate.name}</div>
+              <div style={{ fontSize: 11, color: "var(--muted)" }}>{selectedTemplate.description}</div>
+            </div>
+            <div style={{ fontSize: 11, color: "var(--muted2)" }}>✓ Selected</div>
+          </div>
+        )}
+
+        {/* Browse / collapse toggle */}
+        <button onClick={() => setShowTemplates(!showTemplates)} style={{
+          width: "100%", padding: "0.75rem", borderRadius: 10,
+          border: "1px dashed var(--border2)", background: "transparent",
+          color: "var(--lavender)", fontSize: 13, fontWeight: 500, cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 8
+        }}>
+          📚 {showTemplates ? "Hide Template Gallery" : "Browse Template Gallery"} ({GALLERY_TEMPLATES.length} templates)
+        </button>
+
+        {/* Gallery */}
+        {showTemplates && (
+          <div style={{ marginTop: "1rem" }}>
+            {/* Specialty filter tabs */}
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1rem" }}>
+              {['all', 'psychiatry', 'psychology', 'primary-care', 'pediatrics'].map(f => (
+                <button key={f} onClick={() => setTemplateFilter(f)} style={{
+                  padding: "5px 14px", borderRadius: 20, fontSize: 12, cursor: "pointer",
+                  border: `1px solid ${templateFilter === f ? 'var(--purple)' : 'var(--border)'}`,
+                  background: templateFilter === f ? 'rgba(124,111,247,0.2)' : 'transparent',
+                  color: templateFilter === f ? 'var(--lavender)' : 'var(--muted)',
+                  textTransform: "capitalize"
+                }}>
+                  {f === 'all' ? 'All' : f.replace('-', ' ')}
+                </button>
+              ))}
+            </div>
+
+            {/* Template cards grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "0.75rem" }}>
+              {filteredTemplates.map(tpl => (
+                <div key={tpl.id} onClick={() => handleSelectTemplate(tpl)} style={{
+                  padding: "1rem", borderRadius: 14, cursor: "pointer",
+                  border: `2px solid ${selectedTemplate?.id === tpl.id ? 'var(--purple)' : 'var(--border)'}`,
+                  background: selectedTemplate?.id === tpl.id ? 'rgba(124,111,247,0.12)' : 'rgba(255,255,255,0.03)',
+                  transition: "all 0.2s"
+                }}
+                  onMouseEnter={e => { if (selectedTemplate?.id !== tpl.id) e.currentTarget.style.borderColor = 'rgba(124,111,247,0.4)'; }}
+                  onMouseLeave={e => { if (selectedTemplate?.id !== tpl.id) e.currentTarget.style.borderColor = 'var(--border)'; }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "0.5rem" }}>
+                    <span style={{ fontSize: 22 }}>{tpl.icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--white)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tpl.name}</div>
+                      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{tpl.description}</div>
+                    </div>
+                    <div style={{ fontSize: 10, color: "var(--muted2)", flexShrink: 0 }}>⭐ {tpl.usageCount.toLocaleString()}</div>
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                    {tpl.sections.slice(0, 4).map(s => (
+                      <span key={s} style={{ fontSize: 10, padding: "2px 7px", borderRadius: 6, background: "rgba(255,255,255,0.06)", color: "var(--muted2)" }}>{s}</span>
+                    ))}
+                    {tpl.sections.length > 4 && (
+                      <span style={{ fontSize: 10, color: "var(--muted2)" }}>+{tpl.sections.length - 4} more</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </GlassCard>
+
       {/* Clinical Context */}
       <GlassCard style={{ gridColumn: "1 / -1" }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: "1rem" }}>
-          Clinical Context (Optional)
-        </h3>
+        <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: "1rem" }}>Clinical Context <span style={{ color: "var(--muted)", fontWeight: 400, fontSize: 13 }}>(optional)</span></h3>
         <textarea
           value={data.patientContext}
-          onChange={(e) => setData({ ...data, patientContext: e.target.value })}
-          placeholder="Add any relevant patient history, current medications, or context for this session..."
+          onChange={e => setData({ ...data, patientContext: e.target.value })}
+          placeholder="Previous diagnoses, current medications, treatment history, or any relevant context..."
           style={{
-            width: "100%",
-            minHeight: 100,
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid var(--border)",
-            borderRadius: 12,
-            padding: "0.75rem",
-            color: "var(--white)",
-            fontSize: 14,
-            fontFamily: "var(--font)",
-            resize: "vertical"
+            width: "100%", minHeight: 100,
+            background: "rgba(255,255,255,0.04)", border: "1px solid var(--border)",
+            borderRadius: 12, padding: "0.75rem", color: "var(--white)",
+            fontSize: 14, fontFamily: "var(--font)", resize: "vertical"
           }}
         />
       </GlassCard>
@@ -395,13 +597,12 @@ function SessionSetup({ data, setData, onStart }) {
           onClick={onStart}
           disabled={!data.patientId || !data.providerName}
           style={{
-            padding: "1rem 3rem",
-            fontSize: 16,
+            padding: "1rem 3rem", fontSize: 16,
             opacity: (!data.patientId || !data.providerName) ? 0.5 : 1,
             cursor: (!data.patientId || !data.providerName) ? 'not-allowed' : 'pointer'
           }}
         >
-          Start Recording Session →
+          🎙️ Start Recording Session →
         </Btn>
       </div>
     </div>
@@ -731,8 +932,12 @@ function AfterVisit({ data, sessionId, onNewSession, onNoteSaved }) {
   );
 }
 
-// Helper function to generate clinical note
+// Helper function to generate clinical note (fallback / default)
 function generateClinicalNote(data) {
+  // If a template was selected, use the template-specific generator
+  if (data.templateId) {
+    return generateNoteFromTemplate(data.templateId, data);
+  }
   return `PSYCHIATRIC PROGRESS NOTE
 
 PATIENT INFORMATION:

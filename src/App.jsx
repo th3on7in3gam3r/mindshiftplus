@@ -2761,7 +2761,7 @@ export default function App(){
     return(
       <>
         <GlobalStyles/>
-        <AIScribe/>
+        <AIScribe onBack={()=>setPage("dashboard")}/>
       </>
     );
   }
