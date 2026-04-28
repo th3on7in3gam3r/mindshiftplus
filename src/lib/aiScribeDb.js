@@ -125,13 +125,15 @@ export async function getProviderScribeSessions(limit = 50) {
 }
 
 /**
- * Get sessions for a specific patient — queries by chart UUID OR patient_id string
+ * Get sessions for a specific patient.
+ * EHR passes chart.patient_id (UUID) + chart.id (UUID).
+ * AI Scribe stores the MRN string in patient_id and the chart UUID in patient_chart_id.
+ * So we query by patient_chart_id (UUID) which is set after first push.
  */
 export async function getPatientScribeSessions(patientId, patientChartId = null) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { data: null, error: 'Not authenticated' };
 
-  // Build an OR filter: match by chart UUID (most reliable) OR by patient_id text
   let query = supabase
     .from('ai_scribe_sessions')
     .select('*')
@@ -139,9 +141,10 @@ export async function getPatientScribeSessions(patientId, patientChartId = null)
     .order('created_at', { ascending: false });
 
   if (patientChartId) {
-    // Match by chart UUID OR by patient_id string
-    query = query.or(`patient_chart_id.eq.${patientChartId},patient_id.eq.${patientId}`);
+    // Primary: match by chart UUID (set after first push to EHR)
+    query = query.eq('patient_chart_id', patientChartId);
   } else {
+    // Fallback: match by whatever string was typed as patient_id (e.g. MRN)
     query = query.eq('patient_id', patientId);
   }
 
@@ -211,11 +214,11 @@ export async function pushToEHR(sessionId) {
   let chartId = session.patient_chart_id;
 
   if (!chartId) {
-    // Try to find chart by patient_id (MRN match)
+    // Try to find chart by mrn column (text) — patient_id is a UUID (auth user id)
     const { data: charts } = await supabase
       .from('ehr_charts')
-      .select('id, patient_id')
-      .eq('patient_id', session.patient_id)
+      .select('id, mrn')
+      .eq('mrn', session.patient_id)
       .limit(1);
 
     if (charts && charts.length > 0) {
