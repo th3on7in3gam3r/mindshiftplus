@@ -144,6 +144,17 @@ function PortalAuthScreen({ onBack }) {
                 <button type="submit" disabled={loading} style={{ background:"linear-gradient(135deg,#4a6cf7,#0ea5a0)", border:"none", borderRadius:10, padding:"13px", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer", opacity:loading?0.7:1 }}>{loading?"Signing in…":"Sign In to Portal"}</button>
               </form>
               <p style={{ textAlign:"center", marginTop:"1.2rem", fontSize:13, color:"#6b7280" }}>New patient? <button onClick={()=>{ setError(""); setMode("signup"); }} style={{ background:"transparent", border:"none", color:"#4a6cf7", fontSize:13, cursor:"pointer", fontWeight:600 }}>Create account</button></p>
+              {/* HIPAA Badge — Sign In */}
+              <div style={{ marginTop:"1.2rem", padding:"0.9rem 1rem", background:"linear-gradient(135deg,rgba(74,108,247,0.07),rgba(14,165,160,0.05))", border:"1.5px solid rgba(74,108,247,0.18)", borderRadius:12, display:"flex", alignItems:"center", gap:12 }}>
+                <div style={{ width:44, height:44, borderRadius:10, background:"linear-gradient(135deg,#4a6cf7,#0ea5a0)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", flexShrink:0, boxShadow:"0 2px 8px rgba(74,108,247,0.3)" }}>
+                  <span style={{ fontSize:16 }}>🔒</span>
+                  <span style={{ fontSize:7, fontWeight:800, color:"#fff", letterSpacing:"0.5px", marginTop:1 }}>HIPAA</span>
+                </div>
+                <div>
+                  <div style={{ fontSize:12, fontWeight:700, color:"#1a1f36", marginBottom:2 }}>HIPAA Compliant & Secure</div>
+                  <div style={{ fontSize:11, color:"#6b7280", lineHeight:1.55 }}>256-bit encryption · Your health data is private and protected by federal law.</div>
+                </div>
+              </div>
             </>
           ) : mode === "signup" ? (
             <>
@@ -156,7 +167,18 @@ function PortalAuthScreen({ onBack }) {
                 <div><label style={{ fontSize:12, fontWeight:500, color:"#374151", display:"block", marginBottom:5 }}>Password</label><input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="At least 6 characters" required minLength={6} style={inp} onFocus={focus} onBlur={blur}/></div>
                 <button type="submit" disabled={loading} style={{ background:"linear-gradient(135deg,#4a6cf7,#0ea5a0)", border:"none", borderRadius:10, padding:"13px", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer", opacity:loading?0.7:1 }}>{loading?"Creating…":"Create Account"}</button>
               </form>
-              <p style={{ textAlign:"center", marginTop:"1.2rem", fontSize:13, color:"#6b7280" }}>Already have an account? <button onClick={()=>{ setError(""); setMode("signin"); }} style={{ background:"transparent", border:"none", color:"#4a6cf7", fontSize:13, cursor:"pointer", fontWeight:600 }}>Sign in</button></p>
+              {/* HIPAA Badge — Create Account */}
+              <div style={{ marginTop:"1.2rem", padding:"0.9rem 1rem", background:"linear-gradient(135deg,rgba(74,108,247,0.07),rgba(14,165,160,0.05))", border:"1.5px solid rgba(74,108,247,0.18)", borderRadius:12, display:"flex", alignItems:"center", gap:12 }}>
+                <div style={{ width:44, height:44, borderRadius:10, background:"linear-gradient(135deg,#4a6cf7,#0ea5a0)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", flexShrink:0, boxShadow:"0 2px 8px rgba(74,108,247,0.3)" }}>
+                  <span style={{ fontSize:16 }}>🔒</span>
+                  <span style={{ fontSize:7, fontWeight:800, color:"#fff", letterSpacing:"0.5px", marginTop:1 }}>HIPAA</span>
+                </div>
+                <div>
+                  <div style={{ fontSize:12, fontWeight:700, color:"#1a1f36", marginBottom:2 }}>HIPAA Compliant & Secure</div>
+                  <div style={{ fontSize:11, color:"#6b7280", lineHeight:1.55 }}>256-bit encryption · Your health data is private and protected by federal law.</div>
+                </div>
+              </div>
+              <p style={{ textAlign:"center", marginTop:"1rem", fontSize:13, color:"#6b7280" }}>Already have an account? <button onClick={()=>{ setError(""); setMode("signin"); }} style={{ background:"transparent", border:"none", color:"#4a6cf7", fontSize:13, cursor:"pointer", fontWeight:600 }}>Sign in</button></p>
             </>
           ) : (
             <>
@@ -170,11 +192,6 @@ function PortalAuthScreen({ onBack }) {
               <p style={{ textAlign:"center", marginTop:"1.2rem" }}><button onClick={()=>{ setError(""); setMode("signin"); }} style={{ background:"transparent", border:"none", color:"#4a6cf7", fontSize:13, cursor:"pointer" }}>← Back to sign in</button></p>
             </>
           )}
-
-          <div style={{ marginTop:"1.5rem", padding:"0.9rem 1rem", background:"rgba(74,108,247,0.05)", border:"1px solid rgba(74,108,247,0.12)", borderRadius:10, display:"flex", gap:8 }}>
-            <span style={{ fontSize:14, flexShrink:0 }}>🔒</span>
-            <p style={{ fontSize:11, color:"#6b7280", lineHeight:1.6, margin:0 }}>Secure, encrypted connection. Your health information is protected in accordance with HIPAA privacy standards.</p>
-          </div>
         </div>
       </div>
 
