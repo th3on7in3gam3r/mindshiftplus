@@ -265,7 +265,7 @@ export default function PublicBooking({ onBack }) {
           <div style={{ fontWeight:600, marginBottom:4 }}>What happens next?</div>
           <div>📧 Confirmation sent to <strong>{form.email}</strong></div>
           <div>📞 We'll confirm within 1 business day</div>
-          <div>🏥 Location: 31 Granite St. Suite #2, Milford, MA</div>
+          <div><img src="/logo.png" alt="" style={{width: 14, height: 14, verticalAlign: 'middle', display: 'inline-block'}} /> Location: 31 Granite St. Suite #2, Milford, MA</div>
         </div>
         <p style={{ fontSize:12, color:C.muted2, marginBottom:"1.5rem" }}>
           Questions? Call <a href="tel:5083061128" style={{ color:C.violet, textDecoration:"none" }}>(508) 306-1128</a>
@@ -390,7 +390,7 @@ export default function PublicBooking({ onBack }) {
                     ["✉️", "Email",       form.email],
                     ["📞", "Phone",       form.phone || "—"],
                     ["🩺", "Reason",      form.reason || "—"],
-                    ["🏥", "Location",    "31 Granite St. Suite #2, Milford, MA"],
+                    [<img src="/logo.png" alt="" style={{width: 14, height: 14}} />, "Location",    "31 Granite St. Suite #2, Milford, MA"],
                   ].map(([icon, label, val]) => (
                     <div key={label} style={{ display:"flex", gap:12, padding:"10px 14px", background:"rgba(107,95,207,0.04)", borderRadius:10 }}>
                       <span style={{ fontSize:16, flexShrink:0 }}>{icon}</span>

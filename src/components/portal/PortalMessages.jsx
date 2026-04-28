@@ -128,7 +128,7 @@ export default function PortalMessages({ userId, P }) {
                     color:m.sender_role==="patient"?"#fff":T.text,
                   }}>
                     <div style={{ fontSize:10, color:m.sender_role==="patient"?"rgba(255,255,255,0.6)":T.muted2, marginBottom:4 }}>
-                      {m.sender_role==="clinic"?"🏥 MindShift Clinic":"👤 You"} · {fmt(m.created_at)}
+                      {m.sender_role==="clinic"?<><img src="/logo.png" alt="" style={{width: 12, height: 12, verticalAlign: 'middle', display: 'inline-block'}} /> MindShift Clinic</>:"👤 You"} · {fmt(m.created_at)}
                     </div>
                     {m.body}
                   </div>
@@ -147,7 +147,7 @@ export default function PortalMessages({ userId, P }) {
             <Card key={t.id} onClick={()=>handleSelect(t.latest)} style={{ marginBottom:"0.75rem", cursor:"pointer" }} accent={t.hasUnread?T.accent:undefined}>
               <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
                 <div style={{ width:38, height:38, borderRadius:12, background:t.latest.sender_role==="clinic"?`${T.teal}15`:`${T.accent}15`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>
-                  {t.latest.sender_role==="clinic"?"🏥":"👤"}
+                  {t.latest.sender_role==="clinic"?<img src="/logo.png" alt="" style={{width: 20, height: 20}} />:"👤"}
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:8 }}>

@@ -183,7 +183,7 @@ export default function EHRScribeNotes({ patientId, patientChartId }) {
                     <span>📡 {session.modality}</span>
                     <span>👤 {session.provider_name}</span>
                     {session.duration_minutes && <span>⏱ {session.duration_minutes} min</span>}
-                    {session.specialty && <span>🏥 {session.specialty}</span>}
+                    {session.specialty && <span><img src="/logo.png" alt="" style={{width: 14, height: 14, verticalAlign: 'middle', display: 'inline-block'}} /> {session.specialty}</span>}
                   </div>
                 </div>
 

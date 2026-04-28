@@ -67,7 +67,7 @@ function PortalAuthScreen({ onBack }) {
         {/* Logo */}
         <div style={{ position:"relative", zIndex:1 }}>
           <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:"2.5rem" }}>
-            <div style={{ width:44, height:44, borderRadius:12, background:"linear-gradient(135deg,#4a6cf7,#0ea5a0)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>🏥</div>
+            <img src="/logo.png" alt="MindShift Wellness Clinic" style={{ width:44, height:44, borderRadius:12, objectFit:"contain", background:"#fff", padding:3, flexShrink:0 }}/>
             <div>
               <div style={{ fontSize:15, fontWeight:700, color:"#fff", lineHeight:1.2 }}>MindShift Wellness Clinic</div>
               <div style={{ fontSize:11, color:"rgba(255,255,255,0.45)", lineHeight:1.2 }}>Patient Portal</div>
@@ -245,7 +245,9 @@ export default function Portal({ onExit }) {
   if (session === undefined) return (
     <div style={{ minHeight:"100vh", background:P.bg, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Inter',system-ui,sans-serif" }}>
       <div style={{ textAlign:"center" }}>
-        <div style={{ width:44, height:44, borderRadius:12, background:`linear-gradient(135deg,${P.accent},${P.teal})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, margin:"0 auto 12px" }}>🏥</div>
+        <div style={{ width:44, height:44, borderRadius:12, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 12px" }}>
+          <img src="/logo.png" alt="MindShift" style={{ width:44, height:44, borderRadius:12, objectFit:"contain", background:"#fff", padding:3 }}/>
+        </div>
         <div style={{ fontSize:13, color:P.muted }}>Loading portal…</div>
       </div>
     </div>
@@ -295,7 +297,7 @@ export default function Portal({ onExit }) {
         {/* Logo */}
         <div style={{ padding:"1.4rem 1.4rem 1.2rem", borderBottom:"1px solid rgba(255,255,255,0.08)" }}>
           <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
-            <div style={{ width:36, height:36, borderRadius:10, background:`linear-gradient(135deg,${P.accent},${P.teal})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>🏥</div>
+            <img src="/logo.png" alt="MindShift" style={{ width:36, height:36, borderRadius:10, objectFit:"contain", background:"#fff", padding:2, flexShrink:0 }}/>
             <div>
               <div style={{ fontSize:13, fontWeight:700, color:"#fff", lineHeight:1.2 }}>MindShift Wellness</div>
               <div style={{ fontSize:11, color:"rgba(255,255,255,0.45)", lineHeight:1.2 }}>Patient Portal</div>

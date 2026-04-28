@@ -117,7 +117,7 @@ export default function PortalLogin({ onBack }) {
         {/* Logo */}
         <div style={{ position:"relative", zIndex:1 }}>
           <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:"3rem" }}>
-            <div style={{ width:44, height:44, borderRadius:12, background:"linear-gradient(135deg,#4a6cf7,#0ea5a0)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>🏥</div>
+            <img src="/logo.png" alt="MindShift Wellness Clinic" style={{ width:44, height:44, borderRadius:12, objectFit:"contain", background:"#fff", padding:3, flexShrink:0 }}/>
             <div>
               <div style={{ fontSize:16, fontWeight:700, color:"#fff" }}>MindShift Wellness Clinic</div>
               <div style={{ fontSize:12, color:"rgba(255,255,255,0.5)" }}>Patient Portal</div>

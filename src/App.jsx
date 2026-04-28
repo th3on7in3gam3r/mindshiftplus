@@ -161,14 +161,14 @@ const navItems=[
   {id:"programs",icon:"◧",label:"Programs"},
   {id:"insights",icon:"◐",label:"Insights"},
   {id:"premium",icon:"◆",label:"Premium"},
-  {id:"portal",icon:"🏥",label:"Patient Portal"},
+  {id:"portal",icon:<img src="/logo.png" alt="" style={{width: 20, height: 20}} />,label:"Patient Portal"},
   {id:"settings",icon:"◎",label:"Settings"},
 ];
 
 // Admin-only nav items — only shown to admin emails
 const adminNavItems=[
   {id:"ehr-schedule",icon:"📋",label:"Admin Schedule"},
-  {id:"ehr",        icon:"🏥",label:"EHR"},
+  {id:"ehr",        icon:<img src="/logo.png" alt="" style={{width: 20, height: 20}} />,label:"EHR"},
   {id:"ai-scribe",  icon:"🎙️",label:"AI Scribe"},
 ];
 
@@ -2486,7 +2486,7 @@ function About(){
   const credentials=[
     {icon:"🎓",label:"Education",value:"Walden University (MSN) · Framingham State University (2022)"},
     {icon:"📋",label:"License",value:"Psychiatric Mental Health Nurse Practitioner (PMHNP-BC) · MA License RN2267715 · Exp. 2028-02"},
-    {icon:"🏥",label:"Role",value:"Psychiatric Mental Health Nurse Practitioner (PMHNP-BC)"},
+    {icon:<img src="/logo.png" alt="" style={{width: 16, height: 16, verticalAlign: 'middle'}} />,label:"Role",value:"Psychiatric Mental Health Nurse Practitioner (PMHNP-BC)"},
     {icon:"📍",label:"Locations",value:"31 Granite St. Suite #2, Milford, MA 01757 · 100 Cambridge St. 14th Fl, Boston, MA 02114"},
     {icon:"📞",label:"Phone",value:"(508) 306-1128"},
     {icon:"✉️",label:"Email",value:"info@mindshiftwellnessclinic.org"},

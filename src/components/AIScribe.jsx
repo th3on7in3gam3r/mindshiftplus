@@ -97,7 +97,7 @@ const GALLERY_TEMPLATES = [
     name: 'Discharge Summary',
     specialty: 'psychiatry',
     description: 'Inpatient or intensive outpatient discharge documentation',
-    icon: '🏥',
+    icon: <img src="/logo.png" alt="" style={{width: 20, height: 20}} />,
     sections: ['Admission Information','Reason for Admission','Hospital Course','Medications at Discharge','Discharge Condition','Follow-up Plan','Safety Plan'],
     usageCount: 215,
   },
@@ -420,7 +420,7 @@ function SessionSetup({ data, setData, onStart }) {
   const specialties = [
     { id: 'psychiatry',   name: 'Psychiatry',   icon: '🧠' },
     { id: 'psychology',   name: 'Psychology',   icon: '💭' },
-    { id: 'primary-care', name: 'Primary Care', icon: '🏥' },
+    { id: 'primary-care', name: 'Primary Care', icon: <img src="/logo.png" alt="" style={{width: 16, height: 16}} /> },
     { id: 'pediatrics',   name: 'Pediatrics',   icon: '👶' },
   ];
 
@@ -1146,7 +1146,7 @@ function AfterVisit({ data, sessionId, onNewSession, onNoteSaved }) {
             disabled={isPushing || pushedToEHR}
             style={{ padding: "1rem 2rem" }}
           >
-            {isPushing ? '⏳ Pushing...' : pushedToEHR ? '✓ Pushed to EHR' : '🏥 Push to EHR'}
+            {isPushing ? '⏳ Pushing...' : pushedToEHR ? '✓ Pushed to EHR' : <><img src="/logo.png" alt="" style={{width: 14, height: 14, verticalAlign: 'middle', display: 'inline-block', marginRight: 4}} /> Push to EHR</>}
           </Btn>
         </div>
       )}

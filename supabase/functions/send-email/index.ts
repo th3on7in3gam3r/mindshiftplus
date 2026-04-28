@@ -212,7 +212,7 @@ Deno.serve(async (req) => {
               <strong>What happens next?</strong><br/>
               📋 Your clinician will review your intake before your first appointment<br/>
               📞 We may contact you if we have any questions<br/>
-              🏥 No further action needed — just show up for your appointment!
+              <img src="https://mindshiftwellnessclinic.org/logo.png" alt="" style="width: 14px; height: 14px; vertical-align: middle; display: inline-block;" /> No further action needed — just show up for your appointment!
             </div>
             <p style="font-size:13px;color:#6b7280;margin-top:16px">Questions? Call us at <strong>(508) 306-1128</strong> or email <strong>info@mindshiftwellnessclinic.org</strong></p>
             <a href="https://www.mindshiftwellnessclinic.org" class="btn">Visit Patient Portal</a>

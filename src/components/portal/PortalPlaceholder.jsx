@@ -13,7 +13,9 @@ export default function PortalPlaceholder({ onExit }) {
         padding:"1rem 5%", display:"flex", alignItems:"center", justifyContent:"space-between",
       }}>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <div style={{ width:36, height:36, borderRadius:10, background:"linear-gradient(135deg,#4a6cf7,#0ea5a0)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>🏥</div>
+          <div style={{ width:36, height:36, borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>
+            <img src="/logo.png" alt="MindShift" style={{ width:36, height:36, borderRadius:10, objectFit:"contain", background:"#fff", padding:2 }}/>
+          </div>
           <div>
             <div style={{ fontSize:13, fontWeight:700, color:"#1a1f36" }}>MindShift Wellness Clinic</div>
             <div style={{ fontSize:11, color:"#9ca3af" }}>Patient Portal</div>
@@ -34,8 +36,10 @@ export default function PortalPlaceholder({ onExit }) {
             background:"linear-gradient(135deg,rgba(74,108,247,0.12),rgba(14,165,160,0.08))",
             border:"1px solid rgba(74,108,247,0.15)",
             display:"flex", alignItems:"center", justifyContent:"center",
-            fontSize:36, margin:"0 auto 1.5rem",
-          }}>🏥</div>
+            margin:"0 auto 1.5rem",
+          }}>
+            <img src="/logo.png" alt="MindShift" style={{ width:56, height:56, borderRadius:14, objectFit:"contain", background:"#fff", padding:4 }}/>
+          </div>
 
           {/* Coming soon badge */}
           <div style={{

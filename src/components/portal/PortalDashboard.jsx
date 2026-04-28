@@ -122,7 +122,7 @@ export default function PortalDashboard({ user, displayName, setPage, P }) {
         ) : messages.slice(0,3).map(m=>(
           <div key={m.id} onClick={()=>setPage("messages")} style={{ display:"flex", gap:10, padding:"0.75rem 0", borderBottom:`1px solid ${T.border}`, cursor:"pointer", alignItems:"flex-start" }}>
             <div style={{ width:32, height:32, borderRadius:10, background:m.sender_role==="clinic"?`${T.teal}15`:`${T.accent}15`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, flexShrink:0 }}>
-              {m.sender_role==="clinic"?"🏥":"👤"}
+              {m.sender_role==="clinic"?<img src="/logo.png" alt="" style={{width: 18, height: 18}} />:"👤"}
             </div>
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontSize:13, fontWeight:m.read?400:600, color:T.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{m.subject||"Message"}</div>

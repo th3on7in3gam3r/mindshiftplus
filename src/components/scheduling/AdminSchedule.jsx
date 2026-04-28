@@ -50,7 +50,9 @@ function AdminLogin({ onSuccess }) {
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');*{box-sizing:border-box}`}</style>
       <div style={{ background:"#fff", borderRadius:20, padding:"2rem", maxWidth:400, width:"100%", boxShadow:"0 20px 60px rgba(0,0,0,0.3)" }}>
         <div style={{ textAlign:"center", marginBottom:"2rem" }}>
-          <div style={{ width:52, height:52, borderRadius:14, background:"linear-gradient(135deg,#4a6cf7,#0ea5a0)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, margin:"0 auto 1rem" }}>🏥</div>
+          <div style={{ width:52, height:52, borderRadius:14, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 1rem" }}>
+            <img src="/logo.png" alt="MindShift" style={{ width:52, height:52, borderRadius:14, objectFit:"contain", background:"#fff", padding:4 }}/>
+          </div>
           <h2 style={{ fontSize:"1.3rem", fontWeight:700, color:"#1a1f36", marginBottom:4 }}>Admin Dashboard</h2>
           <p style={{ fontSize:13, color:"#6b7280" }}>MindShift Wellness Clinic · Clinician Access</p>
         </div>
@@ -893,7 +895,7 @@ export default function AdminSchedule({ onBack }) {
       {/* Header */}
       <div style={{ background:P.sidebar, padding:"0.9rem 4%", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8 }}>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <div style={{ width:34, height:34, borderRadius:9, background:`linear-gradient(135deg,${P.accent},${P.teal})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, flexShrink:0 }}>🏥</div>
+          <div style={{ width:34, height:34, borderRadius:9, background:`linear-gradient(135deg,${P.accent},${P.teal})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, flexShrink:0 }}><img src="/logo.png" alt="" style={{width: 20, height: 20}} /></div>
           <div>
             <div style={{ fontSize:13, fontWeight:700, color:"#fff" }}>MindShift Wellness Clinic</div>
             <div style={{ fontSize:11, color:"rgba(255,255,255,0.5)" }}>Scheduling Dashboard · Admin</div>
