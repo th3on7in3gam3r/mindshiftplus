@@ -709,14 +709,21 @@ function DuringVisit({ data, setData, sessionId, onComplete }) {
       };
 
       recognition.onerror = (e) => {
+        if (e.error === 'network') {
+          // Network error — stop trying to restart, fall back to manual transcript
+          console.warn('Speech recognition: network error. Falling back to manual transcript.');
+          setSpeechSupported(false);
+          recognitionRef.current = null;
+          return;
+        }
         if (e.error !== 'no-speech' && e.error !== 'aborted') {
           console.warn('Speech recognition error:', e.error);
         }
       };
 
-      // Auto-restart recognition (it stops after ~60s of silence in some browsers)
+      // Auto-restart only on normal end (not after network/fatal errors)
       recognition.onend = () => {
-        if (isRecordingRef.current && !isPausedRef.current) {
+        if (isRecordingRef.current && !isPausedRef.current && recognitionRef.current) {
           try { recognition.start(); } catch (_) {}
         }
       };
@@ -819,14 +826,36 @@ function DuringVisit({ data, setData, sessionId, onComplete }) {
         </div>
       )}
 
-      {/* Speech API warning */}
+      {/* Speech API warning / fallback */}
       {!speechSupported && isRecording && (
         <div style={{
           background: "rgba(245,200,66,0.1)", border: "1px solid rgba(245,200,66,0.3)",
           borderRadius: 12, padding: "0.75rem 1rem", color: "var(--gold)", fontSize: 13
         }}>
-          ⚠️ Live transcription not supported in this browser. Audio is still being recorded. Use Chrome or Edge for live transcription.
+          ⚠️ Live transcription unavailable (network issue with browser speech service).
+          Audio is still being recorded. You can type the transcript manually below.
         </div>
+      )}
+      {!speechSupported && !isRecording && !liveTranscript && (
+        <GlassCard>
+          <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: "0.75rem" }}>
+            Manual Transcript
+          </h3>
+          <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: "0.75rem" }}>
+            Live transcription wasn't available. Type or paste the session notes here — they'll be used to generate the progress note.
+          </p>
+          <textarea
+            value={data.transcript}
+            onChange={e => setData({ ...data, transcript: e.target.value })}
+            placeholder="Type session notes here… e.g. Patient reports anxiety improving. Sleep still disrupted. Continue current medications. Follow up in 2 weeks."
+            style={{
+              width: "100%", minHeight: 140,
+              background: "rgba(255,255,255,0.04)", border: "1px solid var(--border)",
+              borderRadius: 10, padding: "0.75rem", color: "var(--white)",
+              fontSize: 14, fontFamily: "var(--font)", resize: "vertical"
+            }}
+          />
+        </GlassCard>
       )}
 
       {/* Recording card */}
@@ -953,8 +982,8 @@ function DuringVisit({ data, setData, sessionId, onComplete }) {
         </GlassCard>
       )}
 
-      {/* Complete button — available once recording has started */}
-      {(recordingTime > 0 || audioBlob) && (
+      {/* Complete button — available once recording has started OR manual transcript entered */}
+      {(recordingTime > 0 || audioBlob || data.transcript) && (
         <div style={{ display: "flex", justifyContent: "center" }}>
           <Btn onClick={handleComplete} style={{ padding: "1rem 3rem", fontSize: 15 }}>
             Complete Visit & Generate Note →
