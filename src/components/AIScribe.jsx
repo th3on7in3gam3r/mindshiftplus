@@ -784,10 +784,11 @@ function DuringVisit({ data, setData, sessionId, onComplete }) {
     setIsRecording(false);
     setIsPaused(false);
 
+    // Use real transcript, manual input, or leave blank — never put error messages in the note
     const finalTranscript = transcriptRef.current.trim() ||
       liveTranscript.replace(/\[.*?\]/g, '').trim() ||
-      data.transcript ||
-      'Session recorded. Transcript not available — speech recognition may not be supported in this browser.';
+      data.transcript?.trim() ||
+      '';
 
     setData({
       ...data,
@@ -1208,6 +1209,8 @@ function generateClinicalNote(data) {
 
   const { subjective, objective, assessment, plan } = parseTranscriptToSOAP(data.transcript, data);
 
+  const hasTranscript = data.transcript?.trim().length > 0;
+
   return `PROGRESS NOTE
 
 PATIENT INFORMATION:
@@ -1223,7 +1226,7 @@ ${data.icd10Codes?.length ? `ICD-10 Codes: ${data.icd10Codes.join(', ')}` : ''}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 SUBJECTIVE (Patient Report):
-${subjective}
+${hasTranscript ? subjective : '[Transcript not captured — please add session notes manually]'}
 ${data.patientContext ? `\nCLINICAL CONTEXT:\n${data.patientContext}` : ''}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1234,12 +1237,12 @@ ${objective}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ASSESSMENT:
-${assessment}
+${hasTranscript ? assessment : '[To be completed by provider]'}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 PLAN:
-${plan}
+${hasTranscript ? plan : '[To be completed by provider]'}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

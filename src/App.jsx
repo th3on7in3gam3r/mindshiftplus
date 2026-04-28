@@ -126,7 +126,30 @@ function Avatar({name="U",size=38}){
 }
 
 // ── Nav ────────────────────────────────────────────────────────────────────────
-const ADMIN_EMAILS = ["info@mindshiftwellnessclinic.org", "jerlessm@gmail.com", "kmutegyeki@gmail.com"];
+// Hardcoded owner/super-admin emails — always have full access
+const OWNER_EMAILS = ["info@mindshiftwellnessclinic.org", "jerlessm@gmail.com", "kmutegyeki@gmail.com"];
+
+// Hook: checks if current user is a clinician (owner OR has clinician_roles row)
+function useIsClinicianOrAdmin(user) {
+  const [isClinician, setIsClinician] = useState(false);
+
+  useEffect(() => {
+    if (!user) { setIsClinician(false); return; }
+    // Owners always have access
+    if (OWNER_EMAILS.includes(user.email)) { setIsClinician(true); return; }
+    // Check clinician_roles table for any other staff (PMHNP, therapist, etc.)
+    import("./lib/supabase.js").then(({ supabase }) => {
+      supabase
+        .from("clinician_roles")
+        .select("user_id")
+        .eq("user_id", user.id)
+        .maybeSingle()
+        .then(({ data }) => setIsClinician(!!data));
+    });
+  }, [user?.id]);
+
+  return isClinician;
+}
 
 const navItems=[
   {id:"dashboard",icon:"⊞",label:"Dashboard"},
@@ -149,7 +172,7 @@ const adminNavItems=[
   {id:"ai-scribe",  icon:"🎙️",label:"AI Scribe"},
 ];
 
-function Sidebar({page,setPage,user,onSignOut,open,onClose}){
+function Sidebar({page,setPage,user,onSignOut,open,onClose,isClinician}){
   return(
     <>
       {/* Mobile overlay — only shows on small screens when drawer is open */}
@@ -186,8 +209,8 @@ function Sidebar({page,setPage,user,onSignOut,open,onClose}){
               {n.id==="premium"&&<span style={{marginLeft:"auto",fontSize:10,background:"var(--grad1)",padding:"2px 7px",borderRadius:99,color:"#fff"}}>PRO</span>}
             </button>
           ))}
-          {/* Admin-only items — only visible to admin emails */}
-          {user && ADMIN_EMAILS.includes(user.email) && (
+          {/* Clinician-only items — visible to owners + any clinician_roles member */}
+          {user && isClinician && (
             <>
               <div style={{height:1,background:"var(--border)",margin:"6px 0"}}/>
               <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"var(--muted2)",padding:"0 14px",marginBottom:2}}>Admin</div>
@@ -2644,6 +2667,9 @@ export default function App(){
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [disclaimerChecked, setDisclaimerChecked] = useState(false);
 
+  // Role-based access: owners + any clinician_roles member
+  const isClinician = useIsClinicianOrAdmin(user);
+
   // Check disclaimer acceptance when user logs in
   useEffect(()=>{
     if (!user) { setDisclaimerChecked(false); return; }
@@ -2782,6 +2808,7 @@ export default function App(){
           <Sidebar
             page={page} setPage={setPage} user={appUser} onSignOut={signOut}
             open={sidebarOpen} onClose={()=>setSidebarOpen(false)}
+            isClinician={isClinician}
           />
         )}
         <main className={`main-content${needsSidebar?" has-sidebar":""}`} style={{
