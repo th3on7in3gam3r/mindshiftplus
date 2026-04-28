@@ -8,21 +8,17 @@ export default function EHRScribeNotes({ patientId, patientChartId }) {
 
   useEffect(() => {
     loadSessions();
-  }, [patientId]);
+  }, [patientId, patientChartId]);
 
   const loadSessions = async () => {
-    if (!patientId) return;
-    
     setLoading(true);
-    const { data, error } = await getPatientScribeSessions(patientId);
+    // Pass both IDs so the query can match by chart UUID OR patient_id string
+    const { data, error } = await getPatientScribeSessions(patientId, patientChartId);
     setLoading(false);
-
     if (!error && data) {
-      // Sort by date, most recent first
-      const sorted = data.sort((a, b) => 
+      setSessions(data.sort((a, b) =>
         new Date(b.date_of_service) - new Date(a.date_of_service)
-      );
-      setSessions(sorted);
+      ));
     }
   };
 

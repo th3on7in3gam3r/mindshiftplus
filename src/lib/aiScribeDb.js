@@ -125,19 +125,27 @@ export async function getProviderScribeSessions(limit = 50) {
 }
 
 /**
- * Get sessions for a specific patient
+ * Get sessions for a specific patient — queries by chart UUID OR patient_id string
  */
-export async function getPatientScribeSessions(patientId) {
+export async function getPatientScribeSessions(patientId, patientChartId = null) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { data: null, error: 'Not authenticated' };
 
-  const { data, error } = await supabase
+  // Build an OR filter: match by chart UUID (most reliable) OR by patient_id text
+  let query = supabase
     .from('ai_scribe_sessions')
     .select('*')
-    .eq('patient_id', patientId)
     .order('date_of_service', { ascending: false })
     .order('created_at', { ascending: false });
 
+  if (patientChartId) {
+    // Match by chart UUID OR by patient_id string
+    query = query.or(`patient_chart_id.eq.${patientChartId},patient_id.eq.${patientId}`);
+  } else {
+    query = query.eq('patient_id', patientId);
+  }
+
+  const { data, error } = await query;
   return { data, error };
 }
 
@@ -177,7 +185,7 @@ export async function deleteScribeSession(sessionId) {
 }
 
 /**
- * Push session note to EHR
+ * Push session note to EHR — auto-finds chart if not pre-linked
  */
 export async function pushToEHR(sessionId) {
   const { data: { user } } = await supabase.auth.getUser();
@@ -192,21 +200,44 @@ export async function pushToEHR(sessionId) {
     .single();
 
   if (sessionError || !session) {
-    return { data: null, error: sessionError || 'Session not found' };
+    return { data: null, error: sessionError?.message || 'Session not found' };
   }
 
-  // If patient_chart_id exists, add note to EHR chart
-  if (session.patient_chart_id) {
-    // Get existing chart
+  if (!session.generated_note) {
+    return { data: null, error: 'No generated note to push. Please generate a note first.' };
+  }
+
+  // Resolve chart ID — use pre-linked one or auto-find by patient_id
+  let chartId = session.patient_chart_id;
+
+  if (!chartId) {
+    // Try to find chart by patient_id (MRN match)
+    const { data: charts } = await supabase
+      .from('ehr_charts')
+      .select('id, patient_id')
+      .eq('patient_id', session.patient_id)
+      .limit(1);
+
+    if (charts && charts.length > 0) {
+      chartId = charts[0].id;
+      // Save the link for future pushes
+      await supabase
+        .from('ai_scribe_sessions')
+        .update({ patient_chart_id: chartId })
+        .eq('id', sessionId);
+    }
+  }
+
+  // Push note to EHR chart if we have a chart
+  if (chartId) {
     const { data: chart, error: chartError } = await supabase
       .from('ehr_charts')
       .select('progress_notes')
-      .eq('id', session.patient_chart_id)
+      .eq('id', chartId)
       .single();
 
     if (!chartError && chart) {
-      // Append new note to progress notes
-      const existingNotes = chart.progress_notes || [];
+      const existingNotes = Array.isArray(chart.progress_notes) ? chart.progress_notes : [];
       const newNote = {
         id: sessionId,
         date: session.date_of_service,
@@ -215,24 +246,24 @@ export async function pushToEHR(sessionId) {
         modality: session.modality,
         note: session.generated_note,
         quality_score: session.quality_score,
-        created_at: new Date().toISOString()
+        specialty: session.specialty,
+        icd10_codes: session.icd10_codes,
+        created_at: new Date().toISOString(),
+        source: 'ai_scribe'
       };
 
       const { error: updateError } = await supabase
         .from('ehr_charts')
-        .update({
-          progress_notes: [...existingNotes, newNote],
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', session.patient_chart_id);
+        .update({ progress_notes: [...existingNotes, newNote] })
+        .eq('id', chartId);
 
       if (updateError) {
-        return { data: null, error: updateError };
+        return { data: null, error: updateError.message };
       }
     }
   }
 
-  // Update session status
+  // Mark session as pushed regardless (note is saved in ai_scribe_sessions)
   const { data, error } = await supabase
     .from('ai_scribe_sessions')
     .update({
@@ -245,12 +276,10 @@ export async function pushToEHR(sessionId) {
     .single();
 
   if (!error) {
-    await logAuditAction(sessionId, user.id, 'pushed_to_ehr', {
-      chart_id: session.patient_chart_id
-    });
+    await logAuditAction(sessionId, user.id, 'pushed_to_ehr', { chart_id: chartId });
   }
 
-  return { data, error };
+  return { data, error: error?.message || null };
 }
 
 // ============================================================================
