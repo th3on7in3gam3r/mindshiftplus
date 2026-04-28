@@ -264,6 +264,42 @@ export async function pushToEHR(sessionId) {
         return { data: null, error: updateError.message };
       }
     }
+
+    // ── Also write into ehr_notes (the Notes tab) ──────────────────────────
+    // Parse the generated note into SOAP sections for the structured Notes tab
+    const noteText = session.generated_note || '';
+
+    // Extract SOAP sections from the formatted note
+    const extract = (label) => {
+      const regex = new RegExp(`${label}[:\\s]*([\\s\\S]*?)(?=\\n━|\\nOBJECTIVE|\\nASSESSMENT|\\nPLAN|\\nRISK|\\nElectronically|$)`, 'i');
+      const match = noteText.match(regex);
+      return match ? match[1].trim() : '';
+    };
+
+    const subjective  = extract('SUBJECTIVE');
+    const objective   = extract('OBJECTIVE');
+    const assessment  = extract('ASSESSMENT');
+    const plan        = extract('PLAN');
+
+    const diagnosesArr = (session.icd10_codes || []).map(code => ({ code, label: code }));
+
+    await supabase
+      .from('ehr_notes')
+      .insert({
+        chart_id:       chartId,
+        clinician_id:   user.id,
+        clinician_name: session.provider_name,
+        note_date:      session.date_of_service,
+        note_type:      'progress',
+        subjective:     subjective || noteText,
+        objective:      objective  || null,
+        assessment:     assessment || null,
+        plan:           plan       || null,
+        presenting_concerns: subjective || null,
+        diagnoses:      diagnosesArr,
+        is_signed:      false,
+      });
+    // Note: we don't block on this insert — if it fails the scribe note is still saved
   }
 
   // Mark session as pushed regardless (note is saved in ai_scribe_sessions)

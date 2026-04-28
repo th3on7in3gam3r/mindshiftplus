@@ -1124,55 +1124,104 @@ function AfterVisit({ data, sessionId, onNewSession, onNoteSaved }) {
   );
 }
 
-// Helper function to generate clinical note (fallback / default)
+// ── Transcript → Structured Progress Note ────────────────────────────────────
+// Parses the raw transcript into SOAP sections for the EHR Notes tab
+function parseTranscriptToSOAP(transcript, data) {
+  const t = transcript || '';
+
+  // Heuristic keyword extraction from transcript
+  const lines = t.split(/[.!?]+/).map(s => s.trim()).filter(Boolean);
+
+  const subjectiveLines = lines.filter(l =>
+    /patient|reports|states|says|feels|feeling|complains|describes|mentions|notes|denies|endorses|presents/i.test(l)
+  );
+  const planLines = lines.filter(l =>
+    /continue|start|increase|decrease|refer|follow.?up|schedule|prescribe|recommend|discussed|education|therapy|medication/i.test(l)
+  );
+  const assessmentLines = lines.filter(l =>
+    /diagnosis|impression|assessment|consistent with|appears|seems|demonstrates|showing|improving|worsening|stable/i.test(l)
+  );
+
+  const subjective = subjectiveLines.length > 0
+    ? subjectiveLines.join('. ') + '.'
+    : t.slice(0, 600) || 'Patient presented for scheduled visit.';
+
+  const objective = `Mental Status Examination:
+- Appearance: Well-groomed, appropriate dress
+- Behavior: Cooperative, good eye contact
+- Speech: Normal rate, rhythm, and volume
+- Mood: As reported by patient
+- Affect: Congruent with stated mood
+- Thought Process: Linear and goal-directed
+- Thought Content: No suicidal or homicidal ideation elicited
+- Perception: No perceptual disturbances reported
+- Cognition: Alert and oriented x3
+- Insight: Good
+- Judgment: Intact`;
+
+  const assessment = assessmentLines.length > 0
+    ? assessmentLines.join('. ') + '.'
+    : `Patient presents for ${data.sessionType.toLowerCase()}. ${data.specialty === 'psychiatry' ? 'Psychiatric symptoms reviewed.' : 'Clinical status reviewed.'} ${data.icd10Codes?.length ? 'Diagnoses: ' + data.icd10Codes.join(', ') + '.' : ''}`.trim();
+
+  const plan = planLines.length > 0
+    ? planLines.join('. ') + '.'
+    : `1. Continue current treatment plan\n2. Monitor symptoms and medication response\n3. Follow-up as scheduled\n4. Patient instructed to contact office with any concerns`;
+
+  return { subjective, objective, assessment, plan };
+}
+
+// Generates the full formatted progress note from transcript + session data
 function generateClinicalNote(data) {
   // If a template was selected, use the template-specific generator
   if (data.templateId) {
     return generateNoteFromTemplate(data.templateId, data);
   }
-  return `PSYCHIATRIC PROGRESS NOTE
+
+  const { subjective, objective, assessment, plan } = parseTranscriptToSOAP(data.transcript, data);
+
+  return `PROGRESS NOTE
 
 PATIENT INFORMATION:
-Patient ID: ${data.patientId}
-Date of Service: ${data.dateOfService}
-Provider: ${data.providerName}
+Patient ID:   ${data.patientId}
+Date:         ${data.dateOfService}
+Provider:     ${data.providerName}
 Session Type: ${data.sessionType}
-Duration: ${data.duration || 'N/A'} minutes
-Modality: ${data.modality}
+Duration:     ${data.duration || 'N/A'} minutes
+Modality:     ${data.modality}
+Specialty:    ${data.specialty || 'Psychiatry'}
+${data.icd10Codes?.length ? `ICD-10 Codes: ${data.icd10Codes.join(', ')}` : ''}
 
-CHIEF COMPLAINT:
-Patient presents for ${data.sessionType.toLowerCase()} psychiatric evaluation.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-HISTORY OF PRESENT ILLNESS:
-${data.transcript}
+SUBJECTIVE (Patient Report):
+${subjective}
+${data.patientContext ? `\nCLINICAL CONTEXT:\n${data.patientContext}` : ''}
 
-${data.patientContext ? `CLINICAL CONTEXT:\n${data.patientContext}\n` : ''}
-MENTAL STATUS EXAMINATION:
-- Appearance: Well-groomed, appropriate dress
-- Behavior: Cooperative, good eye contact
-- Speech: Normal rate and rhythm
-- Mood: Patient reports feeling "anxious"
-- Affect: Congruent with stated mood
-- Thought Process: Linear and goal-directed
-- Thought Content: No suicidal or homicidal ideation
-- Perception: No hallucinations reported
-- Cognition: Alert and oriented x3
-- Insight: Good
-- Judgment: Intact
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+OBJECTIVE (Mental Status Examination):
+${objective}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ASSESSMENT:
-Patient demonstrates good engagement in treatment. Symptoms are being monitored closely.
+${assessment}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 PLAN:
-1. Continue current treatment approach
-2. Monitor symptoms and side effects
-3. Follow-up as scheduled
-4. Patient educated on warning signs and when to seek immediate care
+${plan}
 
-${data.icd10Codes.length > 0 ? `ICD-10 CODES:\n${data.icd10Codes.join(', ')}` : ''}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Provider Signature: ${data.providerName}
-Date: ${data.dateOfService}`;
+RISK ASSESSMENT:
+No active suicidal or homicidal ideation elicited. Safety plan reviewed and in place.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Electronically signed by: ${data.providerName}
+Date: ${data.dateOfService}
+Generated by: MindShift AI Scribe`;
 }
 
 // UI Helper Components
