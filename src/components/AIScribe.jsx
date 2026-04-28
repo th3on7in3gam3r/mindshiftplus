@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../lib/AuthContext";
 import {
   createScribeSession,
@@ -609,162 +609,354 @@ function SessionSetup({ data, setData, onStart }) {
   );
 }
 
-// During Visit Component
+// During Visit Component — real browser recording + live speech-to-text
 function DuringVisit({ data, setData, sessionId, onComplete }) {
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
+  const [isRecording, setIsRecording]       = useState(false);
+  const [isPaused, setIsPaused]             = useState(false);
+  const [recordingTime, setRecordingTime]   = useState(0);
   const [recordingStartedAt, setRecordingStartedAt] = useState(null);
+  const [liveTranscript, setLiveTranscript] = useState('');
+  const [micError, setMicError]             = useState('');
+  const [audioBlob, setAudioBlob]           = useState(null);
+  const [speechSupported, setSpeechSupported] = useState(true);
 
+  // Refs — survive re-renders without triggering effects
+  const mediaRecorderRef  = useRef(null);
+  const audioChunksRef    = useRef([]);
+  const recognitionRef    = useRef(null);
+  const timerRef          = useRef(null);
+  const transcriptRef     = useRef(''); // accumulates across recognition restarts
+
+  // ── Timer ──────────────────────────────────────────────────────────────────
   useEffect(() => {
-    let interval;
     if (isRecording && !isPaused) {
-      interval = setInterval(() => {
-        setRecordingTime(t => t + 1);
-      }, 1000);
+      timerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000);
+    } else {
+      clearInterval(timerRef.current);
     }
-    return () => clearInterval(interval);
+    return () => clearInterval(timerRef.current);
   }, [isRecording, isPaused]);
 
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  // ── Cleanup on unmount ─────────────────────────────────────────────────────
+  useEffect(() => {
+    return () => {
+      stopAll();
+    };
+  }, []);
+
+  const formatTime = (s) => {
+    const m = Math.floor(s / 60);
+    return `${String(m).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`;
   };
 
-  const handleStartRecording = () => {
+  // ── Start real recording ───────────────────────────────────────────────────
+  const handleStartRecording = async () => {
+    setMicError('');
+    audioChunksRef.current = [];
+    transcriptRef.current  = '';
+    setLiveTranscript('');
+
+    // 1. Request microphone
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (err) {
+      setMicError('Microphone access denied. Please allow microphone access in your browser and try again.');
+      return;
+    }
+
+    // 2. MediaRecorder — captures actual audio
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
+    const recorder = new MediaRecorder(stream, { mimeType });
+    mediaRecorderRef.current = recorder;
+
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) audioChunksRef.current.push(e.data);
+    };
+
+    recorder.onstop = () => {
+      const blob = new Blob(audioChunksRef.current, { type: mimeType });
+      setAudioBlob(blob);
+      // Stop all mic tracks
+      stream.getTracks().forEach(t => t.stop());
+    };
+
+    recorder.start(1000); // collect chunks every second
+
+    // 3. Web Speech API — live transcription (Chrome/Edge/Safari)
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.continuous     = true;
+      recognition.interimResults = true;
+      recognition.lang           = 'en-US';
+      recognitionRef.current     = recognition;
+
+      recognition.onresult = (event) => {
+        let interim = '';
+        let final   = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const t = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            final += t + ' ';
+          } else {
+            interim += t;
+          }
+        }
+        if (final) transcriptRef.current += final;
+        const display = transcriptRef.current + (interim ? `[${interim}]` : '');
+        setLiveTranscript(display);
+      };
+
+      recognition.onerror = (e) => {
+        if (e.error !== 'no-speech' && e.error !== 'aborted') {
+          console.warn('Speech recognition error:', e.error);
+        }
+      };
+
+      // Auto-restart recognition (it stops after ~60s of silence in some browsers)
+      recognition.onend = () => {
+        if (isRecordingRef.current && !isPausedRef.current) {
+          try { recognition.start(); } catch (_) {}
+        }
+      };
+
+      recognition.start();
+    } else {
+      setSpeechSupported(false);
+    }
+
     setIsRecording(true);
     setRecordingStartedAt(new Date().toISOString());
-    // TODO: Start actual audio recording
+  };
+
+  // Refs to track state inside callbacks
+  const isRecordingRef = useRef(false);
+  const isPausedRef    = useRef(false);
+  useEffect(() => { isRecordingRef.current = isRecording; }, [isRecording]);
+  useEffect(() => { isPausedRef.current = isPaused; }, [isPaused]);
+
+  // ── Pause / Resume ─────────────────────────────────────────────────────────
+  const handlePause = () => {
+    if (!isPaused) {
+      // Pause
+      if (mediaRecorderRef.current?.state === 'recording') {
+        mediaRecorderRef.current.pause();
+      }
+      recognitionRef.current?.stop();
+      setIsPaused(true);
+    } else {
+      // Resume
+      if (mediaRecorderRef.current?.state === 'paused') {
+        mediaRecorderRef.current.resume();
+      }
+      try { recognitionRef.current?.start(); } catch (_) {}
+      setIsPaused(false);
+    }
+  };
+
+  // ── Stop everything ────────────────────────────────────────────────────────
+  const stopAll = () => {
+    isRecordingRef.current = false;
+    recognitionRef.current?.stop();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    clearInterval(timerRef.current);
   };
 
   const handleStopRecording = () => {
+    stopAll();
     setIsRecording(false);
     setIsPaused(false);
-    // TODO: Stop actual audio recording
   };
 
+  // ── Complete visit ─────────────────────────────────────────────────────────
   const handleComplete = () => {
-    handleStopRecording();
-    // Set a sample transcript for demo
-    const transcript = data.transcript || "Patient reports feeling anxious over the past two weeks. Sleep has been disrupted. Discussed coping strategies and reviewed current medication regimen. Patient is responsive to treatment and shows good insight into their condition.";
-    
+    stopAll();
+    setIsRecording(false);
+    setIsPaused(false);
+
+    const finalTranscript = transcriptRef.current.trim() ||
+      liveTranscript.replace(/\[.*?\]/g, '').trim() ||
+      data.transcript ||
+      'Session recorded. Transcript not available — speech recognition may not be supported in this browser.';
+
     setData({
       ...data,
-      transcript,
+      transcript: finalTranscript,
       duration: Math.floor(recordingTime / 60).toString()
     });
 
-    onComplete(transcript, {
+    onComplete(finalTranscript, {
       durationSeconds: recordingTime,
       startedAt: recordingStartedAt,
       completedAt: new Date().toISOString()
     });
   };
 
+  // ── Download audio ─────────────────────────────────────────────────────────
+  const handleDownloadAudio = () => {
+    if (!audioBlob) return;
+    const url = URL.createObjectURL(audioBlob);
+    const a   = document.createElement('a');
+    a.href     = url;
+    a.download = `session-${data.patientId}-${data.dateOfService}.webm`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
-    <div style={{
-      maxWidth: 800,
-      margin: "0 auto",
-      display: "flex",
-      flexDirection: "column",
-      gap: "1.5rem"
-    }}>
-      {/* Recording Status */}
+    <div style={{ maxWidth: 800, margin: "0 auto", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+
+      {/* Mic error banner */}
+      {micError && (
+        <div style={{
+          background: "rgba(240,147,160,0.15)", border: "1px solid rgba(240,147,160,0.4)",
+          borderRadius: 12, padding: "1rem 1.25rem", color: "var(--rose)", fontSize: 14
+        }}>
+          🎤 {micError}
+        </div>
+      )}
+
+      {/* Speech API warning */}
+      {!speechSupported && isRecording && (
+        <div style={{
+          background: "rgba(245,200,66,0.1)", border: "1px solid rgba(245,200,66,0.3)",
+          borderRadius: 12, padding: "0.75rem 1rem", color: "var(--gold)", fontSize: 13
+        }}>
+          ⚠️ Live transcription not supported in this browser. Audio is still being recorded. Use Chrome or Edge for live transcription.
+        </div>
+      )}
+
+      {/* Recording card */}
       <GlassCard style={{
-        background: isRecording ? "linear-gradient(135deg, rgba(124,111,247,0.2), rgba(78,205,196,0.15))" : "var(--glass2)",
+        background: isRecording
+          ? isPaused
+            ? "linear-gradient(135deg, rgba(245,200,66,0.15), rgba(124,111,247,0.1))"
+            : "linear-gradient(135deg, rgba(124,111,247,0.2), rgba(78,205,196,0.15))"
+          : "var(--glass2)",
         textAlign: "center"
       }}>
+        <style>{`
+          @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.7;transform:scale(1.08)} }
+          @keyframes spin  { to{transform:rotate(360deg)} }
+        `}</style>
+
+        {/* Animated mic icon */}
         <div style={{
-          fontSize: 48,
-          marginBottom: "1rem",
-          animation: isRecording && !isPaused ? "pulse 2s infinite" : "none"
+          fontSize: 52, marginBottom: "1rem",
+          animation: isRecording && !isPaused ? "pulse 1.5s infinite" : "none",
+          filter: isRecording && !isPaused ? "drop-shadow(0 0 12px rgba(124,111,247,0.6))" : "none"
         }}>
           {isRecording ? (isPaused ? "⏸️" : "🎙️") : "⏺️"}
         </div>
-        <style>{`
-          @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.7; transform: scale(1.05); }
-          }
-        `}</style>
-        <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: "0.5rem" }}>
+
+        <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: "0.5rem" }}>
           {isRecording ? (isPaused ? "Recording Paused" : "Recording in Progress") : "Ready to Record"}
         </h2>
+
+        {/* Live waveform indicator */}
+        {isRecording && !isPaused && (
+          <div style={{ display: "flex", justifyContent: "center", gap: 3, marginBottom: "0.75rem" }}>
+            {[1,2,3,4,5,4,3,2,1].map((h, i) => (
+              <div key={i} style={{
+                width: 4, height: h * 6,
+                background: "var(--purple)", borderRadius: 2,
+                animation: `pulse ${0.4 + i * 0.1}s ease-in-out infinite alternate`
+              }} />
+            ))}
+          </div>
+        )}
+
         <div style={{
-          fontSize: 36,
-          fontWeight: 700,
-          color: "var(--lavender)",
-          fontFamily: "monospace",
-          marginBottom: "1.5rem"
+          fontSize: 38, fontWeight: 700, color: "var(--lavender)",
+          fontFamily: "monospace", marginBottom: "1.5rem"
         }}>
           {formatTime(recordingTime)}
         </div>
 
-        {/* Recording Controls */}
+        {/* Controls */}
         <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
           {!isRecording ? (
-            <Btn onClick={handleStartRecording} style={{ padding: "1rem 2rem" }}>
-              Start Recording
+            <Btn onClick={handleStartRecording} style={{ padding: "1rem 2.5rem", fontSize: 15 }}>
+              🎙️ Start Recording
             </Btn>
           ) : (
             <>
-              <Btn
-                variant="secondary"
-                onClick={() => setIsPaused(!isPaused)}
-                style={{ padding: "1rem 2rem" }}
-              >
-                {isPaused ? "Resume" : "Pause"}
+              <Btn variant="secondary" onClick={handlePause} style={{ padding: "0.9rem 2rem" }}>
+                {isPaused ? "▶ Resume" : "⏸ Pause"}
               </Btn>
-              <Btn
-                variant="danger"
-                onClick={handleStopRecording}
-                style={{ padding: "1rem 2rem" }}
-              >
-                Stop Recording
+              <Btn variant="danger" onClick={handleStopRecording} style={{ padding: "0.9rem 2rem" }}>
+                ⏹ Stop
               </Btn>
             </>
           )}
         </div>
+
+        {/* Audio saved indicator */}
+        {audioBlob && !isRecording && (
+          <div style={{ marginTop: "1rem", fontSize: 12, color: "var(--teal)" }}>
+            ✓ Audio captured ({(audioBlob.size / 1024).toFixed(0)} KB)
+            <button onClick={handleDownloadAudio} style={{
+              marginLeft: 10, background: "transparent", border: "none",
+              color: "var(--teal)", fontSize: 12, cursor: "pointer", textDecoration: "underline"
+            }}>
+              Download audio
+            </button>
+          </div>
+        )}
       </GlassCard>
 
       {/* Session Info */}
       <GlassCard>
-        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: "1rem" }}>
-          Session Information
-        </h3>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
-          <InfoItem label="Patient ID" value={data.patientId} />
-          <InfoItem label="Provider" value={data.providerName} />
-          <InfoItem label="Session Type" value={data.sessionType} />
-          <InfoItem label="Modality" value={data.modality} />
+        <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: "1rem" }}>Session Information</h3>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
+          <InfoItem label="Patient ID"    value={data.patientId} />
+          <InfoItem label="Provider"      value={data.providerName} />
+          <InfoItem label="Session Type"  value={data.sessionType} />
+          <InfoItem label="Modality"      value={data.modality} />
         </div>
       </GlassCard>
 
-      {/* Live Transcript Preview */}
-      {isRecording && (
+      {/* Live Transcript */}
+      {(isRecording || liveTranscript) && (
         <GlassCard>
-          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: "1rem" }}>
-            Live Transcript
-          </h3>
-          <div style={{
-            background: "rgba(0,0,0,0.3)",
-            borderRadius: 8,
-            padding: "1rem",
-            minHeight: 150,
-            color: "var(--muted)",
-            fontSize: 14,
-            lineHeight: 1.6
-          }}>
-            {data.transcript || "Transcription will appear here as you speak..."}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+            <h3 style={{ fontSize: 15, fontWeight: 600 }}>Live Transcript</h3>
+            {isRecording && !isPaused && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--teal)" }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--teal)", animation: "pulse 1s infinite" }} />
+                Listening…
+              </div>
+            )}
           </div>
+          <div style={{
+            background: "rgba(0,0,0,0.3)", borderRadius: 10, padding: "1rem",
+            minHeight: 120, maxHeight: 280, overflowY: "auto",
+            color: "var(--white)", fontSize: 14, lineHeight: 1.7,
+            fontFamily: "inherit", whiteSpace: "pre-wrap"
+          }}>
+            {liveTranscript || (
+              <span style={{ color: "var(--muted)" }}>
+                {speechSupported
+                  ? "Start speaking — transcript will appear here in real time…"
+                  : "Audio recording active. Live transcription requires Chrome or Edge."}
+              </span>
+            )}
+          </div>
+          {liveTranscript && (
+            <div style={{ fontSize: 11, color: "var(--muted2)", marginTop: "0.5rem" }}>
+              {liveTranscript.replace(/\[.*?\]/g, '').trim().split(/\s+/).filter(Boolean).length} words captured
+            </div>
+          )}
         </GlassCard>
       )}
 
-      {/* Complete Button */}
-      {recordingTime > 0 && (
+      {/* Complete button — available once recording has started */}
+      {(recordingTime > 0 || audioBlob) && (
         <div style={{ display: "flex", justifyContent: "center" }}>
-          <Btn onClick={handleComplete} style={{ padding: "1rem 3rem", fontSize: 16 }}>
+          <Btn onClick={handleComplete} style={{ padding: "1rem 3rem", fontSize: 15 }}>
             Complete Visit & Generate Note →
           </Btn>
         </div>
