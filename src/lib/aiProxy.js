@@ -1,14 +1,23 @@
 /**
  * Calls the Supabase ai-proxy Edge Function (Anthropic Claude).
- * Requires VITE_AI_PROXY_URL and VITE_SUPABASE_ANON_KEY at build time.
+ * Requires VITE_SUPABASE_ANON_KEY at build time.
+ * Uses VITE_AI_PROXY_URL when set, otherwise derives from VITE_SUPABASE_URL.
  */
+function getAiProxyUrl() {
+  const explicit = import.meta.env.VITE_AI_PROXY_URL;
+  if (explicit) return explicit.replace(/\/$/, "");
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  if (supabaseUrl) return `${supabaseUrl.replace(/\/$/, "")}/functions/v1/ai-proxy`;
+  return "";
+}
+
 export async function callAiProxy({ system, messages, max_tokens = 1000 }) {
-  const url = import.meta.env.VITE_AI_PROXY_URL;
+  const url = getAiProxyUrl();
   const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
   if (!url) {
     throw new Error(
-      "VITE_AI_PROXY_URL is not set. Add it in your hosting env (e.g. Vercel) and redeploy."
+      "VITE_SUPABASE_URL or VITE_AI_PROXY_URL must be set in your hosting env and redeployed."
     );
   }
   if (!anonKey) {
