@@ -1,26 +1,14 @@
 import { useState } from "react";
 import { EhrCard, EhrBtn, EhrBadge, EhrStyles, Spinner, formatDate } from "./EHRUI";
 
-const AI_PROXY = import.meta.env.VITE_AI_PROXY_URL;
-const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+import { callAiProxy } from "../../lib/aiProxy.js";
 
 async function askClinicalAI(system, userMessage, maxTokens = 1200) {
-  const res = await fetch(AI_PROXY, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${ANON_KEY}`,
-      "apikey": ANON_KEY,
-    },
-    body: JSON.stringify({
-      system,
-      messages: [{ role: "user", content: userMessage }],
-      max_tokens: maxTokens,
-    }),
-  });
-  const data = await res.json();
-  if (data.error) throw new Error(JSON.stringify(data.error));
-  return data.content?.find(c => c.type === "text")?.text ?? "No response generated.";
+  return (await callAiProxy({
+    system,
+    messages: [{ role: "user", content: userMessage }],
+    max_tokens: maxTokens,
+  })) ?? "No response generated.";
 }
 
 // Build a clinical context string from chart data

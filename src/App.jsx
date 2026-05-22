@@ -593,25 +593,14 @@ function Mia(){
     }
 
     try{
+      const { callAiProxy } = await import("./lib/aiProxy.js");
       // Only send last 20 messages to API to keep context manageable
       const contextMessages = newMessages.slice(-20).map(m=>({ role:m.role, content:m.content }));
-      const res = await fetch(import.meta.env.VITE_AI_PROXY_URL,{
-        method:"POST",
-        headers:{
-          "Content-Type":"application/json",
-          "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
-        },
-        body:JSON.stringify({
-          max_tokens:1000,
-          system:`You are Mia, a warm, emotionally intelligent AI wellness coach for MindShift+. You are calm, supportive, compassionate, and wise — never clinical or robotic. You help users with stress, anxiety, confidence, emotional processing, and personal growth. Keep responses concise (2-4 sentences), warm, and focused on emotional support. Use gentle language and occasional affirmations. Never give medical advice.`,
-          messages: contextMessages
-        })
-      });
-      const data = await res.json();
-      console.log("[Mia] API response:", JSON.stringify(data).slice(0, 300));
-      if(data.error) throw new Error(`API error: ${JSON.stringify(data.error)}`);
-      const reply = data.content?.find(c=>c.type==="text")?.text || "I'm here with you. Take a breath — what would feel most helpful right now?";
+      const reply = await callAiProxy({
+        max_tokens:1000,
+        system:`You are Mia, a warm, emotionally intelligent AI wellness coach for MindShift+. You are calm, supportive, compassionate, and wise — never clinical or robotic. You help users with stress, anxiety, confidence, emotional processing, and personal growth. Keep responses concise (2-4 sentences), warm, and focused on emotional support. Use gentle language and occasional affirmations. Never give medical advice.`,
+        messages: contextMessages
+      }) || "I'm here with you. Take a breath — what would feel most helpful right now?";
       setMessages(m=>[...m,{role:"assistant",content:reply}]);
 
       // Save Mia's reply to Supabase
