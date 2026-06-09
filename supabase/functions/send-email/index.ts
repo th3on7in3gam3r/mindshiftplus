@@ -1,7 +1,8 @@
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import {
+  forbiddenOriginResponse,
+  handleCorsPreflight,
+  jsonWithCors,
+} from "../_shared/cors.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
 const FROM = "MindShift Wellness Clinic <noreply@mindshiftwellnessclinic.org>";
@@ -72,7 +73,10 @@ ${note ? `<p style="margin-top:8px;font-size:10px;color:#d1d5db">${note}</p>` : 
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const preflight = handleCorsPreflight(req);
+  if (preflight) return preflight;
+  const forbidden = forbiddenOriginResponse(req);
+  if (forbidden) return forbidden;
 
   try {
     const { type, data } = await req.json();
@@ -281,18 +285,11 @@ Deno.serve(async (req) => {
       }
 
       default:
-        return new Response(JSON.stringify({ error: `Unknown type: ${type}` }), {
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonWithCors(req, { error: `Unknown type: ${type}` }, 400);
     }
 
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-
+    return jsonWithCors(req, { success: true });
   } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonWithCors(req, { error: e.message }, 500);
   }
 });

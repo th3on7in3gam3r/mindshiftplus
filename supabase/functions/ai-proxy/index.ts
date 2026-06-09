@@ -1,12 +1,14 @@
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import {
+  forbiddenOriginResponse,
+  handleCorsPreflight,
+  jsonWithCors,
+} from "../_shared/cors.ts";
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  const preflight = handleCorsPreflight(req);
+  if (preflight) return preflight;
+  const forbidden = forbiddenOriginResponse(req);
+  if (forbidden) return forbidden;
 
   try {
     const { system, messages, max_tokens = 1000 } = await req.json();
@@ -27,13 +29,8 @@ Deno.serve(async (req) => {
     });
 
     const data = await res.json();
-    return new Response(JSON.stringify(data), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonWithCors(req, data);
   } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonWithCors(req, { error: e.message }, 500);
   }
 });

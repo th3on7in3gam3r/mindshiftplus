@@ -1,16 +1,17 @@
 import { Pool } from "https://deno.land/x/postgres@v0.17.0/mod.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import {
+  forbiddenOriginResponse,
+  handleCorsPreflight,
+  jsonWithCors,
+} from "../_shared/cors.ts";
 
 const pool = new Pool(Deno.env.get("NEON_DATABASE_URL")!, 3, true);
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  const preflight = handleCorsPreflight(req);
+  if (preflight) return preflight;
+  const forbidden = forbiddenOriginResponse(req);
+  if (forbidden) return forbidden;
 
   try {
     const { action, payload } = await req.json();
@@ -214,19 +215,12 @@ Deno.serve(async (req) => {
       }
 
       default:
-        return new Response(JSON.stringify({ error: `Unknown action: ${action}` }), {
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonWithCors(req, { error: `Unknown action: ${action}` }, 400);
     }
 
     client.release();
-    return new Response(JSON.stringify({ data: result }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-
+    return jsonWithCors(req, { data: result });
   } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonWithCors(req, { error: e.message }, 500);
   }
 });

@@ -82,7 +82,7 @@ Supabase Edge Function. Accepts a POST request from `AdminSchedule.jsx` when a t
 { "telehealth_url": "https://whereby.com/mindshift-abc123", "status": "confirmed" }
 ```
 
-**Headers:** Same CORS headers as `ai-proxy` and `send-email`.
+**Headers:** Same origin-restricted CORS as `ai-proxy` and `send-email` (`https://www.mindshiftwellnessclinic.org` + localhost dev, not `*`).
 
 **Secret:** `WHEREBY_API_KEY` — set via `supabase secrets set WHEREBY_API_KEY=...`
 

@@ -1,9 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import {
+  forbiddenOriginResponse,
+  handleCorsPreflight,
+  jsonWithCors,
+} from "../_shared/cors.ts";
 
 /**
  * Pure helper: compute endDate as scheduledAt + 24 hours.
@@ -14,16 +14,14 @@ export function computeEndDate(scheduledAt: string): string {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  const preflight = handleCorsPreflight(req);
+  if (preflight) return preflight;
+  const forbidden = forbiddenOriginResponse(req);
+  if (forbidden) return forbidden;
 
   const WHEREBY_API_KEY = Deno.env.get("WHEREBY_API_KEY");
   if (!WHEREBY_API_KEY) {
-    return new Response(
-      JSON.stringify({ error: "WHEREBY_API_KEY is not configured" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return jsonWithCors(req, { error: "WHEREBY_API_KEY is not configured" }, 500);
   }
 
   try {
@@ -69,14 +67,8 @@ Deno.serve(async (req) => {
         .eq("id", appointmentId);
     }
 
-    return new Response(
-      JSON.stringify({ telehealth_url, status: "confirmed" }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return jsonWithCors(req, { telehealth_url, status: "confirmed" });
   } catch (e) {
-    return new Response(
-      JSON.stringify({ error: e.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return jsonWithCors(req, { error: e.message }, 500);
   }
 });
