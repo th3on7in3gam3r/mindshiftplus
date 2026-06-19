@@ -6,9 +6,14 @@ import {
 } from "../../lib/clinicApi";
 import { emailAppointmentConfirmed, emailAppointmentCancelled, emailTelehealthReminder } from "../../lib/emailService";
 import { supabase } from "../../lib/supabase";
+import { isAdminEmail, getClinicianRole } from "../../lib/ehrDb";
 
-// Admin emails allowed to access this dashboard
-const ADMIN_EMAILS = ["info@mindshiftwellnessclinic.org", "jerlessm@gmail.com"];
+async function authorizeScheduleAdmin(user) {
+  if (!user?.email) return false;
+  if (isAdminEmail(user.email)) return true;
+  const { data } = await getClinicianRole(user.id);
+  return !!data;
+}
 
 const P = {
   bg:"#f7f8fc", bg2:"#fff", sidebar:"#1e2a4a",
@@ -30,9 +35,9 @@ function AdminLogin({ onSuccess }) {
     setError(""); setLoading(true);
     const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
     if (err) { setError("Invalid credentials."); setLoading(false); return; }
-    if (!ADMIN_EMAILS.includes(data.user?.email)) {
-      await supabase.auth.signOut();
-      setError("Access denied. Admin accounts only.");
+    if (!(await authorizeScheduleAdmin(data.user))) {
+      await supabase.auth.signOut({ scope: "local" });
+      setError("Access denied. Clinic staff only.");
       setLoading(false); return;
     }
     onSuccess(data.user);
@@ -854,14 +859,39 @@ function PatientDocumentsTab() {
 // ── Main Admin Schedule ────────────────────────────────────────────────────────
 export default function AdminSchedule({ onBack }) {
   const [adminUser, setAdminUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [tab, setTab] = useState("appointments");
 
+  useEffect(() => {
+    let mounted = true;
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!mounted) return;
+      const user = session?.user;
+      if (user && (await authorizeScheduleAdmin(user))) setAdminUser(user);
+      setAuthLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!mounted) return;
+      const user = session?.user;
+      if (user && (await authorizeScheduleAdmin(user))) setAdminUser(user);
+      else setAdminUser(null);
+    });
+    return () => { mounted = false; subscription.unsubscribe(); };
+  }, []);
+
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "local" });
     setAdminUser(null);
   };
 
-  // Show admin login if not authenticated as admin
+  if (authLoading) {
+    return (
+      <div style={{ minHeight:"100vh", background:P.sidebar, display:"flex", alignItems:"center", justifyContent:"center", color:"rgba(255,255,255,0.5)", fontFamily:"'Inter',system-ui,sans-serif" }}>
+        Loading…
+      </div>
+    );
+  }
+
   if (!adminUser) return <AdminLogin onSuccess={setAdminUser}/>;
 
   const tabs = [
