@@ -175,6 +175,97 @@ ${data.icd10Codes?.length ? `\nICD-10 CODES: ${data.icd10Codes.join(', ')}` : ''
   }
 }
 
+const TEMPLATE_PREVIEW_SAMPLE = {
+  patientId: "MSW-SAMPLE",
+  dateOfService: new Date().toISOString().split("T")[0],
+  providerName: "Dr. Sample Provider",
+  sessionType: "Follow-up",
+  duration: "45",
+  modality: "Telehealth",
+  transcript: "[After you record, your session transcript fills each section below automatically.]",
+  patientContext: "[Optional: prior diagnoses, medications, or context you enter before recording.]",
+  icd10Codes: ["F41.1"],
+  specialty: "psychiatry",
+};
+
+function getFullTemplatePreview(template) {
+  if (!template) return "";
+  return generateNoteFromTemplate(template.id, {
+    ...TEMPLATE_PREVIEW_SAMPLE,
+    specialty: template.specialty || "psychiatry",
+  });
+}
+
+function TemplatePreviewModal({ template, onClose, onSelect }) {
+  if (!template) return null;
+  const previewText = getFullTemplatePreview(template);
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 2000,
+        display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "var(--midnight, #0d1228)", border: "1px solid var(--border)",
+          borderRadius: 20, maxWidth: 820, width: "100%", maxHeight: "92vh",
+          overflow: "hidden", display: "flex", flexDirection: "column",
+        }}
+      >
+        <div style={{ padding: "1.5rem 1.75rem 1rem", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 28, marginBottom: 6 }}>{template.icon}</div>
+              <h2 style={{ margin: 0, fontSize: "1.3rem", fontWeight: 700 }}>{template.name}</h2>
+              <p style={{ margin: "6px 0 0", fontSize: 13, color: "var(--muted)" }}>{template.description}</p>
+            </div>
+            <button type="button" onClick={onClose} style={{
+              background: "rgba(255,255,255,0.08)", border: "none", borderRadius: "50%",
+              width: 36, height: 36, cursor: "pointer", color: "var(--muted)", fontSize: 18,
+            }}>✕</button>
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>
+            {template.sections.map((s) => (
+              <span key={s} style={{
+                fontSize: 11, padding: "3px 9px", borderRadius: 8,
+                background: "rgba(124,111,247,0.15)", color: "var(--lavender)",
+                border: "1px solid rgba(124,111,247,0.25)",
+              }}>{s}</span>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ flex: 1, overflow: "auto", padding: "1.25rem 1.75rem" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted2)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+            Full template preview
+          </div>
+          <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 12px", lineHeight: 1.5 }}>
+            This is the note format that will be generated after your session. Bracketed text is filled from your recording.
+          </p>
+          <pre style={{
+            background: "rgba(0,0,0,0.35)", border: "1px solid var(--border)",
+            borderRadius: 12, padding: "1.25rem", fontSize: 12.5, lineHeight: 1.7,
+            color: "var(--white)", whiteSpace: "pre-wrap", fontFamily: "inherit", margin: 0,
+          }}>
+            {previewText}
+          </pre>
+        </div>
+
+        <div style={{
+          padding: "1rem 1.75rem", borderTop: "1px solid var(--border)",
+          display: "flex", gap: 10, justifyContent: "flex-end", flexShrink: 0,
+        }}>
+          <Btn variant="secondary" onClick={onClose}>Close</Btn>
+          <Btn onClick={() => { onSelect(template); onClose(); }}>Use This Template</Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AIScribe({ onBack }) {
   const { user } = useAuth();
   const [scribeState, setScribeState] = useState('setup'); // 'setup' | 'during' | 'after'
@@ -414,117 +505,12 @@ function AIScribeContent({ state, setState, data, setData, sessionId, setSession
   return null;
 }
 
-// Sample outline shown when previewing a template (before recording)
-function getTemplatePreviewOutline(templateId) {
-  const samples = {
-    'psych-progress-note': `PSYCHIATRIC PROGRESS NOTE
-
-CHIEF COMPLAINT:
-Patient presents for follow-up psychiatric evaluation.
-
-SUBJECTIVE:
-[Patient's reported symptoms, mood, sleep, medication effects — filled from your transcript]
-
-MENTAL STATUS EXAM:
-Appearance, behavior, speech, mood, affect, thought process, cognition, insight, judgment.
-
-ASSESSMENT:
-Clinical impression and symptom status.
-
-RISK ASSESSMENT:
-Suicidal/homicidal ideation, safety plan.
-
-PLAN:
-Medications, therapy, follow-up, patient education.`,
-    'therapy-session-note': `THERAPY SESSION NOTE
-
-PRESENTING PROBLEM:
-[Reason for session — from transcript]
-
-SESSION CONTENT:
-[What was discussed in session]
-
-INTERVENTIONS USED:
-CBT, psychoeducation, supportive therapy, etc.
-
-CLIENT RESPONSE:
-[How patient engaged and responded]
-
-PLAN:
-Homework, next session focus.`,
-  };
-  return samples[templateId] || `This template organizes your session transcript into these sections:
-
-${(GALLERY_TEMPLATES.find(t => t.id === templateId)?.sections || []).map((s, i) => `${i + 1}. ${s}`).join('\n')}
-
-After recording, MindShift AI Scribe fills each section from what was said in the visit.`;
-}
-
-function TemplatePreviewModal({ template, onClose, onSelect }) {
-  if (!template) return null;
-  return (
-    <div style={{
-      position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 2000,
-      display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem",
-    }}>
-      <div style={{
-        background: "var(--midnight, #0d1228)", border: "1px solid var(--border)",
-        borderRadius: 20, maxWidth: 640, width: "100%", maxHeight: "90vh",
-        overflow: "auto", padding: "1.75rem",
-      }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: "1rem" }}>
-          <div>
-            <div style={{ fontSize: 28, marginBottom: 6 }}>{template.icon}</div>
-            <h2 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 700 }}>{template.name}</h2>
-            <p style={{ margin: "6px 0 0", fontSize: 13, color: "var(--muted)" }}>{template.description}</p>
-          </div>
-          <button type="button" onClick={onClose} style={{
-            background: "rgba(255,255,255,0.08)", border: "none", borderRadius: "50%",
-            width: 32, height: 32, cursor: "pointer", color: "var(--muted)", fontSize: 16,
-          }}>✕</button>
-        </div>
-
-        <div style={{ marginBottom: "1rem" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted2)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
-            Sections included
-          </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {template.sections.map((s) => (
-              <span key={s} style={{
-                fontSize: 12, padding: "4px 10px", borderRadius: 8,
-                background: "rgba(124,111,247,0.15)", color: "var(--lavender)",
-                border: "1px solid rgba(124,111,247,0.25)",
-              }}>{s}</span>
-            ))}
-          </div>
-        </div>
-
-        <div style={{ marginBottom: "1.25rem" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted2)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
-            Sample structure
-          </div>
-          <pre style={{
-            background: "rgba(0,0,0,0.35)", border: "1px solid var(--border)",
-            borderRadius: 12, padding: "1rem", fontSize: 12, lineHeight: 1.65,
-            color: "var(--white)", whiteSpace: "pre-wrap", fontFamily: "inherit", margin: 0,
-          }}>
-            {getTemplatePreviewOutline(template.id)}
-          </pre>
-        </div>
-
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-          <Btn variant="secondary" onClick={onClose}>Close</Btn>
-          <Btn onClick={() => { onSelect(template); onClose(); }}>Use This Template</Btn>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // Session Setup Component
 function SessionSetup({ data, setData, onStart }) {
-  const [showTemplates, setShowTemplates] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [showTemplates, setShowTemplates] = useState(true);
+  const [selectedTemplate, setSelectedTemplate] = useState(() =>
+    GALLERY_TEMPLATES.find((t) => t.id === data.templateId) ?? null
+  );
   const [previewTemplate, setPreviewTemplate] = useState(null);
   const [templateFilter, setTemplateFilter] = useState('all');
   const [charts, setCharts] = useState([]);
@@ -652,7 +638,10 @@ function SessionSetup({ data, setData, onStart }) {
       {/* Note Template Gallery */}
       <GlassCard style={{ gridColumn: "1 / -1" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-          <h3 style={{ fontSize: 15, fontWeight: 600 }}>Note Template <span style={{ color: "var(--muted)", fontWeight: 400, fontSize: 13 }}>(optional)</span></h3>
+          <div>
+            <h3 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>Note Template <span style={{ color: "var(--muted)", fontWeight: 400, fontSize: 13 }}>(optional)</span></h3>
+            <p style={{ fontSize: 12, color: "var(--muted)", margin: "4px 0 0" }}>Click any template to view the full note format</p>
+          </div>
           {selectedTemplate && (
             <button onClick={clearTemplate} style={{ background: "transparent", border: "none", color: "var(--rose)", fontSize: 12, cursor: "pointer" }}>
               ✕ Clear
@@ -672,7 +661,14 @@ function SessionSetup({ data, setData, onStart }) {
               <div style={{ fontSize: 13, fontWeight: 600, color: "var(--lavender)" }}>{selectedTemplate.name}</div>
               <div style={{ fontSize: 11, color: "var(--muted)" }}>{selectedTemplate.description}</div>
             </div>
-            <div style={{ fontSize: 11, color: "var(--muted2)" }}>✓ Selected</div>
+            <button type="button" onClick={() => setPreviewTemplate(selectedTemplate)} style={{
+              padding: "6px 12px", borderRadius: 8, cursor: "pointer",
+              border: "1px solid rgba(124,111,247,0.4)", background: "transparent",
+              color: "var(--lavender)", fontSize: 12, fontWeight: 600,
+            }}>
+              👁 View
+            </button>
+            <div style={{ fontSize: 11, color: "var(--teal)", fontWeight: 600 }}>✓ Selected</div>
           </div>
         )}
 
@@ -707,12 +703,21 @@ function SessionSetup({ data, setData, onStart }) {
             {/* Template cards grid */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "0.75rem" }}>
               {filteredTemplates.map(tpl => (
-                <div key={tpl.id} style={{
-                  padding: "1rem", borderRadius: 14,
-                  border: `2px solid ${selectedTemplate?.id === tpl.id ? 'var(--purple)' : 'var(--border)'}`,
-                  background: selectedTemplate?.id === tpl.id ? 'rgba(124,111,247,0.12)' : 'rgba(255,255,255,0.03)',
-                  transition: "all 0.2s"
-                }}>
+                <div
+                  key={tpl.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setPreviewTemplate(tpl)}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setPreviewTemplate(tpl); }}
+                  style={{
+                    padding: "1rem", borderRadius: 14, cursor: "pointer",
+                    border: `2px solid ${selectedTemplate?.id === tpl.id ? 'var(--purple)' : 'var(--border)'}`,
+                    background: selectedTemplate?.id === tpl.id ? 'rgba(124,111,247,0.12)' : 'rgba(255,255,255,0.03)',
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={e => { if (selectedTemplate?.id !== tpl.id) e.currentTarget.style.borderColor = 'rgba(124,111,247,0.45)'; }}
+                  onMouseLeave={e => { if (selectedTemplate?.id !== tpl.id) e.currentTarget.style.borderColor = 'var(--border)'; }}
+                >
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "0.5rem" }}>
                     <span style={{ fontSize: 22 }}>{tpl.icon}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -729,14 +734,14 @@ function SessionSetup({ data, setData, onStart }) {
                     )}
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
-                    <button type="button" onClick={() => setPreviewTemplate(tpl)} style={{
+                    <button type="button" onClick={(e) => { e.stopPropagation(); setPreviewTemplate(tpl); }} style={{
                       flex: 1, padding: "6px 10px", borderRadius: 8, cursor: "pointer",
                       border: "1px solid var(--border2)", background: "transparent",
                       color: "var(--lavender)", fontSize: 12, fontWeight: 600,
                     }}>
-                      👁 View
+                      👁 View Template
                     </button>
-                    <button type="button" onClick={() => handleSelectTemplate(tpl)} style={{
+                    <button type="button" onClick={(e) => { e.stopPropagation(); handleSelectTemplate(tpl); }} style={{
                       flex: 1, padding: "6px 10px", borderRadius: 8, cursor: "pointer",
                       border: "none", background: selectedTemplate?.id === tpl.id ? "var(--purple)" : "var(--grad1)",
                       color: "#fff", fontSize: 12, fontWeight: 600,
@@ -750,12 +755,13 @@ function SessionSetup({ data, setData, onStart }) {
           </div>
         )}
 
-        <TemplatePreviewModal
-          template={previewTemplate}
-          onClose={() => setPreviewTemplate(null)}
-          onSelect={handleSelectTemplate}
-        />
       </GlassCard>
+
+      <TemplatePreviewModal
+        template={previewTemplate}
+        onClose={() => setPreviewTemplate(null)}
+        onSelect={handleSelectTemplate}
+      />
 
       {/* Clinical Context */}
       <GlassCard style={{ gridColumn: "1 / -1" }}>
