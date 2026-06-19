@@ -17,7 +17,7 @@ import EHRInvoices from "./EHRInvoices";
 import EHRCrisisAlerts from "./EHRCrisisAlerts";
 import { Spinner, EhrStyles } from "./EHRUI";
 
-export default function EHR({ onBack }) {
+export default function EHR({ onBack, onOpenDocs }) {
   // ── ALL hooks must be declared unconditionally at the top ──────────────────
   const [session, setSession]         = useState(undefined);
   const [clinician, setClinician]     = useState(null);
@@ -221,6 +221,11 @@ export default function EHR({ onBack }) {
 
         {/* Clinician + theme + sign out */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {onOpenDocs && (
+            <button onClick={onOpenDocs} style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(245,200,66,0.12)", border: "1px solid rgba(245,200,66,0.3)", borderRadius: 20, padding: "6px 12px", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, color: "#ca8a04" }}>
+              📖 Docs
+            </button>
+          )}
           <button onClick={() => {
             const isDark = document.documentElement.getAttribute("data-theme") === "dark";
             document.documentElement.setAttribute("data-theme", isDark ? "light" : "dark");

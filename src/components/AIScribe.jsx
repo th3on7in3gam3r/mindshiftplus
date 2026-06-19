@@ -269,7 +269,7 @@ function TemplatePreviewModal({ template, onClose, onSelect }) {
   );
 }
 
-export default function AIScribe({ onBack }) {
+export default function AIScribe({ onBack, onOpenDocs }) {
   const { user } = useAuth();
   const [scribeState, setScribeState] = useState('setup'); // 'setup' | 'during' | 'after'
   const [currentSessionId, setCurrentSessionId] = useState(null);
@@ -373,6 +373,11 @@ export default function AIScribe({ onBack }) {
             <Btn variant="secondary" small onClick={() => setShowArchive(!showArchive)}>
               📁 {showArchive ? "Hide" : "Archive"} ({savedSessions.length})
             </Btn>
+            {onOpenDocs && (
+              <Btn variant="secondary" small onClick={onOpenDocs}>
+                📖 Docs
+              </Btn>
+            )}
             {onBack && (
               <Btn variant="secondary" small onClick={onBack}>
                 ← Dashboard

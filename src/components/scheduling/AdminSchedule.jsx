@@ -986,7 +986,7 @@ function PatientDocumentsTab() {
 }
 
 // ── Main Admin Schedule ────────────────────────────────────────────────────────
-export default function AdminSchedule({ onBack }) {
+export default function AdminSchedule({ onBack, onOpenDocs }) {
   const [adminUser, setAdminUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [tab, setTab] = useState("appointments");
@@ -1062,6 +1062,7 @@ export default function AdminSchedule({ onBack }) {
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
           <span className="admin-header-email" style={{ fontSize:11, color:"rgba(255,255,255,0.5)" }}>{adminUser?.email}</span>
+          {onOpenDocs&&<button onClick={onOpenDocs} style={{ background:"rgba(245,200,66,0.15)", border:"1px solid rgba(245,200,66,0.35)", borderRadius:20, padding:"5px 12px", fontSize:11, color:"#fcd34d", cursor:"pointer" }}>📖 Docs</button>}
           <button onClick={handleSignOut} style={{ background:"rgba(255,255,255,0.1)", border:"1px solid rgba(255,255,255,0.2)", borderRadius:20, padding:"5px 12px", fontSize:11, color:"rgba(255,255,255,0.7)", cursor:"pointer" }}>Sign Out</button>
           {onBack&&<button onClick={onBack} style={{ background:"rgba(255,255,255,0.1)", border:"1px solid rgba(255,255,255,0.2)", borderRadius:20, padding:"5px 12px", fontSize:11, color:"rgba(255,255,255,0.7)", cursor:"pointer" }}>← Exit</button>}
         </div>

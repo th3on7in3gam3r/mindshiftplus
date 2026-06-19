@@ -8,6 +8,7 @@ import DisclaimerModal, { hasAcceptedDisclaimer } from "./components/DisclaimerM
 import CrisisModal from "./components/CrisisModal";
 import EHR from "./components/ehr/EHR";
 import AIScribe from "./components/AIScribe";
+import StaffDocs from "./components/clinical/StaffDocs";
 
 // ── Fonts ──────────────────────────────────────────────────────────────────────
 const GlobalStyles = () => (
@@ -197,6 +198,16 @@ const clinicalTools = [
     glow: "rgba(14,165,160,0.35)",
     gradient: "linear-gradient(145deg, rgba(14,165,160,0.22) 0%, rgba(124,111,247,0.1) 100%)",
   },
+  {
+    id: "staff-docs",
+    title: "Staff Docs & Help",
+    shortTitle: "Docs",
+    description: "How-to guides for Admin, EHR, Scribe, scheduling, telehealth, and more.",
+    icon: "📖",
+    accent: "#f5c842",
+    glow: "rgba(245,200,66,0.35)",
+    gradient: "linear-gradient(145deg, rgba(245,200,66,0.2) 0%, rgba(124,111,247,0.08) 100%)",
+  },
 ];
 
 function ClinicalSuite({ setPage, userName }) {
@@ -278,8 +289,9 @@ function ClinicalSuite({ setPage, userName }) {
       <GlassCard style={{ marginTop: "1.5rem", padding: "1rem 1.25rem", background: "rgba(255,255,255,0.03)" }}>
         <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.7 }}>
           <strong style={{ color: "var(--white)" }}>Tip:</strong> Use <strong style={{ color: "var(--lavender)" }}>Admin</strong> for scheduling and patient IDs,
-          {" "}<strong style={{ color: "var(--lavender)" }}>EHR</strong> for charts and documentation, and{" "}
-          <strong style={{ color: "var(--lavender)" }}>Scribe</strong> to record sessions and push notes to the chart.
+          {" "}<strong style={{ color: "var(--lavender)" }}>EHR</strong> for charts and documentation,{" "}
+          <strong style={{ color: "var(--lavender)" }}>Scribe</strong> to record sessions and push notes to the chart, and{" "}
+          <strong style={{ color: "var(--gold)" }}>Docs</strong> when you need a refresher on how anything works.
         </div>
       </GlassCard>
     </div>
@@ -287,7 +299,7 @@ function ClinicalSuite({ setPage, userName }) {
 }
 
 function Sidebar({page,setPage,user,onSignOut,open,onClose,isClinician}){
-  const clinicalActive = ["clinical", "ehr-schedule", "ehr", "ai-scribe"].includes(page);
+  const clinicalActive = ["clinical", "ehr-schedule", "ehr", "ai-scribe", "staff-docs"].includes(page);
   return(
     <>
       {/* Mobile overlay — only shows on small screens when drawer is open */}
@@ -352,7 +364,7 @@ function Sidebar({page,setPage,user,onSignOut,open,onClose,isClinician}){
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: "block", lineHeight: 1.25 }}>Clinical Suite</span>
                   <span style={{ display: "block", fontSize: 10, color: "var(--muted2)", fontWeight: 400, marginTop: 2 }}>
-                    Admin · EHR · Scribe
+                    Admin · EHR · Scribe · Docs
                   </span>
                 </span>
               </button>
@@ -2913,7 +2925,7 @@ export default function App(){
     return(
       <>
         <GlobalStyles/>
-        <AdminSchedule onBack={()=>setPage("clinical")}/>
+        <AdminSchedule onBack={()=>setPage("clinical")} onOpenDocs={()=>setPage("staff-docs")}/>
       </>
     );
   }
@@ -2923,7 +2935,7 @@ export default function App(){
     return(
       <>
         <GlobalStyles/>
-        <EHR onBack={()=>setPage("clinical")}/>
+        <EHR onBack={()=>setPage("clinical")} onOpenDocs={()=>setPage("staff-docs")}/>
       </>
     );
   }
@@ -2933,7 +2945,17 @@ export default function App(){
     return(
       <>
         <GlobalStyles/>
-        <AIScribe onBack={()=>setPage("clinical")}/>
+        <AIScribe onBack={()=>setPage("clinical")} onOpenDocs={()=>setPage("staff-docs")}/>
+      </>
+    );
+  }
+
+  // Staff documentation & help
+  if(user && page==="staff-docs"){
+    return(
+      <>
+        <GlobalStyles/>
+        <StaffDocs onBack={()=>setPage("clinical")} onOpenTool={(id)=>setPage(id)}/>
       </>
     );
   }
