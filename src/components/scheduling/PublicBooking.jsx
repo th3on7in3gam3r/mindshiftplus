@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { bookAppointment } from "../../lib/clinicApi";
 import { emailAppointmentRequested } from "../../lib/emailService";
 import { supabase } from "../../lib/supabase";
+import { AVAIL_DAYS, SLOTS_BY_DOW, AVAIL_SUMMARY } from "../../lib/schedulingConstants";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const C = {
@@ -23,15 +24,6 @@ const CLINICIANS = [
   { name: "Kenneth Mutegyeki, PMHNP-BC", emoji: "👨🏾‍⚕️" },
   { name: "Rachel Nakkazi, PMHNP-BC",    emoji: "👩🏾‍⚕️" },
 ];
-
-// Available days: Mon(1), Thu(4), Fri(5), Sat(6)
-const AVAIL_DAYS = [1, 4, 5, 6];
-const SLOTS_BY_DOW = {
-  1: ["6:00 PM", "7:00 PM"],
-  4: ["6:00 PM", "7:00 PM"],
-  5: ["8:00 AM","9:00 AM","10:00 AM","11:00 AM","1:00 PM","2:00 PM","3:00 PM","4:00 PM"],
-  6: ["8:00 AM","9:00 AM","10:00 AM","11:00 AM","1:00 PM","2:00 PM","3:00 PM","4:00 PM"],
-};
 
 function fmtDate(d) {
   return d ? new Date(d + "T12:00:00").toLocaleDateString("en-US", { weekday:"long", month:"long", day:"numeric", year:"numeric" }) : "";
@@ -124,9 +116,7 @@ function Calendar({ selected, onSelect }) {
           );
         })}
       </div>
-      <div style={{ marginTop:12, fontSize:11, color:C.muted2 }}>
-        Available: Mon & Thu evenings · Fri & Sat all day
-      </div>
+      <div style={{ marginTop:12, fontSize:11, color:C.muted2 }}>{AVAIL_SUMMARY}</div>
     </div>
   );
 }

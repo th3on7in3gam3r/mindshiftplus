@@ -15,16 +15,12 @@ const STATUS_DOT = {
   cancelled: { color: "#e05c7a", label: "Cancelled" },
 };
 
-// Available slots per day of week (matches PublicBooking)
-const SLOTS_BY_DOW = {
-  1: 2,  // Monday: 2 evening slots
-  4: 2,  // Thursday: 2 evening slots
-  5: 8,  // Friday: 8 slots
-  6: 8,  // Saturday: 8 slots
-};
-const AVAIL_DAYS = [1, 4, 5, 6];
-
+import { AVAIL_DAYS, SLOTS_BY_DOW as SLOT_LABELS } from "../../lib/schedulingConstants";
 import { sessionWindowState } from "../../lib/telehealthUtils";
+
+const SLOTS_BY_DOW = Object.fromEntries(
+  Object.entries(SLOT_LABELS).map(([dow, slots]) => [dow, slots.length])
+);
 export { sessionWindowState };
 
 // ── Mini Calendar ──────────────────────────────────────────────────────────────

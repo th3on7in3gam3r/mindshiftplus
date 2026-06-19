@@ -7,6 +7,10 @@ import {
 import { emailAppointmentConfirmed, emailAppointmentCancelled, emailTelehealthReminder } from "../../lib/emailService";
 import { supabase } from "../../lib/supabase";
 import { isAdminEmail, getClinicianRole, searchAdminPatients } from "../../lib/ehrDb";
+import {
+  DAY_NAMES, AVAIL_SUMMARY, OFF_SUMMARY,
+  DEFAULT_AVAILABILITY_SLOTS, isAvailableDayOfWeek, isOffDayOfWeek,
+} from "../../lib/schedulingConstants";
 
 async function authorizeScheduleAdmin(user) {
   if (!user?.email) return false;
@@ -87,7 +91,7 @@ function AdminLogin({ onSuccess }) {
   );
 }
 
-const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const DAYS = DAY_NAMES;
 const STATUS_COLORS = {
   pending:   { bg:"#fef9c3", color:"#854d0e", label:"Pending" },
   confirmed: { bg:"#dcfce7", color:"#166534", label:"Confirmed" },
@@ -120,11 +124,100 @@ function Tab({ label, active, onClick, count }) {
   );
 }
 
+// ── Schedule Calendar (matches public booking) ─────────────────────────────────
+function AdminScheduleCalendar({ appointments, selectedDate, onSelectDate }) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const [view, setView] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+  const year = view.getFullYear(), month = view.getMonth();
+  const firstDow = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const toStr = d => `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+  const apptMap = {};
+  appointments.forEach(a => {
+    if (!a.scheduled_at) return;
+    const ds = a.scheduled_at.slice(0, 10);
+    if (!apptMap[ds]) apptMap[ds] = [];
+    apptMap[ds].push(a);
+  });
+
+  const cells = [...Array(firstDow).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
+
+  return (
+    <Card style={{ marginBottom: "1.2rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <button onClick={() => setView(new Date(year, month - 1, 1))} style={{ background: "transparent", border: `1px solid ${P.border}`, borderRadius: 8, width: 32, height: 32, cursor: "pointer", color: P.muted, fontSize: 16 }}>‹</button>
+        <span style={{ fontSize: "1rem", fontWeight: 700, color: P.text }}>{view.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</span>
+        <button onClick={() => setView(new Date(year, month + 1, 1))} style={{ background: "transparent", border: `1px solid ${P.border}`, borderRadius: 8, width: 32, height: 32, cursor: "pointer", color: P.muted, fontSize: 16 }}>›</button>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
+        {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d, idx) => (
+          <div key={d} style={{
+            textAlign: "center", fontSize: 11, fontWeight: 600, padding: "4px 0",
+            color: isOffDayOfWeek(idx) ? P.muted2 : P.muted,
+          }}>{d}</div>
+        ))}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3 }}>
+        {cells.map((d, i) => {
+          if (!d) return <div key={`e${i}`} />;
+          const ds = toStr(d);
+          const dow = new Date(`${ds}T12:00:00`).getDay();
+          const off = isOffDayOfWeek(dow);
+          const open = isAvailableDayOfWeek(dow);
+          const sel = selectedDate === ds;
+          const dayAppts = apptMap[ds] || [];
+          const pending = dayAppts.filter(a => ["pending", "requested"].includes(a.status)).length;
+          return (
+            <button
+              key={d}
+              type="button"
+              onClick={() => onSelectDate(sel ? "" : ds)}
+              disabled={off}
+              title={off ? "Clinic closed" : dayAppts.length ? `${dayAppts.length} appointment(s)` : "Open — click to filter list"}
+              style={{
+                aspectRatio: "1", borderRadius: 10, border: "none", fontSize: 13,
+                fontWeight: sel ? 700 : 400,
+                background: sel ? P.accent : off ? "#f3f4f6" : "transparent",
+                color: sel ? "#fff" : off ? P.muted2 : P.text,
+                cursor: off ? "default" : "pointer",
+                opacity: off ? 0.45 : 1,
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2,
+                transition: "all .15s",
+              }}
+              onMouseOver={e => { if (open && !sel) e.currentTarget.style.background = "#eef2ff"; }}
+              onMouseOut={e => { if (open && !sel) e.currentTarget.style.background = "transparent"; }}
+            >
+              {d}
+              {dayAppts.length > 0 && (
+                <div style={{ display: "flex", gap: 2, justifyContent: "center" }}>
+                  {pending > 0 && <span style={{ width: 5, height: 5, borderRadius: "50%", background: sel ? "#fff" : P.gold, display: "inline-block" }} />}
+                  {dayAppts.length > pending && <span style={{ width: 5, height: 5, borderRadius: "50%", background: sel ? "rgba(255,255,255,0.85)" : P.success, display: "inline-block" }} />}
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      <div style={{ marginTop: 12, fontSize: 11, color: P.muted, display: "flex", flexWrap: "wrap", gap: "8px 16px" }}>
+        <span>{AVAIL_SUMMARY}</span>
+        <span style={{ color: P.muted2 }}>· {OFF_SUMMARY}</span>
+      </div>
+      <div style={{ marginTop: 8, display: "flex", gap: 14, flexWrap: "wrap", fontSize: 11, color: P.muted }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 5 }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: P.gold, display: "inline-block" }} /> Pending</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 5 }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: P.success, display: "inline-block" }} /> Scheduled</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 5 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: "#f3f4f6", border: `1px solid ${P.border}`, display: "inline-block" }} /> Closed</span>
+      </div>
+    </Card>
+  );
+}
+
 // ── Appointments Tab ───────────────────────────────────────────────────────────
 function AppointmentsTab({ userId }) {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("");
   const [toast, setToast] = useState("");
 
   const load = async () => {
@@ -184,9 +277,10 @@ function AppointmentsTab({ userId }) {
 
   const fmt = (iso) => iso ? new Date(iso).toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}) : "—";
 
-  const filtered = filter==="all"
+  const filtered = (filter === "all"
     ? appointments.filter(a => a.status !== "archived")
-    : appointments.filter(a=>a.status===filter);
+    : appointments.filter(a => a.status === filter)
+  ).filter(a => !dateFilter || a.scheduled_at?.slice(0, 10) === dateFilter);
   const pending = appointments.filter(a=>["pending","requested"].includes(a.status));
 
   return (
@@ -200,6 +294,21 @@ function AppointmentsTab({ userId }) {
         </div>
       )}
 
+      <AdminScheduleCalendar
+        appointments={appointments.filter(a => a.status !== "archived")}
+        selectedDate={dateFilter}
+        onSelectDate={setDateFilter}
+      />
+
+      {dateFilter && (
+        <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:"1rem", flexWrap:"wrap" }}>
+          <span style={{ fontSize:12, color:P.muted }}>
+            Showing {new Date(dateFilter+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}
+          </span>
+          <button onClick={()=>setDateFilter("")} style={{ background:"#eef2ff", border:"none", borderRadius:20, padding:"4px 12px", color:P.accent, fontSize:11, fontWeight:600, cursor:"pointer" }}>Clear date filter</button>
+        </div>
+      )}
+
       <div style={{ display:"flex", gap:6, marginBottom:"1.2rem", flexWrap:"wrap" }}>
         {[["all","All",null],["pending","Pending",pending.length],["confirmed","Confirmed",null],["cancelled","Cancelled",null],["completed","Completed",null],["archived","🗄️ Archived",null]].map(([v,l,c])=>(
           <Tab key={v} label={l} active={filter===v} onClick={()=>setFilter(v)} count={c}/>
@@ -210,7 +319,7 @@ function AppointmentsTab({ userId }) {
       : filtered.length===0 ? (
         <Card style={{ textAlign:"center", padding:"2.5rem" }}>
           <div style={{ fontSize:36, marginBottom:10 }}>📅</div>
-          <div style={{ color:P.muted, fontSize:13 }}>{filter==="archived" ? "No archived appointments." : "No appointments found."}</div>
+          <div style={{ color:P.muted, fontSize:13 }}>{filter==="archived" ? "No archived appointments." : dateFilter ? "No appointments on this date." : "No appointments found."}</div>
         </Card>
       ) : filtered.map(a=>(
         <Card key={a.id} style={{ marginBottom:"0.75rem", opacity: a.status==="archived" ? 0.75 : 1 }}>
@@ -268,25 +377,15 @@ function AvailabilityTab({ userId }) {
     getAvailability()
       .then(data => {
         if (Array.isArray(data) && data.length) setSlots(data);
-        else setSlots([
-          { day_of_week:1, start_time:"18:00", end_time:"20:00", slot_duration_minutes:60, location:"Milford", is_active:true }, // Monday
-          { day_of_week:4, start_time:"18:00", end_time:"20:00", slot_duration_minutes:60, location:"Milford", is_active:true }, // Thursday
-          { day_of_week:5, start_time:"08:00", end_time:"17:00", slot_duration_minutes:60, location:"Milford", is_active:true }, // Friday
-          { day_of_week:6, start_time:"08:00", end_time:"17:00", slot_duration_minutes:60, location:"Milford", is_active:true }, // Saturday
-        ]);
+        else setSlots(DEFAULT_AVAILABILITY_SLOTS.map(s => ({ ...s })));
       })
-      .catch(() => setSlots([
-          { day_of_week:1, start_time:"18:00", end_time:"20:00", slot_duration_minutes:60, location:"Milford", is_active:true },
-          { day_of_week:4, start_time:"18:00", end_time:"20:00", slot_duration_minutes:60, location:"Milford", is_active:true },
-          { day_of_week:5, start_time:"08:00", end_time:"17:00", slot_duration_minutes:60, location:"Milford", is_active:true },
-          { day_of_week:6, start_time:"08:00", end_time:"17:00", slot_duration_minutes:60, location:"Milford", is_active:true },
-        ]));
+      .catch(() => setSlots(DEFAULT_AVAILABILITY_SLOTS.map(s => ({ ...s }))));
   }, []);
 
   const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(""),3000); };
 
   const update = (i, key, val) => setSlots(s => s.map((sl,idx) => idx===i ? {...sl,[key]:val} : sl));
-  const addSlot = () => setSlots(s => [...s, { day_of_week:1, start_time:"09:00", end_time:"17:00", slot_duration_minutes:60, location:"Milford", is_active:true }]);
+  const addSlot = () => setSlots(s => [...s, { ...DEFAULT_AVAILABILITY_SLOTS[0], start_time:"09:00", end_time:"17:00" }]);
   const removeSlot = (i) => setSlots(s => s.filter((_,idx)=>idx!==i));
 
   const handleSave = async () => {
@@ -303,8 +402,8 @@ function AvailabilityTab({ userId }) {
   return (
     <div>
       {toast&&<div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"#1a1f36", borderRadius:30, padding:"10px 20px", fontSize:13, color:"#fff", zIndex:9999, whiteSpace:"nowrap" }}>{toast}</div>}
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"1.2rem" }}>
-        <p style={{ fontSize:13, color:P.muted }}>Define your weekly recurring availability. Patients will only see slots that are open.</p>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"1.2rem", flexWrap:"wrap", gap:8 }}>
+        <p style={{ fontSize:13, color:P.muted, margin:0 }}>Weekly recurring availability. {AVAIL_SUMMARY} · {OFF_SUMMARY}.</p>
         <button onClick={addSlot} style={{ background:P.accent, border:"none", borderRadius:20, padding:"8px 16px", color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer" }}>+ Add Slot</button>
       </div>
       <div style={{ display:"flex", flexDirection:"column", gap:"0.75rem", marginBottom:"1.2rem" }}>
@@ -312,7 +411,11 @@ function AvailabilityTab({ userId }) {
           <Card key={i} style={{ padding:"1rem" }}>
             <div className="admin-avail-row" style={{ display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
               <select value={s.day_of_week} onChange={e=>update(i,"day_of_week",Number(e.target.value))} style={{...inputStyle,minWidth:110}}>
-                {DAYS.map((d,idx)=><option key={d} value={idx}>{d}</option>)}
+                {DAYS.map((d,idx)=>(
+                  <option key={d} value={idx} disabled={isOffDayOfWeek(idx)}>
+                    {d}{isOffDayOfWeek(idx) ? " (Closed)" : ""}
+                  </option>
+                ))}
               </select>
               <input type="time" value={s.start_time} onChange={e=>update(i,"start_time",e.target.value)} style={inputStyle}/>
               <span style={{ color:P.muted, fontSize:13 }}>to</span>
