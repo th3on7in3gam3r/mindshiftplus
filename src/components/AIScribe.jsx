@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../lib/AuthContext";
+import { getAllCharts } from "../lib/ehrDb";
 import {
   createScribeSession,
   saveGeneratedNote,
@@ -184,6 +185,7 @@ export default function AIScribe({ onBack }) {
   const [sessionData, setSessionData] = useState({
     patientId: '',
     patientChartId: null,
+    patientName: '',
     dateOfService: new Date().toISOString().split('T')[0],
     providerName: user?.user_metadata?.full_name || '',
     sessionType: 'Follow-up',
@@ -384,6 +386,7 @@ function AIScribeContent({ state, setState, data, setData, sessionId, setSession
         setData({
           patientId: '',
           patientChartId: null,
+          patientName: '',
           dateOfService: new Date().toISOString().split('T')[0],
           providerName: data.providerName,
           sessionType: 'Follow-up',
@@ -411,11 +414,121 @@ function AIScribeContent({ state, setState, data, setData, sessionId, setSession
   return null;
 }
 
+// Sample outline shown when previewing a template (before recording)
+function getTemplatePreviewOutline(templateId) {
+  const samples = {
+    'psych-progress-note': `PSYCHIATRIC PROGRESS NOTE
+
+CHIEF COMPLAINT:
+Patient presents for follow-up psychiatric evaluation.
+
+SUBJECTIVE:
+[Patient's reported symptoms, mood, sleep, medication effects — filled from your transcript]
+
+MENTAL STATUS EXAM:
+Appearance, behavior, speech, mood, affect, thought process, cognition, insight, judgment.
+
+ASSESSMENT:
+Clinical impression and symptom status.
+
+RISK ASSESSMENT:
+Suicidal/homicidal ideation, safety plan.
+
+PLAN:
+Medications, therapy, follow-up, patient education.`,
+    'therapy-session-note': `THERAPY SESSION NOTE
+
+PRESENTING PROBLEM:
+[Reason for session — from transcript]
+
+SESSION CONTENT:
+[What was discussed in session]
+
+INTERVENTIONS USED:
+CBT, psychoeducation, supportive therapy, etc.
+
+CLIENT RESPONSE:
+[How patient engaged and responded]
+
+PLAN:
+Homework, next session focus.`,
+  };
+  return samples[templateId] || `This template organizes your session transcript into these sections:
+
+${(GALLERY_TEMPLATES.find(t => t.id === templateId)?.sections || []).map((s, i) => `${i + 1}. ${s}`).join('\n')}
+
+After recording, MindShift AI Scribe fills each section from what was said in the visit.`;
+}
+
+function TemplatePreviewModal({ template, onClose, onSelect }) {
+  if (!template) return null;
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 2000,
+      display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem",
+    }}>
+      <div style={{
+        background: "var(--midnight, #0d1228)", border: "1px solid var(--border)",
+        borderRadius: 20, maxWidth: 640, width: "100%", maxHeight: "90vh",
+        overflow: "auto", padding: "1.75rem",
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: "1rem" }}>
+          <div>
+            <div style={{ fontSize: 28, marginBottom: 6 }}>{template.icon}</div>
+            <h2 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 700 }}>{template.name}</h2>
+            <p style={{ margin: "6px 0 0", fontSize: 13, color: "var(--muted)" }}>{template.description}</p>
+          </div>
+          <button type="button" onClick={onClose} style={{
+            background: "rgba(255,255,255,0.08)", border: "none", borderRadius: "50%",
+            width: 32, height: 32, cursor: "pointer", color: "var(--muted)", fontSize: 16,
+          }}>✕</button>
+        </div>
+
+        <div style={{ marginBottom: "1rem" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted2)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+            Sections included
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {template.sections.map((s) => (
+              <span key={s} style={{
+                fontSize: 12, padding: "4px 10px", borderRadius: 8,
+                background: "rgba(124,111,247,0.15)", color: "var(--lavender)",
+                border: "1px solid rgba(124,111,247,0.25)",
+              }}>{s}</span>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ marginBottom: "1.25rem" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted2)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+            Sample structure
+          </div>
+          <pre style={{
+            background: "rgba(0,0,0,0.35)", border: "1px solid var(--border)",
+            borderRadius: 12, padding: "1rem", fontSize: 12, lineHeight: 1.65,
+            color: "var(--white)", whiteSpace: "pre-wrap", fontFamily: "inherit", margin: 0,
+          }}>
+            {getTemplatePreviewOutline(template.id)}
+          </pre>
+        </div>
+
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          <Btn variant="secondary" onClick={onClose}>Close</Btn>
+          <Btn onClick={() => { onSelect(template); onClose(); }}>Use This Template</Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Session Setup Component
 function SessionSetup({ data, setData, onStart }) {
   const [showTemplates, setShowTemplates] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [previewTemplate, setPreviewTemplate] = useState(null);
   const [templateFilter, setTemplateFilter] = useState('all');
+  const [charts, setCharts] = useState([]);
+  const [chartsLoading, setChartsLoading] = useState(true);
 
   const specialties = [
     { id: 'psychiatry',   name: 'Psychiatry',   icon: '🧠' },
@@ -431,10 +544,28 @@ function SessionSetup({ data, setData, onStart }) {
     ? GALLERY_TEMPLATES
     : GALLERY_TEMPLATES.filter(t => t.specialty === templateFilter);
 
+  useEffect(() => {
+    getAllCharts().then(({ data: chartList }) => {
+      setCharts(chartList ?? []);
+      setChartsLoading(false);
+    });
+  }, []);
+
   const handleSelectTemplate = (tpl) => {
     setSelectedTemplate(tpl);
     setData(d => ({ ...d, templateId: tpl.id }));
     setShowTemplates(false);
+  };
+
+  const handleSelectPatient = (chartId) => {
+    const chart = charts.find((c) => c.id === chartId);
+    if (!chart) return;
+    setData({
+      ...data,
+      patientChartId: chart.id,
+      patientId: chart.mrn || chart.full_name || chart.id,
+      patientName: chart.full_name || chart.mrn || 'Unknown',
+    });
   };
 
   const clearTemplate = () => {
@@ -449,7 +580,40 @@ function SessionSetup({ data, setData, onStart }) {
       <GlassCard>
         <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: "1rem" }}>Patient Information</h3>
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <InputField label="Patient ID *" value={data.patientId} onChange={e => setData({ ...data, patientId: e.target.value })} placeholder="e.g. PT-12345" />
+          <div>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6, color: "var(--muted)" }}>
+              Select Patient from EHR *
+            </label>
+            {chartsLoading ? (
+              <div style={{ fontSize: 13, color: "var(--muted)" }}>Loading patients…</div>
+            ) : charts.length === 0 ? (
+              <div style={{ fontSize: 13, color: "var(--gold)" }}>
+                No patients in EHR yet. Create a patient chart first (EHR → New Patient).
+              </div>
+            ) : (
+              <select
+                value={data.patientChartId || ''}
+                onChange={(e) => handleSelectPatient(e.target.value)}
+                style={{
+                  width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid var(--border)",
+                  borderRadius: 10, padding: "0.75rem", color: "var(--white)", fontSize: 14,
+                  fontFamily: "var(--font)", cursor: "pointer",
+                }}
+              >
+                <option value="" style={{ background: "var(--midnight)" }}>— Choose a patient —</option>
+                {charts.map((c) => (
+                  <option key={c.id} value={c.id} style={{ background: "var(--midnight)" }}>
+                    {c.full_name || 'Unknown'}{c.mrn ? ` (${c.mrn})` : ''}
+                  </option>
+                ))}
+              </select>
+            )}
+            {data.patientName && (
+              <div style={{ fontSize: 12, color: "var(--teal)", marginTop: 6 }}>
+                ✓ {data.patientName}{data.patientId ? ` · MRN: ${data.patientId}` : ''}
+              </div>
+            )}
+          </div>
           <InputField label="Date of Service" type="date" value={data.dateOfService} onChange={e => setData({ ...data, dateOfService: e.target.value })} />
           <InputField label="Provider Name *" value={data.providerName} onChange={e => setData({ ...data, providerName: e.target.value })} placeholder="Dr. Jane Smith" />
         </div>
@@ -543,24 +707,20 @@ function SessionSetup({ data, setData, onStart }) {
             {/* Template cards grid */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "0.75rem" }}>
               {filteredTemplates.map(tpl => (
-                <div key={tpl.id} onClick={() => handleSelectTemplate(tpl)} style={{
-                  padding: "1rem", borderRadius: 14, cursor: "pointer",
+                <div key={tpl.id} style={{
+                  padding: "1rem", borderRadius: 14,
                   border: `2px solid ${selectedTemplate?.id === tpl.id ? 'var(--purple)' : 'var(--border)'}`,
                   background: selectedTemplate?.id === tpl.id ? 'rgba(124,111,247,0.12)' : 'rgba(255,255,255,0.03)',
                   transition: "all 0.2s"
-                }}
-                  onMouseEnter={e => { if (selectedTemplate?.id !== tpl.id) e.currentTarget.style.borderColor = 'rgba(124,111,247,0.4)'; }}
-                  onMouseLeave={e => { if (selectedTemplate?.id !== tpl.id) e.currentTarget.style.borderColor = 'var(--border)'; }}
-                >
+                }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "0.5rem" }}>
                     <span style={{ fontSize: 22 }}>{tpl.icon}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, fontWeight: 600, color: "var(--white)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tpl.name}</div>
                       <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{tpl.description}</div>
                     </div>
-                    <div style={{ fontSize: 10, color: "var(--muted2)", flexShrink: 0 }}>⭐ {tpl.usageCount.toLocaleString()}</div>
                   </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 10 }}>
                     {tpl.sections.slice(0, 4).map(s => (
                       <span key={s} style={{ fontSize: 10, padding: "2px 7px", borderRadius: 6, background: "rgba(255,255,255,0.06)", color: "var(--muted2)" }}>{s}</span>
                     ))}
@@ -568,11 +728,33 @@ function SessionSetup({ data, setData, onStart }) {
                       <span style={{ fontSize: 10, color: "var(--muted2)" }}>+{tpl.sections.length - 4} more</span>
                     )}
                   </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button type="button" onClick={() => setPreviewTemplate(tpl)} style={{
+                      flex: 1, padding: "6px 10px", borderRadius: 8, cursor: "pointer",
+                      border: "1px solid var(--border2)", background: "transparent",
+                      color: "var(--lavender)", fontSize: 12, fontWeight: 600,
+                    }}>
+                      👁 View
+                    </button>
+                    <button type="button" onClick={() => handleSelectTemplate(tpl)} style={{
+                      flex: 1, padding: "6px 10px", borderRadius: 8, cursor: "pointer",
+                      border: "none", background: selectedTemplate?.id === tpl.id ? "var(--purple)" : "var(--grad1)",
+                      color: "#fff", fontSize: 12, fontWeight: 600,
+                    }}>
+                      {selectedTemplate?.id === tpl.id ? '✓ Selected' : 'Select'}
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         )}
+
+        <TemplatePreviewModal
+          template={previewTemplate}
+          onClose={() => setPreviewTemplate(null)}
+          onSelect={handleSelectTemplate}
+        />
       </GlassCard>
 
       {/* Clinical Context */}
@@ -595,11 +777,11 @@ function SessionSetup({ data, setData, onStart }) {
       <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "center" }}>
         <Btn
           onClick={onStart}
-          disabled={!data.patientId || !data.providerName}
+          disabled={!data.patientChartId || !data.providerName}
           style={{
             padding: "1rem 3rem", fontSize: 16,
-            opacity: (!data.patientId || !data.providerName) ? 0.5 : 1,
-            cursor: (!data.patientId || !data.providerName) ? 'not-allowed' : 'pointer'
+            opacity: (!data.patientChartId || !data.providerName) ? 0.5 : 1,
+            cursor: (!data.patientChartId || !data.providerName) ? 'not-allowed' : 'pointer'
           }}
         >
           🎙️ Start Recording Session →
@@ -942,7 +1124,7 @@ function DuringVisit({ data, setData, sessionId, onComplete }) {
       <GlassCard>
         <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: "1rem" }}>Session Information</h3>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
-          <InfoItem label="Patient ID"    value={data.patientId} />
+          <InfoItem label="Patient"       value={data.patientName || data.patientId} />
           <InfoItem label="Provider"      value={data.providerName} />
           <InfoItem label="Session Type"  value={data.sessionType} />
           <InfoItem label="Modality"      value={data.modality} />
@@ -1002,6 +1184,7 @@ function AfterVisit({ data, sessionId, onNewSession, onNoteSaved }) {
   const [qualityScore, setQualityScore] = useState(null);
   const [isPushing, setIsPushing] = useState(false);
   const [pushedToEHR, setPushedToEHR] = useState(false);
+  const [pushResult, setPushResult] = useState(null);
 
   useEffect(() => {
     // Simulate note generation
@@ -1041,15 +1224,17 @@ function AfterVisit({ data, sessionId, onNewSession, onNoteSaved }) {
     }
 
     setIsPushing(true);
+    setPushResult(null);
     const { data: result, error } = await pushToEHR(sessionId);
     setIsPushing(false);
 
     if (error) {
       alert('Error pushing to EHR: ' + error);
-    } else {
-      setPushedToEHR(true);
-      alert('✓ Successfully pushed to EHR!');
+      return;
     }
+
+    setPushedToEHR(true);
+    setPushResult(result);
   };
 
   return (
@@ -1067,7 +1252,7 @@ function AfterVisit({ data, sessionId, onNewSession, onNoteSaved }) {
             Clinical Documentation
           </h2>
           <p style={{ color: "var(--muted)", fontSize: 14 }}>
-            Patient: {data.patientId} • {data.dateOfService}
+            Patient: {data.patientName || data.patientId} • {data.dateOfService}
           </p>
         </div>
         {qualityScore && (
@@ -1136,19 +1321,36 @@ function AfterVisit({ data, sessionId, onNewSession, onNoteSaved }) {
 
       {/* Actions */}
       {!isGenerating && (
-        <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
-          <Btn onClick={onNewSession} style={{ padding: "1rem 2rem" }}>
-            Start New Session
-          </Btn>
-          <Btn 
-            variant="secondary" 
-            onClick={handlePushToEHR}
-            disabled={isPushing || pushedToEHR}
-            style={{ padding: "1rem 2rem" }}
-          >
-            {isPushing ? '⏳ Pushing...' : pushedToEHR ? '✓ Pushed to EHR' : <><img src="/logo.png" alt="" style={{width: 14, height: 14, verticalAlign: 'middle', display: 'inline-block', marginRight: 4}} /> Push to EHR</>}
-          </Btn>
-        </div>
+        <>
+          {pushResult && (
+            <GlassCard style={{ background: "rgba(78,205,196,0.1)", border: "1px solid rgba(78,205,196,0.35)" }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "var(--teal)", marginBottom: 8 }}>
+                ✓ Saved to EHR for {pushResult.patient_name || data.patientName}
+              </div>
+              <p style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.6, margin: "0 0 10px" }}>
+                The note is now in the patient chart. Kenneth, Rachel, and admin can find it here:
+              </p>
+              <ul style={{ margin: 0, paddingLeft: "1.2rem", fontSize: 13, color: "var(--white)", lineHeight: 1.8 }}>
+                <li><strong>EHR → Patients → {pushResult.patient_name || data.patientName} → 🎙️ AI Scribe</strong> — full generated note</li>
+                <li><strong>EHR → Patients → {pushResult.patient_name || data.patientName} → 📝 Notes</strong> — structured SOAP note (ready to sign)</li>
+              </ul>
+            </GlassCard>
+          )}
+
+          <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
+            <Btn onClick={onNewSession} style={{ padding: "1rem 2rem" }}>
+              Start New Session
+            </Btn>
+            <Btn 
+              variant="secondary" 
+              onClick={handlePushToEHR}
+              disabled={isPushing || pushedToEHR}
+              style={{ padding: "1rem 2rem" }}
+            >
+              {isPushing ? '⏳ Pushing...' : pushedToEHR ? '✓ Pushed to EHR' : <><img src="/logo.png" alt="" style={{width: 14, height: 14, verticalAlign: 'middle', display: 'inline-block', marginRight: 4}} /> Push to EHR</>}
+            </Btn>
+          </div>
+        </>
       )}
     </div>
   );

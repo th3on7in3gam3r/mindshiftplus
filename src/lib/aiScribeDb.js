@@ -125,31 +125,59 @@ export async function getProviderScribeSessions(limit = 50) {
 }
 
 /**
- * Get sessions for a specific patient.
- * EHR passes chart.patient_id (UUID) + chart.id (UUID).
- * AI Scribe stores the MRN string in patient_id and the chart UUID in patient_chart_id.
- * So we query by patient_chart_id (UUID) which is set after first push.
+ * Get sessions for a patient chart (EHR → AI Scribe tab).
  */
-export async function getPatientScribeSessions(patientId, patientChartId = null) {
+export async function getPatientScribeSessions(patientId, patientChartId = null, mrn = null) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { data: null, error: 'Not authenticated' };
 
-  let query = supabase
+  const filters = [];
+  if (patientChartId) filters.push(`patient_chart_id.eq.${patientChartId}`);
+  if (mrn) filters.push(`patient_id.eq.${mrn}`);
+  if (!mrn && patientId && patientId !== patientChartId) {
+    filters.push(`patient_id.eq.${patientId}`);
+  }
+
+  if (filters.length === 0) return { data: [], error: null };
+
+  const { data, error } = await supabase
     .from('ai_scribe_sessions')
     .select('*')
+    .or(filters.join(','))
     .order('date_of_service', { ascending: false })
     .order('created_at', { ascending: false });
 
-  if (patientChartId) {
-    // Primary: match by chart UUID (set after first push to EHR)
-    query = query.eq('patient_chart_id', patientChartId);
-  } else {
-    // Fallback: match by whatever string was typed as patient_id (e.g. MRN)
-    query = query.eq('patient_id', patientId);
+  return { data, error };
+}
+
+async function resolveChartForSession(session) {
+  if (session.patient_chart_id) {
+    const { data } = await supabase
+      .from('ehr_charts')
+      .select('id')
+      .eq('id', session.patient_chart_id)
+      .maybeSingle();
+    if (data) return data.id;
   }
 
-  const { data, error } = await query;
-  return { data, error };
+  const pid = (session.patient_id || '').trim();
+  if (!pid) return null;
+
+  const { data: byMrn } = await supabase.from('ehr_charts').select('id').eq('mrn', pid).limit(1);
+  if (byMrn?.length) return byMrn[0].id;
+
+  const { data: byMrnIlike } = await supabase.from('ehr_charts').select('id').ilike('mrn', pid).limit(1);
+  if (byMrnIlike?.length) return byMrnIlike[0].id;
+
+  const { data: byName } = await supabase.from('ehr_charts').select('id').ilike('full_name', pid).limit(1);
+  if (byName?.length) return byName[0].id;
+
+  if (/^[0-9a-f-]{36}$/i.test(pid)) {
+    const { data: byPatient } = await supabase.from('ehr_charts').select('id').eq('patient_id', pid).limit(1);
+    if (byPatient?.length) return byPatient[0].id;
+  }
+
+  return null;
 }
 
 /**
@@ -210,104 +238,104 @@ export async function pushToEHR(sessionId) {
     return { data: null, error: 'No generated note to push. Please generate a note first.' };
   }
 
-  // Resolve chart ID — use pre-linked one or auto-find by patient_id
-  let chartId = session.patient_chart_id;
+  const alreadyPushed = session.status === 'pushed_to_ehr';
+
+  // Resolve chart ID — use pre-linked one or auto-find
+  let chartId = await resolveChartForSession(session);
 
   if (!chartId) {
-    // Try to find chart by mrn column (text) — patient_id is a UUID (auth user id)
-    const { data: charts } = await supabase
-      .from('ehr_charts')
-      .select('id, mrn')
-      .eq('mrn', session.patient_id)
-      .limit(1);
-
-    if (charts && charts.length > 0) {
-      chartId = charts[0].id;
-      // Save the link for future pushes
-      await supabase
-        .from('ai_scribe_sessions')
-        .update({ patient_chart_id: chartId })
-        .eq('id', sessionId);
-    }
+    return {
+      data: null,
+      error: 'Could not find this patient in the EHR. Go back and select the patient from the dropdown when starting the session.',
+    };
   }
 
-  // Push note to EHR chart if we have a chart
-  if (chartId) {
-    const { data: chart, error: chartError } = await supabase
-      .from('ehr_charts')
-      .select('progress_notes')
-      .eq('id', chartId)
-      .single();
+  // Persist chart link for future queries
+  if (!session.patient_chart_id) {
+    await supabase
+      .from('ai_scribe_sessions')
+      .update({ patient_chart_id: chartId })
+      .eq('id', sessionId);
+  }
 
-    if (!chartError && chart) {
-      const existingNotes = Array.isArray(chart.progress_notes) ? chart.progress_notes : [];
-      const newNote = {
-        id: sessionId,
-        date: session.date_of_service,
-        provider: session.provider_name,
-        session_type: session.session_type,
-        modality: session.modality,
-        note: session.generated_note,
-        quality_score: session.quality_score,
-        specialty: session.specialty,
-        icd10_codes: session.icd10_codes,
-        created_at: new Date().toISOString(),
-        source: 'ai_scribe'
-      };
+  const { data: chart, error: chartError } = await supabase
+    .from('ehr_charts')
+    .select('progress_notes, full_name, mrn')
+    .eq('id', chartId)
+    .single();
 
-      const { error: updateError } = await supabase
-        .from('ehr_charts')
-        .update({ progress_notes: [...existingNotes, newNote] })
-        .eq('id', chartId);
+  if (chartError || !chart) {
+    return { data: null, error: chartError?.message || 'Patient chart not found' };
+  }
 
-      if (updateError) {
-        return { data: null, error: updateError.message };
-      }
-    }
+  const existingNotes = Array.isArray(chart.progress_notes) ? chart.progress_notes : [];
+  const noteAlreadyInChart = existingNotes.some((n) => n.id === sessionId);
 
-    // ── Also write into ehr_notes (the Notes tab) ──────────────────────────
-    // Parse the generated note into SOAP sections for the structured Notes tab
-    const noteText = session.generated_note || '';
-
-    // Extract SOAP sections from the formatted note
-    const extract = (label) => {
-      const regex = new RegExp(`${label}[:\\s]*([\\s\\S]*?)(?=\\n━|\\nOBJECTIVE|\\nASSESSMENT|\\nPLAN|\\nRISK|\\nElectronically|$)`, 'i');
-      const match = noteText.match(regex);
-      return match ? match[1].trim() : '';
+  if (!noteAlreadyInChart && !alreadyPushed) {
+    const newNote = {
+      id: sessionId,
+      date: session.date_of_service,
+      provider: session.provider_name,
+      session_type: session.session_type,
+      modality: session.modality,
+      note: session.generated_note,
+      quality_score: session.quality_score,
+      specialty: session.specialty,
+      icd10_codes: session.icd10_codes,
+      created_at: new Date().toISOString(),
+      source: 'ai_scribe',
     };
 
-    const subjective  = extract('SUBJECTIVE');
-    const objective   = extract('OBJECTIVE');
-    const assessment  = extract('ASSESSMENT');
-    const plan        = extract('PLAN');
+    const { error: updateError } = await supabase
+      .from('ehr_charts')
+      .update({ progress_notes: [...existingNotes, newNote] })
+      .eq('id', chartId);
 
-    const diagnosesArr = (session.icd10_codes || []).map(code => ({ code, label: code }));
-
-    await supabase
-      .from('ehr_notes')
-      .insert({
-        chart_id:       chartId,
-        clinician_id:   user.id,
-        clinician_name: session.provider_name,
-        note_date:      session.date_of_service,
-        note_type:      'progress',
-        subjective:     subjective || noteText,
-        objective:      objective  || null,
-        assessment:     assessment || null,
-        plan:           plan       || null,
-        presenting_concerns: subjective || null,
-        diagnoses:      diagnosesArr,
-        is_signed:      false,
-      });
-    // Note: we don't block on this insert — if it fails the scribe note is still saved
+    if (updateError) {
+      return { data: null, error: updateError.message };
+    }
   }
 
-  // Mark session as pushed regardless (note is saved in ai_scribe_sessions)
+  const noteText = session.generated_note || '';
+  const extract = (label) => {
+    const regex = new RegExp(`${label}[:\\s]*([\\s\\S]*?)(?=\\n━|\\n(?:OBJECTIVE|ASSESSMENT|PLAN|RISK|CHIEF|MENTAL|INTERVENTIONS|PROGRESS|DISPOSITION|Electronically)|$)`, 'i');
+    const match = noteText.match(regex);
+    return match ? match[1].trim() : '';
+  };
+
+  const subjective = extract('SUBJECTIVE') || extract('CHIEF COMPLAINT') || extract('PRESENTING');
+  const objective = extract('OBJECTIVE') || extract('MENTAL STATUS');
+  const assessment = extract('ASSESSMENT');
+  const plan = extract('PLAN');
+  const diagnosesArr = (session.icd10_codes || []).map((code) => ({ code, label: code }));
+
+  if (!alreadyPushed) {
+    const { error: noteError } = await supabase.from('ehr_notes').insert({
+      chart_id: chartId,
+      clinician_id: user.id,
+      clinician_name: session.provider_name,
+      note_date: session.date_of_service,
+      note_type: 'progress',
+      subjective: subjective || noteText,
+      objective: objective || null,
+      assessment: assessment || null,
+      plan: plan || null,
+      presenting_concerns: subjective || noteText.slice(0, 500),
+      diagnoses: diagnosesArr,
+      is_signed: false,
+    });
+
+    if (noteError) {
+      return { data: null, error: `Could not save to Notes tab: ${noteError.message}` };
+    }
+  }
+
   const { data, error } = await supabase
     .from('ai_scribe_sessions')
     .update({
       status: 'pushed_to_ehr',
-      pushed_to_ehr_at: new Date().toISOString()
+      pushed_to_ehr_at: new Date().toISOString(),
+      patient_chart_id: chartId,
     })
     .eq('id', sessionId)
     .eq('provider_id', user.id)
@@ -318,7 +346,15 @@ export async function pushToEHR(sessionId) {
     await logAuditAction(sessionId, user.id, 'pushed_to_ehr', { chart_id: chartId });
   }
 
-  return { data, error: error?.message || null };
+  return {
+    data: {
+      ...data,
+      chart_id: chartId,
+      patient_name: chart.full_name,
+      patient_mrn: chart.mrn,
+    },
+    error: error?.message || null,
+  };
 }
 
 // ============================================================================

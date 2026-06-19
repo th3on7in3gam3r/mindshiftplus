@@ -181,7 +181,7 @@ export default function EHRPatientChart({ chartId, clinician, onBack, isNew = fa
         ) : tab === "documents" ? (
           <DocumentsTab docs={docs} />
         ) : tab === "scribe" ? (
-          <EHRScribeNotes patientId={chart.patient_id} patientChartId={chart.id} />
+          <EHRScribeNotes patientId={chart.patient_id} patientChartId={chart.id} mrn={chart.mrn} />
         ) : tab === "billing" ? (
           <EHRBilling patientId={chart.patient_id} chartId={chart.id} clinician={clinician} />
         ) : tab === "ai" ? (

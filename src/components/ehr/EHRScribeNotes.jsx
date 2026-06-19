@@ -2,17 +2,17 @@ import { useState, useEffect } from "react";
 import { getPatientScribeSessions } from "../../lib/aiScribeDb";
 import { EhrStyles } from "./EHRUI";
 
-export default function EHRScribeNotes({ patientId, patientChartId }) {
+export default function EHRScribeNotes({ patientId, patientChartId, mrn }) {
   const [sessions, setSessions]       = useState([]);
   const [loading, setLoading]         = useState(true);
   const [expandedId, setExpandedId]   = useState(null);
   const [copiedId, setCopiedId]       = useState(null);
 
-  useEffect(() => { loadSessions(); }, [patientId, patientChartId]);
+  useEffect(() => { loadSessions(); }, [patientId, patientChartId, mrn]);
 
   const loadSessions = async () => {
     setLoading(true);
-    const { data } = await getPatientScribeSessions(patientId, patientChartId);
+    const { data } = await getPatientScribeSessions(patientId, patientChartId, mrn);
     setLoading(false);
     if (data) {
       setSessions(data.sort((a, b) =>
