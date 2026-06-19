@@ -56,6 +56,30 @@ export async function getAllIntakes() {
   return { data, error };
 }
 
+/** Intakes that do not yet have an EHR chart (pending or reviewed only). */
+export async function getIntakesWithoutCharts() {
+  const [{ data: charts }, { data: intakes, error }] = await Promise.all([
+    supabase.from("ehr_charts").select("patient_id"),
+    supabase
+      .from("intake_submissions")
+      .select("id, patient_id, full_name, phone, status, submitted_at")
+      .in("status", ["pending", "reviewed"])
+      .order("full_name"),
+  ]);
+  if (error) return { data: null, error };
+
+  const chartPatientIds = new Set((charts ?? []).map((c) => c.patient_id));
+  const withoutChart = (intakes ?? []).filter((i) => i.patient_id && !chartPatientIds.has(i.patient_id));
+  return { data: withoutChart, error: null };
+}
+
+export function matchesIntakeSearch(intake, query) {
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return true;
+  const haystack = [intake.full_name, intake.phone].filter(Boolean).join(" ").toLowerCase();
+  return words.every((w) => haystack.includes(w));
+}
+
 export async function markIntakeReviewed(intakeId, reviewerId) {
   const { data, error } = await supabase
     .from("intake_submissions")

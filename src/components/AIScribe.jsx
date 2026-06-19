@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useAuth } from "../lib/AuthContext";
 import { getChartsForPicker, chartDisplayName, matchesChartSearch } from "../lib/ehrDb";
+import { getIntakesWithoutCharts, matchesIntakeSearch } from "../lib/intakeDb";
 import {
   createScribeSession,
   saveGeneratedNote,
@@ -516,6 +517,7 @@ function SessionSetup({ data, setData, onStart }) {
   const [charts, setCharts] = useState([]);
   const [chartsLoading, setChartsLoading] = useState(true);
   const [patientSearch, setPatientSearch] = useState("");
+  const [intakesWithoutChart, setIntakesWithoutChart] = useState([]);
 
   const specialties = [
     { id: 'psychiatry',   name: 'Psychiatry',   icon: '🧠' },
@@ -532,16 +534,24 @@ function SessionSetup({ data, setData, onStart }) {
     : GALLERY_TEMPLATES.filter(t => t.specialty === templateFilter);
 
   useEffect(() => {
-    getChartsForPicker().then(({ data: chartList }) => {
-      setCharts(chartList ?? []);
-      setChartsLoading(false);
-    });
+    Promise.all([getChartsForPicker(), getIntakesWithoutCharts()]).then(
+      ([{ data: chartList }, { data: intakeList }]) => {
+        setCharts(chartList ?? []);
+        setIntakesWithoutChart(intakeList ?? []);
+        setChartsLoading(false);
+      }
+    );
   }, []);
 
   const filteredCharts = useMemo(() => {
     if (!patientSearch.trim()) return charts;
     return charts.filter((c) => matchesChartSearch(c, patientSearch));
   }, [charts, patientSearch]);
+
+  const matchingIntakesNoChart = useMemo(() => {
+    if (!patientSearch.trim() || filteredCharts.length > 0) return [];
+    return intakesWithoutChart.filter((i) => matchesIntakeSearch(i, patientSearch));
+  }, [patientSearch, filteredCharts, intakesWithoutChart]);
 
   const handleSelectTemplate = (tpl) => {
     setSelectedTemplate(tpl);
@@ -621,6 +631,32 @@ function SessionSetup({ data, setData, onStart }) {
                 {!patientSearch && charts.length > 0 && (
                   <div style={{ fontSize: 11, color: "var(--muted2)", marginTop: 4 }}>
                     {charts.length} patients · A–Z
+                  </div>
+                )}
+                {patientSearch.trim() && filteredCharts.length === 0 && matchingIntakesNoChart.length > 0 && (
+                  <div style={{
+                    marginTop: 10, padding: "12px 14px", borderRadius: 12,
+                    background: "rgba(245,200,66,0.12)", border: "1px solid rgba(245,200,66,0.35)",
+                    fontSize: 13, lineHeight: 1.6, color: "var(--gold)",
+                  }}>
+                    <div style={{ fontWeight: 700, marginBottom: 6 }}>
+                      📋 Found in Intakes — EHR chart not created yet
+                    </div>
+                    {matchingIntakesNoChart.map((i) => (
+                      <div key={i.id} style={{ marginBottom: 6 }}>
+                        <strong style={{ color: "var(--white)" }}>{i.full_name || "Unknown"}</strong>
+                        {i.phone ? ` · ${i.phone}` : ""}
+                        <span style={{ color: "var(--muted)" }}> ({i.status === "pending" ? "awaiting review" : "reviewed"})</span>
+                      </div>
+                    ))}
+                    <div style={{ marginTop: 8, color: "var(--muted)", fontSize: 12 }}>
+                      Go to <strong style={{ color: "var(--white)" }}>EHR → Intakes</strong>, open the patient, and click <strong style={{ color: "var(--white)" }}>Create Chart</strong>. Then return here to start AI Scribe.
+                    </div>
+                  </div>
+                )}
+                {patientSearch.trim() && filteredCharts.length === 0 && matchingIntakesNoChart.length === 0 && (
+                  <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 8 }}>
+                    No patient or intake matches “{patientSearch}”. Check spelling or create a chart in EHR first.
                   </div>
                 )}
               </>
