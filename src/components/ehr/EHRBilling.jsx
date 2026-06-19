@@ -196,11 +196,7 @@ function ClaimForm({ claim, chartId, patientId, createdBy, onSaved, onCancel }) 
       return;
     }
     setSaving(true);
-    // Ensure at least appointment_id or note_id — use a placeholder note_id if neither set
     const payload = { ...form };
-    if (!payload.appointment_id && !payload.note_id) {
-      payload.note_id = "00000000-0000-0000-0000-000000000000";
-    }
     let result;
     if (form.id) {
       result = await updateClaim(form.id, payload);

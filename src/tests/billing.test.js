@@ -305,22 +305,18 @@ vi.mock("../lib/supabase.js", () => {
   };
 });
 
-// Feature: billing-claims, Property 3: new claims always have draft status
-describe("P3: new claims always have draft status", () => {
-  it("createClaim forces claim_status to draft regardless of payload", async () => {
-    // Validates: Requirements 2.2
+// Feature: billing-claims, Property 3: new claims default to draft when status omitted
+describe("P3: new claims default to draft status", () => {
+  it("createClaim defaults claim_status to draft when omitted", async () => {
     const { supabase } = await import("../lib/supabase.js");
 
     await fc.assert(
       fc.asyncProperty(
         fc.record({
-          appointment_id: fc.uuid(),
           patient_id: fc.uuid(),
           chart_id: fc.uuid(),
           service_date: fc.constant("2024-01-01"),
           amount_billed_cents: fc.nat({ max: 100000 }),
-          // Attempt to pass any status — should be overridden to 'draft'
-          claim_status: fc.constantFrom("submitted", "accepted", "denied", "paid", "draft"),
         }),
         async (payload) => {
           let insertedPayload = null;

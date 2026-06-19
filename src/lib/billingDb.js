@@ -117,24 +117,40 @@ export async function getAggregateClaims({ statusFilter, limit = 10 } = {}) {
   }
 
   const { data, error } = await query;
-  return { data, error };
+  if (error) return { data, error };
+
+  const patientIds = [...new Set((data ?? []).map((c) => c.patient_id).filter(Boolean))];
+  let nameMap = {};
+  if (patientIds.length) {
+    const { data: charts } = await supabase
+      .from("ehr_charts")
+      .select("patient_id, full_name")
+      .in("patient_id", patientIds);
+    for (const c of charts ?? []) if (c.full_name) nameMap[c.patient_id] = c.full_name;
+  }
+
+  return {
+    data: (data ?? []).map((c) => ({ ...c, patient_name: nameMap[c.patient_id] ?? null })),
+    error: null,
+  };
 }
 
 /**
- * Create a new claim. Forces claim_status to 'draft'.
- * Requires appointment_id or note_id to be present.
+ * Create a new claim / invoice.
+ * Manual invoices from EHR → Invoices do not require appointment_id or note_id.
  */
 export async function createClaim(payload) {
-  if (!payload.appointment_id && !payload.note_id) {
-    return { data: null, error: "A claim must be linked to an appointment or visit note." };
-  }
-
   const { data, error } = await supabase
     .from("billing_claims")
-    .insert({ ...payload, claim_status: "draft" })
+    .insert({ ...payload, claim_status: payload.claim_status ?? "draft" })
     .select()
     .single();
   return { data, error };
+}
+
+/** Mark invoice visible to patient in portal (submitted). */
+export async function sendInvoiceToPatient(id) {
+  return updateClaim(id, { claim_status: "submitted" });
 }
 
 /**
