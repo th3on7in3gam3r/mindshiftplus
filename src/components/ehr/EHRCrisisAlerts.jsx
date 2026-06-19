@@ -1,411 +1,187 @@
 import { useState, useEffect } from "react";
-import { supabase } from "../../lib/supabase";
+import {
+  getCrisisAlerts,
+  markCrisisReviewed,
+  crisisSourceLabel,
+} from "../../lib/crisisDb";
+
+const SEVERITY = {
+  high: { color: "#dc2626", bg: "#fef2f2", label: "HIGH — contact patient ASAP" },
+  moderate: { color: "#d97706", bg: "#fffbeb", label: "MODERATE — review soon" },
+};
 
 export default function EHRCrisisAlerts() {
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('unreviewed'); // 'all', 'unreviewed', 'high', 'moderate'
-  const [selectedAlert, setSelectedAlert] = useState(null);
-  const [reviewing, setReviewing] = useState(false);
+  const [filter, setFilter] = useState("unreviewed");
+  const [selected, setSelected] = useState(null);
+  const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadAlerts();
-  }, [filter]);
+  useEffect(() => { load(); }, [filter]);
 
-  const loadAlerts = async () => {
+  async function load() {
     setLoading(true);
-    try {
-      let query = supabase
-        .from('crisis_alerts')
-        .select(`
-          *,
-          patient:user_id (
-            id,
-            email,
-            raw_user_meta_data
-          )
-        `)
-        .order('created_at', { ascending: false });
-
-      if (filter === 'unreviewed') {
-        query = query.eq('reviewed', false);
-      } else if (filter === 'high' || filter === 'moderate') {
-        query = query.eq('severity', filter);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      setAlerts(data || []);
-    } catch (err) {
-      console.error('Failed to load crisis alerts:', err);
-      setAlerts([]);
-    }
+    const { data } = await getCrisisAlerts({ filter });
+    setAlerts(data ?? []);
     setLoading(false);
-  };
+  }
 
-  const markAsReviewed = async (alertId, notes = '') => {
-    setReviewing(true);
-    try {
-      const { error } = await supabase
-        .from('crisis_alerts')
-        .update({
-          reviewed: true,
-          reviewed_at: new Date().toISOString(),
-          reviewed_by: (await supabase.auth.getUser()).data.user?.id,
-          notes: notes || null
-        })
-        .eq('id', alertId);
-
-      if (error) throw error;
-      
-      setSelectedAlert(null);
-      loadAlerts();
-    } catch (err) {
-      console.error('Failed to mark as reviewed:', err);
-      alert('Failed to update alert. Please try again.');
+  async function handleReview() {
+    if (!selected) return;
+    setSaving(true);
+    const { error } = await markCrisisReviewed(selected.id, notes);
+    setSaving(false);
+    if (error) {
+      alert("Could not save. Please try again.");
+      return;
     }
-    setReviewing(false);
-  };
-
-  const formatDate = (iso) => {
-    return new Date(iso).toLocaleString('en-US', {
-      month: 'short', day: 'numeric', year: 'numeric',
-      hour: '2-digit', minute: '2-digit'
-    });
-  };
-
-  const getPatientName = (alert) => {
-    return alert.patient?.raw_user_meta_data?.full_name || 'Unknown Patient';
-  };
-
-  const getSeverityColor = (severity) => {
-    return severity === 'high' ? '#dc2626' : '#f59e0b';
-  };
-
-  const getSourceLabel = (source) => {
-    const labels = {
-      'mia': '💬 Mia Chat',
-      'journal': '📔 Journal Entry',
-      'portal_message': '✉️ Portal Message'
-    };
-    return labels[source] || source;
-  };
+    setSelected(null);
+    setNotes("");
+    load();
+  }
 
   return (
-    <div style={{ padding: "2rem 2.5rem", maxWidth: 1400, margin: "0 auto" }}>
-      {/* Header */}
-      <div style={{ marginBottom: "2rem" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-          <span style={{ fontSize: 28 }}>🚨</span>
-          <h1 style={{ fontSize: "1.8rem", fontWeight: 700, margin: 0 }}>Crisis Alerts</h1>
-        </div>
-        <p style={{ color: "#6b7280", fontSize: 14 }}>
-          Monitor and respond to detected crisis language in patient communications
+    <div style={{ padding: "2rem 2.5rem", maxWidth: 960, margin: "0 auto", fontFamily: "inherit" }}>
+      <div style={{ marginBottom: "1.5rem" }}>
+        <h1 style={{ fontSize: "1.6rem", fontWeight: 700, margin: "0 0 8px", display: "flex", alignItems: "center", gap: 10 }}>
+          🚨 Patient Safety Alerts
+        </h1>
+        <p style={{ color: "#6b7280", fontSize: 14, margin: "0 0 12px", lineHeight: 1.6 }}>
+          Alerts appear when concerning language is detected in a patient&apos;s <strong>Mia chat</strong>, <strong>journal</strong>, or <strong>portal message</strong>.
+          The patient is shown 988 / 911 resources. You also receive an email alert.
         </p>
+        <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 12, padding: "12px 16px", fontSize: 13, color: "#1e40af", lineHeight: 1.6 }}>
+          <strong>What to do:</strong> Review the excerpt → call the patient if high risk → document in notes → mark as reviewed.
+        </div>
       </div>
 
-      {/* Filters */}
-      <div style={{ 
-        display: "flex", gap: 8, marginBottom: "1.5rem", 
-        background: "#f9fafb", padding: "0.5rem", borderRadius: 12 
-      }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: "1.5rem", flexWrap: "wrap" }}>
         {[
-          { value: 'unreviewed', label: 'Unreviewed', count: alerts.filter(a => !a.reviewed).length },
-          { value: 'high', label: 'High Risk', count: alerts.filter(a => a.severity === 'high').length },
-          { value: 'moderate', label: 'Moderate Risk', count: alerts.filter(a => a.severity === 'moderate').length },
-          { value: 'all', label: 'All Alerts', count: alerts.length }
-        ].map(({ value, label, count }) => (
+          { value: "unreviewed", label: "Needs Review" },
+          { value: "high", label: "High Risk" },
+          { value: "moderate", label: "Moderate" },
+          { value: "all", label: "All" },
+        ].map(({ value, label }) => (
           <button
             key={value}
+            type="button"
             onClick={() => setFilter(value)}
             style={{
-              padding: "8px 16px",
-              borderRadius: 8,
-              border: "none",
-              background: filter === value ? "#fff" : "transparent",
-              color: filter === value ? "#1f2937" : "#6b7280",
-              fontSize: 13,
-              fontWeight: filter === value ? 600 : 400,
-              cursor: "pointer",
-              boxShadow: filter === value ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
-              transition: "all 0.2s"
+              padding: "8px 16px", borderRadius: 20, border: "none", cursor: "pointer",
+              background: filter === value ? "#1e2a4a" : "#f3f4f6",
+              color: filter === value ? "#fff" : "#4b5563",
+              fontSize: 13, fontWeight: filter === value ? 600 : 400,
             }}
           >
-            {label} {count > 0 && `(${count})`}
+            {label}
           </button>
         ))}
       </div>
 
-      {/* Alerts List */}
       {loading ? (
-        <div style={{ textAlign: "center", padding: "3rem", color: "#9ca3af" }}>
-          Loading alerts...
-        </div>
+        <div style={{ textAlign: "center", padding: "3rem", color: "#9ca3af" }}>Loading…</div>
       ) : alerts.length === 0 ? (
-        <div style={{ 
-          textAlign: "center", padding: "3rem", 
-          background: "#f9fafb", borderRadius: 16 
-        }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>✓</div>
-          <div style={{ fontWeight: 600, marginBottom: 4 }}>No alerts found</div>
-          <div style={{ color: "#6b7280", fontSize: 14 }}>
-            {filter === 'unreviewed' 
-              ? 'All crisis alerts have been reviewed' 
-              : 'No crisis alerts match this filter'}
+        <div style={{ textAlign: "center", padding: "3rem", background: "#f0fdf4", borderRadius: 16, border: "1px solid #bbf7d0" }}>
+          <div style={{ fontSize: 40, marginBottom: 8 }}>✓</div>
+          <div style={{ fontWeight: 600, color: "#166534" }}>No alerts in this view</div>
+          <div style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>
+            {filter === "unreviewed" ? "All caught up — no patients waiting for review." : "Try another filter."}
           </div>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {alerts.map(alert => (
-            <div
-              key={alert.id}
-              onClick={() => setSelectedAlert(alert)}
-              style={{
-                background: "#fff",
-                border: `2px solid ${alert.reviewed ? '#e5e7eb' : getSeverityColor(alert.severity)}40`,
-                borderRadius: 16,
-                padding: "1.25rem",
-                cursor: "pointer",
-                transition: "all 0.2s",
-                opacity: alert.reviewed ? 0.7 : 1
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 12,
-                    background: `${getSeverityColor(alert.severity)}15`,
-                    border: `2px solid ${getSeverityColor(alert.severity)}`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 18,
-                    fontWeight: 700,
-                    color: getSeverityColor(alert.severity)
-                  }}>
-                    !
-                  </div>
+          {alerts.map((alert) => {
+            const sev = SEVERITY[alert.severity] ?? SEVERITY.moderate;
+            return (
+              <button
+                key={alert.id}
+                type="button"
+                onClick={() => { setSelected(alert); setNotes(""); }}
+                style={{
+                  textAlign: "left", width: "100%", cursor: "pointer",
+                  background: "#fff",
+                  border: `2px solid ${alert.reviewed ? "#e5e7eb" : sev.color + "55"}`,
+                  borderRadius: 16, padding: "1.25rem",
+                  opacity: alert.reviewed ? 0.75 : 1,
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 2 }}>
-                      {getPatientName(alert)}
-                    </div>
-                    <div style={{ fontSize: 12, color: "#6b7280" }}>
-                      {getSourceLabel(alert.source)} · {formatDate(alert.created_at)}
+                    <div style={{ fontWeight: 700, fontSize: 16 }}>{alert.patient_name}</div>
+                    <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
+                      {crisisSourceLabel(alert.source)} · {new Date(alert.created_at).toLocaleString()}
                     </div>
                   </div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{
-                    padding: "4px 12px",
-                    borderRadius: 20,
-                    fontSize: 11,
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    background: `${getSeverityColor(alert.severity)}15`,
-                    color: getSeverityColor(alert.severity)
-                  }}>
-                    {alert.severity} risk
-                  </span>
-                  {alert.reviewed && (
-                    <span style={{
-                      padding: "4px 12px",
-                      borderRadius: 20,
-                      fontSize: 11,
-                      fontWeight: 600,
-                      background: "#f0fdf4",
-                      color: "#166534"
-                    }}>
-                      ✓ Reviewed
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 20, background: sev.bg, color: sev.color }}>
+                      {sev.label}
                     </span>
-                  )}
+                    {alert.reviewed && (
+                      <span style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 20, background: "#f0fdf4", color: "#166534" }}>
+                        ✓ Reviewed
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div style={{
-                fontSize: 13,
-                color: "#4b5563",
-                lineHeight: 1.6,
-                background: "#f9fafb",
-                padding: "0.75rem",
-                borderRadius: 8,
-                fontFamily: "monospace"
-              }}>
-                {alert.content_excerpt.substring(0, 200)}
-                {alert.content_excerpt.length > 200 && '...'}
-              </div>
-              <div style={{ marginTop: 8, fontSize: 12, color: "#9ca3af" }}>
-                Keywords: {alert.keywords_detected.join(', ')}
-              </div>
-            </div>
-          ))}
+                <div style={{ fontSize: 13, color: "#374151", background: "#f9fafb", padding: "10px 12px", borderRadius: 8, lineHeight: 1.5 }}>
+                  {alert.content_excerpt.slice(0, 180)}{alert.content_excerpt.length > 180 ? "…" : ""}
+                </div>
+                <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 8 }}>
+                  Keywords: {alert.keywords_detected.join(", ")}
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
 
-      {/* Detail Modal */}
-      {selectedAlert && (
-        <div style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(0,0,0,0.5)",
-          backdropFilter: "blur(4px)",
-          zIndex: 1000,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "1rem"
-        }}>
-          <div style={{
-            background: "#fff",
-            borderRadius: 24,
-            maxWidth: 700,
-            width: "100%",
-            maxHeight: "90vh",
-            overflow: "auto",
-            boxShadow: "0 20px 60px rgba(0,0,0,0.3)"
-          }}>
-            <div style={{
-              padding: "1.5rem 2rem",
-              borderBottom: "1px solid #e5e7eb",
-              position: "sticky",
-              top: 0,
-              background: "#fff",
-              zIndex: 1
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h2 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0 }}>
-                  Crisis Alert Details
-                </h2>
+      {selected && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+          <div style={{ background: "#fff", borderRadius: 20, maxWidth: 560, width: "100%", maxHeight: "90vh", overflow: "auto", padding: "1.75rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <h2 style={{ margin: 0, fontSize: "1.15rem" }}>{selected.patient_name}</h2>
+              <button type="button" onClick={() => setSelected(null)} style={{ border: "none", background: "#f3f4f6", borderRadius: "50%", width: 32, height: 32, cursor: "pointer" }}>✕</button>
+            </div>
+
+            <div style={{ fontSize: 13, color: "#6b7280", marginBottom: "1rem" }}>
+              {crisisSourceLabel(selected.source)} · {(SEVERITY[selected.severity] ?? SEVERITY.moderate).label}
+            </div>
+
+            <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 12, padding: "1rem", fontSize: 14, lineHeight: 1.65, marginBottom: "1rem", whiteSpace: "pre-wrap" }}>
+              {selected.content_excerpt}
+            </div>
+
+            <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: "#991b1b", marginBottom: "1rem" }}>
+              Emergency: patient was shown <strong>988</strong> and <strong>911</strong>. High risk → contact within 1 hour.
+            </div>
+
+            {!selected.reviewed ? (
+              <>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>Review notes (optional)</label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={3}
+                  placeholder="e.g. Called patient at 2pm, safety plan discussed…"
+                  style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid #e5e7eb", fontSize: 13, fontFamily: "inherit", marginBottom: "1rem", boxSizing: "border-box" }}
+                />
                 <button
-                  onClick={() => setSelectedAlert(null)}
-                  style={{
-                    background: "#f3f4f6",
-                    border: "none",
-                    borderRadius: "50%",
-                    width: 32,
-                    height: 32,
-                    fontSize: 16,
-                    cursor: "pointer",
-                    color: "#6b7280"
-                  }}
+                  type="button"
+                  disabled={saving}
+                  onClick={handleReview}
+                  style={{ width: "100%", padding: "12px", border: "none", borderRadius: 12, background: "linear-gradient(135deg,#4a6cf7,#0ea5a0)", color: "#fff", fontWeight: 600, fontSize: 14, cursor: "pointer", opacity: saving ? 0.7 : 1 }}
                 >
-                  ✕
+                  {saving ? "Saving…" : "Mark as Reviewed"}
                 </button>
-              </div>
-            </div>
-
-            <div style={{ padding: "2rem" }}>
-              <div style={{ marginBottom: "1.5rem" }}>
-                <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Patient</div>
-                <div style={{ fontSize: 16, fontWeight: 600 }}>{getPatientName(selectedAlert)}</div>
-                <div style={{ fontSize: 13, color: "#9ca3af" }}>{selectedAlert.patient?.email}</div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1.5rem" }}>
-                <div>
-                  <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Source</div>
-                  <div style={{ fontSize: 14, fontWeight: 500 }}>{getSourceLabel(selectedAlert.source)}</div>
+              </>
+            ) : (
+              selected.notes && (
+                <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "12px", fontSize: 13 }}>
+                  <strong>Notes:</strong> {selected.notes}
                 </div>
-                <div>
-                  <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Severity</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: getSeverityColor(selectedAlert.severity) }}>
-                    {selectedAlert.severity.toUpperCase()} RISK
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Detected</div>
-                  <div style={{ fontSize: 14 }}>{formatDate(selectedAlert.created_at)}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Status</div>
-                  <div style={{ fontSize: 14, fontWeight: 500 }}>
-                    {selectedAlert.reviewed ? '✓ Reviewed' : '⚠️ Needs Review'}
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ marginBottom: "1.5rem" }}>
-                <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 8 }}>Content Excerpt</div>
-                <div style={{
-                  background: "#f9fafb",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: 12,
-                  padding: "1rem",
-                  fontSize: 14,
-                  lineHeight: 1.7,
-                  fontFamily: "monospace",
-                  whiteSpace: "pre-wrap"
-                }}>
-                  {selectedAlert.content_excerpt}
-                </div>
-              </div>
-
-              <div style={{ marginBottom: "1.5rem" }}>
-                <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 8 }}>Detected Keywords</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {selectedAlert.keywords_detected.map((kw, i) => (
-                    <span
-                      key={i}
-                      style={{
-                        padding: "4px 10px",
-                        borderRadius: 6,
-                        fontSize: 12,
-                        background: `${getSeverityColor(selectedAlert.severity)}10`,
-                        color: getSeverityColor(selectedAlert.severity),
-                        border: `1px solid ${getSeverityColor(selectedAlert.severity)}30`
-                      }}
-                    >
-                      {kw}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {selectedAlert.reviewed && selectedAlert.notes && (
-                <div style={{ marginBottom: "1.5rem" }}>
-                  <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 8 }}>Review Notes</div>
-                  <div style={{
-                    background: "#f0fdf4",
-                    border: "1px solid #bbf7d0",
-                    borderRadius: 12,
-                    padding: "1rem",
-                    fontSize: 13,
-                    lineHeight: 1.6
-                  }}>
-                    {selectedAlert.notes}
-                  </div>
-                </div>
-              )}
-
-              {!selectedAlert.reviewed && (
-                <div>
-                  <button
-                    onClick={() => {
-                      const notes = prompt('Add review notes (optional):');
-                      if (notes !== null) {
-                        markAsReviewed(selectedAlert.id, notes);
-                      }
-                    }}
-                    disabled={reviewing}
-                    style={{
-                      width: "100%",
-                      padding: "12px",
-                      background: "linear-gradient(135deg, #4a6cf7, #0ea5a0)",
-                      border: "none",
-                      borderRadius: 12,
-                      color: "#fff",
-                      fontSize: 14,
-                      fontWeight: 600,
-                      cursor: reviewing ? "not-allowed" : "pointer",
-                      opacity: reviewing ? 0.6 : 1
-                    }}
-                  >
-                    {reviewing ? 'Marking as Reviewed...' : 'Mark as Reviewed'}
-                  </button>
-                </div>
-              )}
-            </div>
+              )
+            )}
           </div>
         </div>
       )}

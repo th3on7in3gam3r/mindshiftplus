@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../lib/supabase";
 import { getClinicianRole, isAdminEmail, getTasks, getPortalPatientUnreadCount } from "../../lib/ehrDb";
+import { getUnreviewedCrisisCount } from "../../lib/crisisDb";
 import { getPendingIntakes } from "../../lib/intakeDb";
 import EHRLogin from "./EHRLogin";
 import EHRDashboard from "./EHRDashboard";
@@ -26,6 +27,7 @@ export default function EHR({ onBack }) {
   const [pendingIntakes, setPendingIntakes] = useState(0);
   const [taskCount, setTaskCount]     = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [crisisCount, setCrisisCount] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -62,6 +64,7 @@ export default function EHR({ onBack }) {
       getPendingIntakes().then(({ data }) => { if (mounted) setPendingIntakes(data?.length ?? 0); });
       getTasks({ status: "open" }).then(({ data }) => { if (mounted) setTaskCount(data?.length ?? 0); });
       getPortalPatientUnreadCount().then(({ count }) => { if (mounted) setUnreadCount(count ?? 0); });
+      getUnreviewedCrisisCount().then(({ count }) => { if (mounted) setCrisisCount(count ?? 0); });
       setAuthLoading(false);
       return;
     }
@@ -72,6 +75,7 @@ export default function EHR({ onBack }) {
       getPendingIntakes().then(({ data: d }) => { if (mounted) setPendingIntakes(d?.length ?? 0); });
       getTasks({ status: "open" }).then(({ data: d }) => { if (mounted) setTaskCount(d?.length ?? 0); });
       getPortalPatientUnreadCount().then(({ count: c }) => { if (mounted) setUnreadCount(c ?? 0); });
+      getUnreviewedCrisisCount().then(({ count: c }) => { if (mounted) setCrisisCount(c ?? 0); });
     } else {
       // Not authorized — clear session locally without calling signOut (avoids 403)
       setClinician(null);
@@ -149,8 +153,20 @@ export default function EHR({ onBack }) {
           </button>
 
           {/* Phase 9 nav items */}
+          <button onClick={() => setView("crisis")} style={{
+            background: view === "crisis" ? "color-mix(in srgb,var(--ehr-rose) 14%,transparent)" : "transparent",
+            border: view === "crisis" ? "1px solid color-mix(in srgb,var(--ehr-rose) 30%,transparent)" : "1px solid transparent",
+            borderRadius: 8, padding: "5px 12px", cursor: "pointer",
+            color: view === "crisis" ? "var(--ehr-rose)" : "var(--ehr-muted)",
+            fontWeight: view === "crisis" ? 600 : 400, fontFamily: "inherit", fontSize: 13,
+            display: "flex", alignItems: "center", gap: 6,
+          }}>
+            🚨 Crisis
+            {crisisCount > 0 && (
+              <span style={{ background: "#dc2626", color: "#fff", fontSize: 10, fontWeight: 800, borderRadius: 20, padding: "1px 7px" }}>{crisisCount}</span>
+            )}
+          </button>
           {[
-            { key: "crisis",    label: "🚨 Crisis",  color: "rose" },
             { key: "schedule",  label: "Schedule",   color: "teal" },
             { key: "reports",   label: "Reports",    color: "purple" },
             { key: "giftcards", label: "Gift Cards", color: "green" },

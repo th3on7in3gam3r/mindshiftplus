@@ -144,6 +144,7 @@ export async function alertClinicians(userId, patientName, source, severity) {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
       },
       body: JSON.stringify({
         type: 'crisis_alert',
