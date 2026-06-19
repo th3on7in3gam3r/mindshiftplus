@@ -507,6 +507,9 @@ function AIScribeContent({ state, setState, data, setData, sessionId, setSession
 }
 
 // Session Setup Component
+const PATIENT_LIST_VISIBLE = 5;
+const PATIENT_ROW_HEIGHT = 56;
+
 function PatientPicker({
   charts,
   intakesWithoutChart,
@@ -529,6 +532,13 @@ function PatientPicker({
     return intakesWithoutChart.filter((i) => matchesIntakeSearch(i, query));
   }, [query, filtered, intakesWithoutChart]);
 
+  const displayedCharts = useMemo(() => {
+    if (query.trim()) return filtered;
+    return filtered.slice(0, PATIENT_LIST_VISIBLE);
+  }, [filtered, query]);
+
+  const listHeight = PATIENT_LIST_VISIBLE * PATIENT_ROW_HEIGHT;
+
   if (loading) {
     return <div style={{ fontSize: 13, color: "var(--muted)" }}>Loading patients…</div>;
   }
@@ -543,7 +553,7 @@ function PatientPicker({
 
   if (selected && !listOpen) {
     return (
-      <div>
+      <div style={{ minHeight: listHeight + 44 }}>
         <div style={{
           display: "flex", alignItems: "center", gap: 10, padding: "0.75rem 1rem",
           background: "rgba(78,205,196,0.12)", border: "1px solid rgba(78,205,196,0.35)",
@@ -571,7 +581,7 @@ function PatientPicker({
   }
 
   return (
-    <div>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: listHeight + 44 }}>
       <input
         type="search"
         value={query}
@@ -588,16 +598,16 @@ function PatientPicker({
       />
 
       <div style={{
-        marginTop: 8, maxHeight: 220, overflowY: "auto",
+        marginTop: 8, flex: 1, minHeight: listHeight, maxHeight: listHeight, overflowY: "auto",
         background: "rgba(0,0,0,0.25)", border: "1px solid var(--border)",
         borderRadius: 12,
       }}>
-        {filtered.length === 0 ? (
+        {displayedCharts.length === 0 ? (
           <div style={{ padding: "1rem", fontSize: 13, color: "var(--muted)", textAlign: "center" }}>
             {query.trim() ? `No patients match “${query}”` : "No patients"}
           </div>
         ) : (
-          filtered.map((c) => (
+          displayedCharts.map((c) => (
             <button
               key={c.id}
               type="button"
@@ -621,9 +631,16 @@ function PatientPicker({
         )}
       </div>
 
-      {!query && (
+      {!query && charts.length > 0 && (
         <div style={{ fontSize: 11, color: "var(--muted2)", marginTop: 4 }}>
-          {charts.length} patients · A–Z · click a name to select
+          {charts.length > PATIENT_LIST_VISIBLE
+            ? `Showing ${PATIENT_LIST_VISIBLE} of ${charts.length} · search for more`
+            : `${charts.length} patient${charts.length !== 1 ? "s" : ""} · A–Z · click to select`}
+        </div>
+      )}
+      {query.trim() && filtered.length > PATIENT_LIST_VISIBLE && (
+        <div style={{ fontSize: 11, color: "var(--muted2)", marginTop: 4 }}>
+          {filtered.length} matches · scroll list
         </div>
       )}
 
@@ -713,36 +730,43 @@ function SessionSetup({ data, setData, onStart }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "1.5rem" }}>
 
-      {/* Patient Information */}
-      <GlassCard>
-        <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: "1rem" }}>Patient Information</h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <div>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6, color: "var(--muted)" }}>
-              Select Patient from EHR *
-            </label>
-            <PatientPicker
-              charts={charts}
-              intakesWithoutChart={intakesWithoutChart}
-              selectedChartId={data.patientChartId}
-              onSelect={handleSelectPatient}
-              loading={chartsLoading}
-            />
+      {/* Patient Information + Session Details — equal height row */}
+      <div style={{
+        gridColumn: "1 / -1",
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+        gap: "1.5rem",
+        alignItems: "stretch",
+      }}>
+        <GlassCard style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+          <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: "1rem" }}>Patient Information</h3>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6, color: "var(--muted)" }}>
+                Select Patient from EHR *
+              </label>
+              <PatientPicker
+                charts={charts}
+                intakesWithoutChart={intakesWithoutChart}
+                selectedChartId={data.patientChartId}
+                onSelect={handleSelectPatient}
+                loading={chartsLoading}
+              />
+            </div>
+            <InputField label="Date of Service" type="date" value={data.dateOfService} onChange={e => setData({ ...data, dateOfService: e.target.value })} />
+            <InputField label="Provider Name *" value={data.providerName} onChange={e => setData({ ...data, providerName: e.target.value })} placeholder="Dr. Jane Smith" />
           </div>
-          <InputField label="Date of Service" type="date" value={data.dateOfService} onChange={e => setData({ ...data, dateOfService: e.target.value })} />
-          <InputField label="Provider Name *" value={data.providerName} onChange={e => setData({ ...data, providerName: e.target.value })} placeholder="Dr. Jane Smith" />
-        </div>
-      </GlassCard>
+        </GlassCard>
 
-      {/* Session Details */}
-      <GlassCard>
-        <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: "1rem" }}>Session Details</h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <SelectField label="Session Type" value={data.sessionType} onChange={e => setData({ ...data, sessionType: e.target.value })} options={sessionTypes} />
-          <SelectField label="Modality" value={data.modality} onChange={e => setData({ ...data, modality: e.target.value })} options={modalities} />
-          <InputField label="Duration (minutes)" type="number" value={data.duration} onChange={e => setData({ ...data, duration: e.target.value })} placeholder="45" />
-        </div>
-      </GlassCard>
+        <GlassCard style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+          <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: "1rem" }}>Session Details</h3>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "1rem", justifyContent: "flex-start" }}>
+            <SelectField label="Session Type" value={data.sessionType} onChange={e => setData({ ...data, sessionType: e.target.value })} options={sessionTypes} />
+            <SelectField label="Modality" value={data.modality} onChange={e => setData({ ...data, modality: e.target.value })} options={modalities} />
+            <InputField label="Duration (minutes)" type="number" value={data.duration} onChange={e => setData({ ...data, duration: e.target.value })} placeholder="45" />
+          </div>
+        </GlassCard>
+      </div>
 
       {/* Medical Specialty */}
       <GlassCard style={{ gridColumn: "1 / -1" }}>
