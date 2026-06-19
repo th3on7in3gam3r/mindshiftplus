@@ -15,7 +15,7 @@ const STATUS_DOT = {
   cancelled: { color: "#e05c7a", label: "Cancelled" },
 };
 
-import { AVAIL_DAYS, SLOTS_BY_DOW as SLOT_LABELS } from "../../lib/schedulingConstants";
+import { AVAIL_DAYS, AVAIL_SUMMARY, OFF_SUMMARY, SLOTS_BY_DOW as SLOT_LABELS, isOffDayOfWeek, isAvailableDayOfWeek } from "../../lib/schedulingConstants";
 import { sessionWindowState } from "../../lib/telehealthUtils";
 
 const SLOTS_BY_DOW = Object.fromEntries(
@@ -63,8 +63,13 @@ function AppointmentCalendar({ appointments, onDayClick, selectedDate, fullDays 
       <div style={{ padding:"1rem 1.2rem 1.4rem" }}>
         {/* Day headers */}
         <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", marginBottom:6 }}>
-          {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => (
-            <div key={d} style={{ textAlign:"center", fontSize:11, fontWeight:700, color:T.muted2, padding:"4px 0", letterSpacing:"0.04em" }}>{d}</div>
+          {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((d, idx) => (
+            <div key={d} style={{
+              textAlign:"center", fontSize:11, fontWeight:700,
+              color: isOffDayOfWeek(idx) ? T.muted2 : T.muted2,
+              padding:"4px 0", letterSpacing:"0.04em",
+              opacity: isOffDayOfWeek(idx) ? 0.45 : 1,
+            }}>{d}</div>
           ))}
         </div>
 
@@ -79,27 +84,34 @@ function AppointmentCalendar({ appointments, onDayClick, selectedDate, fullDays 
             const hasAppt = dayAppts.length > 0;
             const isFull = fullDays?.includes(ds);
             const dow = new Date(ds+"T12:00:00").getDay();
-            const isAvailDay = AVAIL_DAYS.includes(dow);
+            const isOff = isOffDayOfWeek(dow);
+            const isOpen = isAvailableDayOfWeek(dow);
             const isPast = new Date(ds) < today;
+            const canClick = hasAppt || (isOpen && !isOff && !isPast);
 
             return (
-              <button key={d} onClick={() => onDayClick(ds)} style={{
+              <button
+                key={d}
+                type="button"
+                disabled={!canClick}
+                onClick={() => canClick && onDayClick(ds)}
+                style={{
                 position:"relative", aspectRatio:"1", borderRadius:10, border:"none",
-                background: isSel ? T.accent : isFull ? "#fef2f2" : isToday ? `${T.accent}12` : "transparent",
-                color: isSel ? "#fff" : isFull ? "#fca5a5" : isToday ? T.accent : isPast ? T.muted2 : T.text,
+                background: isSel ? T.accent : isOff ? "#f3f4f6" : isFull ? "#fef2f2" : isToday ? `${T.accent}12` : "transparent",
+                color: isSel ? "#fff" : isOff ? T.muted2 : isFull ? "#fca5a5" : isToday ? T.accent : isPast ? T.muted2 : T.text,
                 fontWeight: isSel || isToday ? 700 : 400,
-                fontSize:13, cursor: "pointer",
-                outline: isToday && !isSel ? `2px solid ${T.accent}40` : "none",
+                fontSize:13, cursor: canClick ? "pointer" : "default",
+                outline: isToday && !isSel && !isOff ? `2px solid ${T.accent}40` : "none",
                 transition:"all .15s",
                 display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:2,
-                opacity: isPast && !hasAppt ? 0.4 : 1,
+                opacity: isOff ? 0.45 : (isPast && !hasAppt ? 0.4 : 1),
               }}
-                onMouseOver={e=>{ if(!isSel) e.currentTarget.style.background = isFull ? "#fee2e2" : `${T.accent}10`; }}
-                onMouseOut={e=>{ if(!isSel) e.currentTarget.style.background = isFull ? "#fef2f2" : isToday ? `${T.accent}12` : "transparent"; }}
-                title={isFull ? "Fully booked — choose another day" : hasAppt ? "View appointment" : isAvailDay && !isPast ? "Available for booking" : ""}
+                onMouseOver={e=>{ if(canClick && !isSel) e.currentTarget.style.background = isFull ? "#fee2e2" : `${T.accent}10`; }}
+                onMouseOut={e=>{ if(!isSel) e.currentTarget.style.background = isOff ? "#f3f4f6" : isFull ? "#fef2f2" : isToday ? `${T.accent}12` : "transparent"; }}
+                title={isOff ? "Clinic closed" : isFull ? "Fully booked — choose another day" : hasAppt ? "View appointment" : isOpen && !isPast ? "Available for booking" : isPast ? "Past date" : ""}
               >
                 {d}
-                {isFull && !hasAppt && (
+                {isFull && !hasAppt && !isOff && (
                   <span style={{ fontSize:7, color:"#fca5a5", fontWeight:700, lineHeight:1 }}>FULL</span>
                 )}
                 {hasAppt && (
@@ -114,6 +126,10 @@ function AppointmentCalendar({ appointments, onDayClick, selectedDate, fullDays 
           })}
         </div>
 
+        <div style={{ marginTop:12, fontSize:11, color:T.muted, lineHeight:1.5 }}>
+          {AVAIL_SUMMARY} · {OFF_SUMMARY}
+        </div>
+
         {/* Legend */}
         <div style={{ display:"flex", gap:14, marginTop:14, paddingTop:12, borderTop:`1px solid ${T.border}`, flexWrap:"wrap" }}>
           {Object.entries(STATUS_DOT).slice(0,4).map(([status, { color, label }]) => (
@@ -125,6 +141,10 @@ function AppointmentCalendar({ appointments, onDayClick, selectedDate, fullDays 
           <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, color:T.muted }}>
             <span style={{ width:8, height:8, borderRadius:2, background:"#fca5a5", display:"inline-block" }}/>
             Fully Booked
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, color:T.muted }}>
+            <span style={{ width:8, height:8, borderRadius:2, background:"#f3f4f6", border:`1px solid ${T.border}`, display:"inline-block" }}/>
+            Closed
           </div>
         </div>
       </div>
