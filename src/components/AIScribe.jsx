@@ -507,6 +507,148 @@ function AIScribeContent({ state, setState, data, setData, sessionId, setSession
 }
 
 // Session Setup Component
+function PatientPicker({
+  charts,
+  intakesWithoutChart,
+  selectedChartId,
+  onSelect,
+  loading,
+}) {
+  const [query, setQuery] = useState("");
+  const [listOpen, setListOpen] = useState(false);
+
+  const selected = charts.find((c) => c.id === selectedChartId);
+
+  const filtered = useMemo(() => {
+    if (!query.trim()) return charts;
+    return charts.filter((c) => matchesChartSearch(c, query));
+  }, [charts, query]);
+
+  const matchingIntakesNoChart = useMemo(() => {
+    if (!query.trim() || filtered.length > 0) return [];
+    return intakesWithoutChart.filter((i) => matchesIntakeSearch(i, query));
+  }, [query, filtered, intakesWithoutChart]);
+
+  if (loading) {
+    return <div style={{ fontSize: 13, color: "var(--muted)" }}>Loading patients…</div>;
+  }
+
+  if (charts.length === 0) {
+    return (
+      <div style={{ fontSize: 13, color: "var(--gold)" }}>
+        No patients in EHR yet. Create a patient chart first (EHR → New Patient).
+      </div>
+    );
+  }
+
+  if (selected && !listOpen) {
+    return (
+      <div>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10, padding: "0.75rem 1rem",
+          background: "rgba(78,205,196,0.12)", border: "1px solid rgba(78,205,196,0.35)",
+          borderRadius: 12,
+        }}>
+          <span style={{ fontSize: 18 }}>✓</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--white)" }}>{chartDisplayName(selected)}</div>
+            {selected.mrn && <div style={{ fontSize: 12, color: "var(--muted)" }}>MRN: {selected.mrn}</div>}
+          </div>
+          <button
+            type="button"
+            onClick={() => { setListOpen(true); setQuery(""); }}
+            style={{
+              padding: "6px 12px", borderRadius: 8, cursor: "pointer",
+              border: "1px solid var(--border2)", background: "transparent",
+              color: "var(--lavender)", fontSize: 12, fontWeight: 600,
+            }}
+          >
+            Change
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <input
+        type="search"
+        value={query}
+        onChange={(e) => { setQuery(e.target.value); setListOpen(true); }}
+        onFocus={() => setListOpen(true)}
+        placeholder={`Search ${charts.length} patients by name or MRN…`}
+        autoFocus={listOpen && !!selected}
+        style={{
+          width: "100%", boxSizing: "border-box",
+          background: "rgba(255,255,255,0.04)", border: "1px solid var(--border)",
+          borderRadius: 10, padding: "0.65rem 0.75rem", color: "var(--white)",
+          fontSize: 14, fontFamily: "var(--font)",
+        }}
+      />
+
+      <div style={{
+        marginTop: 8, maxHeight: 220, overflowY: "auto",
+        background: "rgba(0,0,0,0.25)", border: "1px solid var(--border)",
+        borderRadius: 12,
+      }}>
+        {filtered.length === 0 ? (
+          <div style={{ padding: "1rem", fontSize: 13, color: "var(--muted)", textAlign: "center" }}>
+            {query.trim() ? `No patients match “${query}”` : "No patients"}
+          </div>
+        ) : (
+          filtered.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => {
+                onSelect(c.id);
+                setQuery("");
+                setListOpen(false);
+              }}
+              style={{
+                display: "block", width: "100%", textAlign: "left", cursor: "pointer",
+                padding: "0.75rem 1rem", border: "none",
+                borderBottom: "1px solid rgba(255,255,255,0.06)",
+                background: c.id === selectedChartId ? "rgba(124,111,247,0.2)" : "transparent",
+                color: "var(--white)", fontFamily: "var(--font)", fontSize: 14,
+              }}
+            >
+              <div style={{ fontWeight: 600 }}>{chartDisplayName(c)}</div>
+              {c.mrn && <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{c.mrn}</div>}
+            </button>
+          ))
+        )}
+      </div>
+
+      {!query && (
+        <div style={{ fontSize: 11, color: "var(--muted2)", marginTop: 4 }}>
+          {charts.length} patients · A–Z · click a name to select
+        </div>
+      )}
+
+      {query.trim() && filtered.length === 0 && matchingIntakesNoChart.length > 0 && (
+        <div style={{
+          marginTop: 10, padding: "12px 14px", borderRadius: 12,
+          background: "rgba(245,200,66,0.12)", border: "1px solid rgba(245,200,66,0.35)",
+          fontSize: 13, lineHeight: 1.6, color: "var(--gold)",
+        }}>
+          <div style={{ fontWeight: 700, marginBottom: 6 }}>📋 Found in Intakes — chart not created yet</div>
+          {matchingIntakesNoChart.map((i) => (
+            <div key={i.id} style={{ marginBottom: 4 }}>
+              <strong style={{ color: "var(--white)" }}>{i.full_name || "Unknown"}</strong>
+              {i.phone ? ` · ${i.phone}` : ""}
+            </div>
+          ))}
+          <div style={{ marginTop: 8, fontSize: 12, color: "var(--muted)" }}>
+            <strong style={{ color: "var(--white)" }}>EHR → Intakes → Create Chart</strong>, then return here.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SessionSetup({ data, setData, onStart }) {
   const [showTemplates, setShowTemplates] = useState(true);
   const [selectedTemplate, setSelectedTemplate] = useState(() =>
@@ -516,7 +658,6 @@ function SessionSetup({ data, setData, onStart }) {
   const [templateFilter, setTemplateFilter] = useState('all');
   const [charts, setCharts] = useState([]);
   const [chartsLoading, setChartsLoading] = useState(true);
-  const [patientSearch, setPatientSearch] = useState("");
   const [intakesWithoutChart, setIntakesWithoutChart] = useState([]);
 
   const specialties = [
@@ -543,16 +684,6 @@ function SessionSetup({ data, setData, onStart }) {
     );
   }, []);
 
-  const filteredCharts = useMemo(() => {
-    if (!patientSearch.trim()) return charts;
-    return charts.filter((c) => matchesChartSearch(c, patientSearch));
-  }, [charts, patientSearch]);
-
-  const matchingIntakesNoChart = useMemo(() => {
-    if (!patientSearch.trim() || filteredCharts.length > 0) return [];
-    return intakesWithoutChart.filter((i) => matchesIntakeSearch(i, patientSearch));
-  }, [patientSearch, filteredCharts, intakesWithoutChart]);
-
   const handleSelectTemplate = (tpl) => {
     setSelectedTemplate(tpl);
     setData(d => ({ ...d, templateId: tpl.id }));
@@ -560,6 +691,10 @@ function SessionSetup({ data, setData, onStart }) {
   };
 
   const handleSelectPatient = (chartId) => {
+    if (!chartId) {
+      setData({ ...data, patientChartId: null, patientId: "", patientName: "" });
+      return;
+    }
     const chart = charts.find((c) => c.id === chartId);
     if (!chart) return;
     setData({
@@ -586,86 +721,13 @@ function SessionSetup({ data, setData, onStart }) {
             <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6, color: "var(--muted)" }}>
               Select Patient from EHR *
             </label>
-            {chartsLoading ? (
-              <div style={{ fontSize: 13, color: "var(--muted)" }}>Loading patients…</div>
-            ) : charts.length === 0 ? (
-              <div style={{ fontSize: 13, color: "var(--gold)" }}>
-                No patients in EHR yet. Create a patient chart first (EHR → New Patient).
-              </div>
-            ) : (
-              <>
-                <input
-                  type="search"
-                  value={patientSearch}
-                  onChange={(e) => setPatientSearch(e.target.value)}
-                  placeholder="Search by name or MRN…"
-                  style={{
-                    width: "100%", marginBottom: 8,
-                    background: "rgba(255,255,255,0.04)", border: "1px solid var(--border)",
-                    borderRadius: 10, padding: "0.65rem 0.75rem", color: "var(--white)",
-                    fontSize: 14, fontFamily: "var(--font)", boxSizing: "border-box",
-                  }}
-                />
-                <select
-                  value={data.patientChartId || ''}
-                  onChange={(e) => handleSelectPatient(e.target.value)}
-                  style={{
-                    width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid var(--border)",
-                    borderRadius: 10, padding: "0.75rem", color: "var(--white)", fontSize: 14,
-                    fontFamily: "var(--font)", cursor: "pointer",
-                  }}
-                >
-                  <option value="" style={{ background: "var(--midnight)" }}>— Choose a patient —</option>
-                  {filteredCharts.length === 0 ? (
-                    <option value="" disabled style={{ background: "var(--midnight)" }}>
-                      No patients match “{patientSearch}”
-                    </option>
-                  ) : (
-                    filteredCharts.map((c) => (
-                      <option key={c.id} value={c.id} style={{ background: "var(--midnight)" }}>
-                        {chartDisplayName(c)}{c.mrn ? ` (${c.mrn})` : ''}
-                      </option>
-                    ))
-                  )}
-                </select>
-                {!patientSearch && charts.length > 0 && (
-                  <div style={{ fontSize: 11, color: "var(--muted2)", marginTop: 4 }}>
-                    {charts.length} patients · A–Z
-                  </div>
-                )}
-                {patientSearch.trim() && filteredCharts.length === 0 && matchingIntakesNoChart.length > 0 && (
-                  <div style={{
-                    marginTop: 10, padding: "12px 14px", borderRadius: 12,
-                    background: "rgba(245,200,66,0.12)", border: "1px solid rgba(245,200,66,0.35)",
-                    fontSize: 13, lineHeight: 1.6, color: "var(--gold)",
-                  }}>
-                    <div style={{ fontWeight: 700, marginBottom: 6 }}>
-                      📋 Found in Intakes — EHR chart not created yet
-                    </div>
-                    {matchingIntakesNoChart.map((i) => (
-                      <div key={i.id} style={{ marginBottom: 6 }}>
-                        <strong style={{ color: "var(--white)" }}>{i.full_name || "Unknown"}</strong>
-                        {i.phone ? ` · ${i.phone}` : ""}
-                        <span style={{ color: "var(--muted)" }}> ({i.status === "pending" ? "awaiting review" : "reviewed"})</span>
-                      </div>
-                    ))}
-                    <div style={{ marginTop: 8, color: "var(--muted)", fontSize: 12 }}>
-                      Go to <strong style={{ color: "var(--white)" }}>EHR → Intakes</strong>, open the patient, and click <strong style={{ color: "var(--white)" }}>Create Chart</strong>. Then return here to start AI Scribe.
-                    </div>
-                  </div>
-                )}
-                {patientSearch.trim() && filteredCharts.length === 0 && matchingIntakesNoChart.length === 0 && (
-                  <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 8 }}>
-                    No patient or intake matches “{patientSearch}”. Check spelling or create a chart in EHR first.
-                  </div>
-                )}
-              </>
-            )}
-            {data.patientName && (
-              <div style={{ fontSize: 12, color: "var(--teal)", marginTop: 6 }}>
-                ✓ {data.patientName}{data.patientId ? ` · MRN: ${data.patientId}` : ''}
-              </div>
-            )}
+            <PatientPicker
+              charts={charts}
+              intakesWithoutChart={intakesWithoutChart}
+              selectedChartId={data.patientChartId}
+              onSelect={handleSelectPatient}
+              loading={chartsLoading}
+            />
           </div>
           <InputField label="Date of Service" type="date" value={data.dateOfService} onChange={e => setData({ ...data, dateOfService: e.target.value })} />
           <InputField label="Provider Name *" value={data.providerName} onChange={e => setData({ ...data, providerName: e.target.value })} placeholder="Dr. Jane Smith" />
