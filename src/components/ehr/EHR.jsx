@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../lib/supabase";
-import { getClinicianRole, isAdminEmail, getTasks, getEhrMessages } from "../../lib/ehrDb";
+import { getClinicianRole, isAdminEmail, getTasks, getPortalPatientUnreadCount } from "../../lib/ehrDb";
 import { getPendingIntakes } from "../../lib/intakeDb";
 import EHRLogin from "./EHRLogin";
 import EHRDashboard from "./EHRDashboard";
@@ -9,6 +9,7 @@ import EHRIntakes from "./EHRIntakes";
 import EHRSchedule from "./EHRSchedule";
 import EHRTasks from "./EHRTasks";
 import EHRMessages from "./EHRMessages";
+import EHRPatientMessages from "./EHRPatientMessages";
 import EHRReports from "./EHRReports";
 import EHRGiftCards from "./EHRGiftCards";
 import EHRInvoices from "./EHRInvoices";
@@ -60,7 +61,7 @@ export default function EHR({ onBack }) {
       });
       getPendingIntakes().then(({ data }) => { if (mounted) setPendingIntakes(data?.length ?? 0); });
       getTasks({ status: "open" }).then(({ data }) => { if (mounted) setTaskCount(data?.length ?? 0); });
-      getEhrMessages().then(({ data }) => { if (mounted) setUnreadCount((data ?? []).filter(m => !m.is_read).length); });
+      getPortalPatientUnreadCount().then(({ count }) => { if (mounted) setUnreadCount(count ?? 0); });
       setAuthLoading(false);
       return;
     }
@@ -70,7 +71,7 @@ export default function EHR({ onBack }) {
       setClinician({ ...data, email: user.email });
       getPendingIntakes().then(({ data: d }) => { if (mounted) setPendingIntakes(d?.length ?? 0); });
       getTasks({ status: "open" }).then(({ data: d }) => { if (mounted) setTaskCount(d?.length ?? 0); });
-      getEhrMessages().then(({ data: d }) => { if (mounted) setUnreadCount((d ?? []).filter(m => !m.is_read).length); });
+      getPortalPatientUnreadCount().then(({ count: c }) => { if (mounted) setUnreadCount(c ?? 0); });
     } else {
       // Not authorized — clear session locally without calling signOut (avoids 403)
       setClinician(null);
@@ -186,7 +187,7 @@ export default function EHR({ onBack }) {
             fontWeight: view === "messages" ? 600 : 400, fontFamily: "inherit", fontSize: 13,
             display: "flex", alignItems: "center", gap: 6,
           }}>
-            Messages
+            Patient Messages
             {unreadCount > 0 && (
               <span style={{ background: "var(--ehr-teal)", color: "#fff", fontSize: 10, fontWeight: 800, borderRadius: 20, padding: "1px 7px" }}>{unreadCount}</span>
             )}
@@ -257,7 +258,8 @@ export default function EHR({ onBack }) {
         )}
         {view === "schedule"  && <EHRSchedule  clinician={clinician} />}
         {view === "tasks"     && <EHRTasks     clinician={clinician} />}
-        {view === "messages"  && <EHRMessages  clinician={clinician} />}
+        {view === "messages"  && <EHRPatientMessages clinician={clinician} />}
+        {view === "staff-messages" && <EHRMessages clinician={clinician} />}
         {view === "reports"   && <EHRReports   clinician={clinician} />}
         {view === "crisis"    && <EHRCrisisAlerts />}
         {view === "giftcards" && <EHRGiftCards clinician={clinician} />}

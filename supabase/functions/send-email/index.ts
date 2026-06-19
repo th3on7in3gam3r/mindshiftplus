@@ -166,6 +166,25 @@ Deno.serve(async (req) => {
         break;
       }
 
+      // ── Patient sent a message (notify clinic staff) ───────────────────────
+      case "patient_message_received": {
+        const { patient_name, patient_email, subject, body_preview } = data;
+        await sendEmail(CLINICIAN_EMAILS, `💬 New Patient Message — ${patient_name || patient_email || "Patient"}`, base(`
+          <span class="badge badge-yellow">Action Required</span>
+          <h1>New patient portal message</h1>
+          <p class="sub">A patient sent a secure message through the patient portal.</p>
+          <table class="dt">
+            <tr><td>👤 Patient</td><td>${patient_name || "—"}</td></tr>
+            <tr><td>✉️ Email</td><td>${patient_email || "—"}</td></tr>
+            <tr><td>📋 Subject</td><td>${subject || "General Inquiry"}</td></tr>
+            ${body_preview ? `<tr><td>💬 Preview</td><td>${body_preview}</td></tr>` : ""}
+          </table>
+          <div class="info">Open the EHR → <strong>Patient Messages</strong> to read and reply. All clinic staff can access this inbox.</div>
+          <a href="https://www.mindshiftwellnessclinic.org" class="btn">Open MindShift+ →</a>
+        `, "Patient portal message notification."));
+        break;
+      }
+
       // ── Appointment reminder ───────────────────────────────────────────────
       case "appointment_reminder": {
         const { name, email, date, time, clinician, location } = data;

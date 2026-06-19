@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { getMessages, sendMessage, markMessageRead } from "../../lib/clinicApi";
-import { emailNewMessage } from "../../lib/emailService";
+import { emailPatientMessageReceived } from "../../lib/emailService";
 import { PageHeader, Card, SectionDivider, EmptyState, Alert, Btn, Toast, Input, T } from "./PortalUI";
 import CrisisModal from "../CrisisModal";
 
-export default function PortalMessages({ userId, P }) {
+export default function PortalMessages({ userId, displayName, userEmail, P }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCompose, setShowCompose] = useState(false);
@@ -54,6 +54,12 @@ export default function PortalMessages({ userId, P }) {
     setSending(true);
     try {
       await sendMessage(userId, subject||"General Inquiry", body);
+      emailPatientMessageReceived({
+        patient_name: displayName || "Patient",
+        patient_email: userEmail,
+        subject: subject || "General Inquiry",
+        body_preview: body.slice(0, 200),
+      });
       showToast("✓ Message sent. We'll respond within 1 business day.");
       setShowCompose(false); setSubject(""); setBody(""); load();
     } catch { showToast("Failed to send. Please try again."); }

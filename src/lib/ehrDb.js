@@ -169,7 +169,7 @@ export async function getPatientAppointments(patientId) {
   return { data, error };
 }
 
-// ── MESSAGES (read from portal_messages as clinician) ─────────────────────────
+// ── MESSAGES (patient portal secure messaging) ────────────────────────────────
 export async function getPatientMessages(patientId) {
   const { data, error } = await supabase
     .from("portal_messages")
@@ -177,6 +177,57 @@ export async function getPatientMessages(patientId) {
     .eq("patient_id", patientId)
     .order("created_at", { ascending: false });
   return { data, error };
+}
+
+export async function getAllPortalMessages() {
+  const { data: messages, error } = await supabase
+    .from("portal_messages")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) return { data: null, error };
+
+  const patientIds = [...new Set((messages ?? []).map((m) => m.patient_id).filter(Boolean))];
+  let nameMap = {};
+  if (patientIds.length) {
+    const [{ data: profiles }, { data: charts }] = await Promise.all([
+      supabase.from("patient_profiles").select("id, full_name").in("id", patientIds),
+      supabase.from("ehr_charts").select("patient_id, full_name").in("patient_id", patientIds),
+    ]);
+    for (const p of profiles ?? []) if (p.full_name) nameMap[p.id] = p.full_name;
+    for (const c of charts ?? []) if (c.full_name && !nameMap[c.patient_id]) nameMap[c.patient_id] = c.full_name;
+  }
+
+  return {
+    data: (messages ?? []).map((m) => ({
+      ...m,
+      patient_name: nameMap[m.patient_id] ?? null,
+    })),
+    error: null,
+  };
+}
+
+export async function getPortalPatientUnreadCount() {
+  const { count, error } = await supabase
+    .from("portal_messages")
+    .select("*", { count: "exact", head: true })
+    .eq("sender_role", "patient")
+    .eq("read", false);
+  return { count: count ?? 0, error };
+}
+
+export async function markPortalMessageRead(id) {
+  const { error } = await supabase.from("portal_messages").update({ read: true }).eq("id", id);
+  return { error };
+}
+
+export async function deletePortalMessage(id) {
+  const { error } = await supabase.from("portal_messages").delete().eq("id", id);
+  return { error };
+}
+
+export async function deletePortalThread(threadId) {
+  const { error } = await supabase.from("portal_messages").delete().eq("thread_id", threadId);
+  return { error };
 }
 
 export async function sendClinicianMessage(patientId, subject, body, threadId = null) {
