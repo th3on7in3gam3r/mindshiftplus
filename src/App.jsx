@@ -165,14 +165,129 @@ const navItems=[
   {id:"settings",icon:"◎",label:"Settings"},
 ];
 
-// Admin-only nav items — only shown to admin emails
-const adminNavItems=[
-  {id:"ehr-schedule",icon:"📋",label:"MindShift Admin"},
-  {id:"ehr",        icon:<img src="/logo.png" alt="" style={{width: 20, height: 20}} />,label:"MindShift EHR"},
-  {id:"ai-scribe",  icon:"🎙️",label:"MindShift Scribe"},
+// Clinical tools — launched from Clinical Suite hub (not listed individually in sidebar)
+const clinicalTools = [
+  {
+    id: "ehr-schedule",
+    title: "MindShift Admin",
+    shortTitle: "Admin",
+    description: "Scheduling, appointments, availability, and patient lookup.",
+    icon: "📋",
+    accent: "#4a6cf7",
+    glow: "rgba(74,108,247,0.35)",
+    gradient: "linear-gradient(145deg, rgba(74,108,247,0.22) 0%, rgba(14,165,160,0.1) 100%)",
+  },
+  {
+    id: "ehr",
+    title: "MindShift EHR",
+    shortTitle: "EHR",
+    description: "Patient charts, clinical notes, medications, and billing.",
+    icon: "logo",
+    accent: "#7c6ff7",
+    glow: "rgba(124,111,247,0.35)",
+    gradient: "linear-gradient(145deg, rgba(124,111,247,0.22) 0%, rgba(78,205,196,0.1) 100%)",
+  },
+  {
+    id: "ai-scribe",
+    title: "MindShift Scribe",
+    shortTitle: "Scribe",
+    description: "AI-powered session recording and progress note generation.",
+    icon: "🎙️",
+    accent: "#0ea5a0",
+    glow: "rgba(14,165,160,0.35)",
+    gradient: "linear-gradient(145deg, rgba(14,165,160,0.22) 0%, rgba(124,111,247,0.1) 100%)",
+  },
 ];
 
+function ClinicalSuite({ setPage, userName }) {
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const firstName = (userName || "Clinician").split(" ")[0];
+
+  return (
+    <div style={{ padding: "1.5rem", maxWidth: 920, margin: "0 auto", paddingBottom: "90px" }}>
+      <div style={{ marginBottom: "1.75rem" }}>
+        <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6, letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 600 }}>
+          Staff workspace
+        </div>
+        <h1 style={{ fontSize: "clamp(1.4rem, 4vw, 2rem)", fontWeight: 700, marginBottom: 6, letterSpacing: "-0.02em" }}>
+          {greeting}, {firstName}
+        </h1>
+        <p style={{ fontSize: 14, color: "var(--muted)", lineHeight: 1.6, maxWidth: 520 }}>
+          Choose a clinical tool below. These modules are for authorized MindShift Wellness Clinic staff only.
+        </p>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "1rem" }}>
+        {clinicalTools.map((tool) => (
+          <button
+            key={tool.id}
+            type="button"
+            onClick={() => setPage(tool.id)}
+            style={{
+              textAlign: "left",
+              background: tool.gradient,
+              border: `1px solid ${tool.glow}`,
+              borderRadius: 20,
+              padding: "1.35rem 1.4rem",
+              cursor: "pointer",
+              fontFamily: "var(--font)",
+              color: "var(--white)",
+              transition: "transform .2s, box-shadow .2s, border-color .2s",
+              boxShadow: `0 8px 32px ${tool.glow.replace("0.35", "0.12")}`,
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+              minHeight: 168,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-3px)";
+              e.currentTarget.style.boxShadow = `0 14px 40px ${tool.glow.replace("0.35", "0.2")}`;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = `0 8px 32px ${tool.glow.replace("0.35", "0.12")}`;
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+              <div style={{
+                width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+                background: "rgba(255,255,255,0.1)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                {tool.icon === "logo" ? (
+                  <img src="/logo.png" alt="" style={{ width: 24, height: 24, objectFit: "contain" }} />
+                ) : (
+                  <span style={{ fontSize: 22 }}>{tool.icon}</span>
+                )}
+              </div>
+              <span style={{ fontSize: 18, color: "rgba(255,255,255,0.35)", lineHeight: 1 }}>→</span>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: tool.accent, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 4 }}>
+                {tool.shortTitle}
+              </div>
+              <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 6, letterSpacing: "-0.01em" }}>{tool.title}</div>
+              <div style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.55 }}>{tool.description}</div>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <GlassCard style={{ marginTop: "1.5rem", padding: "1rem 1.25rem", background: "rgba(255,255,255,0.03)" }}>
+        <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.7 }}>
+          <strong style={{ color: "var(--white)" }}>Tip:</strong> Use <strong style={{ color: "var(--lavender)" }}>Admin</strong> for scheduling and patient IDs,
+          {" "}<strong style={{ color: "var(--lavender)" }}>EHR</strong> for charts and documentation, and{" "}
+          <strong style={{ color: "var(--lavender)" }}>Scribe</strong> to record sessions and push notes to the chart.
+        </div>
+      </GlassCard>
+    </div>
+  );
+}
+
 function Sidebar({page,setPage,user,onSignOut,open,onClose,isClinician}){
+  const clinicalActive = ["clinical", "ehr-schedule", "ehr", "ai-scribe"].includes(page);
   return(
     <>
       {/* Mobile overlay — only shows on small screens when drawer is open */}
@@ -209,22 +324,38 @@ function Sidebar({page,setPage,user,onSignOut,open,onClose,isClinician}){
               {n.id==="premium"&&<span style={{marginLeft:"auto",fontSize:10,background:"var(--grad1)",padding:"2px 7px",borderRadius:99,color:"#fff"}}>PRO</span>}
             </button>
           ))}
-          {/* Clinician-only items — visible to owners + any clinician_roles member */}
+          {/* Clinician workspace — single professional entry */}
           {user && isClinician && (
             <>
-              <div style={{height:1,background:"var(--border)",margin:"6px 0"}}/>
-              <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"var(--muted2)",padding:"0 14px",marginBottom:2}}>Admin</div>
-              {adminNavItems.map(n=>(
-                <button key={n.id} onClick={()=>{setPage(n.id);onClose();}} style={{
-                  display:"flex",alignItems:"center",gap:10,padding:"9px 14px",borderRadius:12,
-                  background:page===n.id?"rgba(124,111,247,0.2)":"transparent",
-                  border:page===n.id?"1px solid rgba(124,111,247,0.3)":"1px solid transparent",
-                  color:page===n.id?"var(--lavender)":"var(--muted)",fontSize:14,fontWeight:page===n.id?600:400,
-                  cursor:"pointer",textAlign:"left",transition:"all .15s"
-                }}>
-                  <span style={{fontSize:15}}>{n.icon}</span>{n.label}
-                </button>
-              ))}
+              <div style={{ height: 1, background: "var(--border)", margin: "8px 0 6px" }} />
+              <button
+                onClick={() => { setPage("clinical"); onClose(); }}
+                style={{
+                  display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 14,
+                  background: clinicalActive
+                    ? "linear-gradient(135deg, rgba(124,111,247,0.18), rgba(14,165,160,0.1))"
+                    : "rgba(255,255,255,0.03)",
+                  border: clinicalActive
+                    ? "1px solid rgba(124,111,247,0.35)"
+                    : "1px solid rgba(255,255,255,0.06)",
+                  color: clinicalActive ? "var(--white)" : "var(--muted)",
+                  fontSize: 13, fontWeight: clinicalActive ? 600 : 500,
+                  cursor: "pointer", textAlign: "left", transition: "all .15s", width: "100%",
+                }}
+              >
+                <span style={{
+                  width: 32, height: 32, borderRadius: 9, flexShrink: 0,
+                  background: clinicalActive ? "var(--grad1)" : "rgba(255,255,255,0.06)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 14, fontWeight: 700, color: "#fff",
+                }}>⚕</span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", lineHeight: 1.25 }}>Clinical Suite</span>
+                  <span style={{ display: "block", fontSize: 10, color: "var(--muted2)", fontWeight: 400, marginTop: 2 }}>
+                    Admin · EHR · Scribe
+                  </span>
+                </span>
+              </button>
             </>
           )}
         </nav>
@@ -361,7 +492,7 @@ function Onboarding({setPage,setUser}){
 }
 
 // ── DASHBOARD ──────────────────────────────────────────────────────────────────
-function Dashboard({user,setPage}){
+function Dashboard({user,setPage,isClinician}){
   const { user: authUser } = useAuth();
   const { show: showToast, el: toastEl } = useToast();
   const [mood, setMood] = useState(null);
@@ -433,6 +564,32 @@ function Dashboard({user,setPage}){
           <div><div style={{fontWeight:700,fontSize:16,color:"var(--gold)"}}>{streak}</div><div style={{color:"var(--muted2)",fontSize:10}}>day streak</div></div>
         </GlassCard>
       </div>
+
+      {isClinician && (
+        <GlassCard
+          onClick={() => setPage("clinical")}
+          style={{
+            marginBottom: "1rem", cursor: "pointer", padding: "1rem 1.2rem",
+            background: "linear-gradient(135deg, rgba(124,111,247,0.14), rgba(14,165,160,0.08))",
+            border: "1px solid rgba(124,111,247,0.28)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+              <div style={{
+                width: 40, height: 40, borderRadius: 11, flexShrink: 0,
+                background: "var(--grad1)", display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 16, fontWeight: 700, color: "#fff",
+              }}>⚕</div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>Clinical Suite</div>
+                <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 2 }}>Admin · EHR · Scribe</div>
+              </div>
+            </div>
+            <span style={{ color: "var(--lavender)", fontSize: 18, flexShrink: 0 }}>→</span>
+          </div>
+        </GlassCard>
+      )}
 
       {/* Mood Check-in */}
       <GlassCard style={{marginBottom:"1rem",background:"linear-gradient(135deg,rgba(124,111,247,0.12),rgba(78,205,196,0.08))"}}>
@@ -2756,7 +2913,7 @@ export default function App(){
     return(
       <>
         <GlobalStyles/>
-        <AdminSchedule onBack={()=>setPage("dashboard")}/>
+        <AdminSchedule onBack={()=>setPage("clinical")}/>
       </>
     );
   }
@@ -2766,7 +2923,7 @@ export default function App(){
     return(
       <>
         <GlobalStyles/>
-        <EHR onBack={()=>setPage("dashboard")}/>
+        <EHR onBack={()=>setPage("clinical")}/>
       </>
     );
   }
@@ -2776,7 +2933,7 @@ export default function App(){
     return(
       <>
         <GlobalStyles/>
-        <AIScribe onBack={()=>setPage("dashboard")}/>
+        <AIScribe onBack={()=>setPage("clinical")}/>
       </>
     );
   }
@@ -2822,7 +2979,8 @@ export default function App(){
           )}
           {(!user || page==="landing") && <Landing/>}
           {user && page==="onboarding" && <Onboarding setPage={setPage} setUser={()=>{}}/>}
-          {user && page==="dashboard" && <Dashboard user={appUser} setPage={setPage}/>}
+          {user && page==="dashboard" && <Dashboard user={appUser} setPage={setPage} isClinician={isClinician}/>}
+          {user && page==="clinical" && isClinician && <ClinicalSuite setPage={setPage} userName={appUser?.name}/>}
           {user && page==="mia" && <Mia/>}
           {user && page==="journal" && <Journal/>}
           {user && page==="breathe" && <Breathe/>}

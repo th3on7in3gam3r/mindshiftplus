@@ -6,7 +6,7 @@ import {
 } from "../../lib/clinicApi";
 import { emailAppointmentConfirmed, emailAppointmentCancelled, emailTelehealthReminder } from "../../lib/emailService";
 import { supabase } from "../../lib/supabase";
-import { isAdminEmail, getClinicianRole } from "../../lib/ehrDb";
+import { isAdminEmail, getClinicianRole, searchAdminPatients } from "../../lib/ehrDb";
 
 async function authorizeScheduleAdmin(user) {
   if (!user?.email) return false;
@@ -658,68 +658,54 @@ function PatientLookupTab() {
   const [search, setSearch] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
   const [copied, setCopied] = useState("");
   const [toast, setToast] = useState("");
 
   const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(""),3000); };
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    if (!search.trim()) return;
+  const runSearch = async (query) => {
+    const q = query.trim();
+    if (!q) {
+      setResults([]);
+      setSearched(false);
+      return;
+    }
     setLoading(true);
+    setSearched(true);
     try {
-      const { supabase: sb } = await import("../../lib/supabase");
-
-      // Search appointments table by email or name (works even without patient_profiles)
-      const { data: byEmail } = await sb
-        .from("appointments")
-        .select("patient_id, name, email")
-        .ilike("email", `%${search.trim()}%`)
-        .limit(20);
-
-      const { data: byName } = await sb
-        .from("appointments")
-        .select("patient_id, name, email")
-        .ilike("name", `%${search.trim()}%`)
-        .limit(20);
-
-      // Also search patient_profiles
-      const { data: profileData } = await sb
-        .from("patient_profiles")
-        .select("id, full_name, phone")
-        .ilike("full_name", `%${search.trim()}%`)
-        .limit(20);
-
-      // Merge all results
-      const merged = new Map();
-      [...(byEmail||[]), ...(byName||[])].forEach(a => {
-        if (a.patient_id) merged.set(a.patient_id, { id: a.patient_id, name: a.name, email: a.email });
-      });
-      (profileData||[]).forEach(p => {
-        if (!merged.has(p.id)) merged.set(p.id, { id: p.id, name: p.full_name, email: "—" });
-        else merged.get(p.id).name = p.full_name || merged.get(p.id).name;
-      });
-
-      // If still empty, try to find by exact email in auth via a direct query
-      if (merged.size === 0) {
-        const { data: exactAppt } = await sb
-          .from("appointments")
-          .select("patient_id, name, email")
-          .eq("email", search.trim())
-          .limit(10);
-        (exactAppt||[]).forEach(a => {
-          if (a.patient_id) merged.set(a.patient_id, { id: a.patient_id, name: a.name, email: a.email });
-          else if (a.email) merged.set(a.email, { id: "Public booking (no account)", name: a.name, email: a.email });
-        });
-      }
-
-      setResults([...merged.values()]);
-    } catch (e) { showToast("Search failed: " + e.message); }
+      const { data, error } = await searchAdminPatients(q);
+      if (error) throw new Error(error.message || String(error));
+      setResults(data ?? []);
+    } catch (e) {
+      showToast("Search failed: " + e.message);
+      setResults([]);
+    }
     setLoading(false);
   };
 
-  const copyId = (id) => {
-    navigator.clipboard.writeText(id).then(()=>{ setCopied(id); showToast("✓ Patient ID copied!"); setTimeout(()=>setCopied(""),2000); });
+  useEffect(() => {
+    const q = search.trim();
+    if (!q) {
+      setResults([]);
+      setSearched(false);
+      return;
+    }
+    const timer = setTimeout(() => runSearch(q), 350);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    runSearch(search);
+  };
+
+  const copyText = (label, text) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(text);
+      showToast(`✓ ${label} copied!`);
+      setTimeout(() => setCopied(""), 2000);
+    });
   };
 
   const inputStyle = { flex:1, padding:"10px 12px", borderRadius:8, border:`1.5px solid ${P.border}`, fontSize:14, color:P.text, background:P.bg2, outline:"none", fontFamily:"inherit" };
@@ -729,12 +715,19 @@ function PatientLookupTab() {
       {toast&&<div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"#1a1f36", borderRadius:30, padding:"10px 20px", fontSize:13, color:"#fff", zIndex:9999, whiteSpace:"nowrap" }}>{toast}</div>}
 
       <p style={{ fontSize:13, color:P.muted, marginBottom:"1.2rem" }}>
-        Search for a patient by name or email to find their Patient ID. Use this ID in Visit Notes, Prescriptions, Appointment Review, and Patient Documents tabs.
+        Search by patient name, MRN (e.g. <code style={{ fontSize:12 }}>MSW-MO4SQTOK</code>), email, or Supabase patient ID.
+        Results come from MindShift EHR charts, appointments, and intakes.
       </p>
 
       <Card style={{ marginBottom:"1.5rem" }}>
         <form onSubmit={handleSearch} style={{ display:"flex", gap:10 }}>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search by name or email…" style={inputStyle}/>
+          <input
+            value={search}
+            onChange={e=>setSearch(e.target.value)}
+            placeholder="Name, MRN, email, or patient UUID…"
+            style={inputStyle}
+            autoComplete="off"
+          />
           <button type="submit" style={{ background:`linear-gradient(135deg,${P.accent},${P.teal})`, border:"none", borderRadius:8, padding:"10px 20px", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer" }}>
             Search
           </button>
@@ -743,41 +736,74 @@ function PatientLookupTab() {
 
       {loading && <div style={{color:P.muted,fontSize:13}}>Searching…</div>}
 
-      {results.length === 0 && !loading && search && (
+      {results.length === 0 && !loading && searched && (
         <Card style={{ textAlign:"center", padding:"2rem" }}>
-          <div style={{ color:P.muted, fontSize:13 }}>No patients found. Try a different name or email.</div>
+          <div style={{ color:P.muted, fontSize:13, marginBottom:8 }}>No patients found for &ldquo;{search.trim()}&rdquo;.</div>
+          <div style={{ color:P.muted2, fontSize:12 }}>Try the full MRN, first + last name, or create a chart in MindShift EHR first.</div>
         </Card>
       )}
 
       {results.map(p=>(
         <Card key={p.id} style={{ marginBottom:"0.75rem" }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:12 }}>
-            <div>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:12 }}>
+            <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontWeight:700, fontSize:14, color:P.text, marginBottom:3 }}>{p.name || "Unknown Patient"}</div>
-              <div style={{ fontSize:12, color:P.muted, marginBottom:4 }}>✉️ {p.email}</div>
-              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                <code style={{ fontSize:11, background:"#f3f4f6", padding:"3px 8px", borderRadius:6, color:P.muted, fontFamily:"monospace", wordBreak:"break-all" }}>{p.id}</code>
+              {p.mrn && (
+                <div style={{ fontSize:12, color:P.muted, marginBottom:4 }}>
+                  MRN: <code style={{ fontSize:11, background:"#f3f4f6", padding:"2px 6px", borderRadius:4 }}>{p.mrn}</code>
+                </div>
+              )}
+              {p.email && p.email !== "—" && (
+                <div style={{ fontSize:12, color:P.muted, marginBottom:4 }}>✉️ {p.email}</div>
+              )}
+              {p.phone && (
+                <div style={{ fontSize:12, color:P.muted, marginBottom:6 }}>📞 {p.phone}</div>
+              )}
+              <div style={{ fontSize:11, color:P.muted2, marginBottom:4 }}>Source: {p.source}</div>
+              <div style={{ marginBottom:4 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:P.muted2, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:4 }}>
+                  Supabase Patient ID
+                </div>
+                <code style={{ fontSize:11, background:"#f3f4f6", padding:"4px 8px", borderRadius:6, color:P.text, fontFamily:"monospace", wordBreak:"break-all", display:"block" }}>{p.id}</code>
               </div>
             </div>
-            <button
-              onClick={()=>copyId(p.id)}
-              style={{
-                background: copied===p.id ? "#dcfce7" : `linear-gradient(135deg,${P.accent},${P.teal})`,
-                border:"none", borderRadius:20, padding:"8px 16px",
-                color: copied===p.id ? "#166534" : "#fff",
-                fontSize:12, fontWeight:600, cursor:"pointer", flexShrink:0,
-                transition:"all .2s",
-              }}
-            >
-              {copied===p.id ? "✓ Copied!" : "Copy ID"}
-            </button>
+            <div style={{ display:"flex", flexDirection:"column", gap:8, flexShrink:0 }}>
+              <button
+                type="button"
+                onClick={()=>copyText("Patient ID", p.id)}
+                style={{
+                  background: copied===p.id ? "#dcfce7" : `linear-gradient(135deg,${P.accent},${P.teal})`,
+                  border:"none", borderRadius:20, padding:"8px 16px",
+                  color: copied===p.id ? "#166534" : "#fff",
+                  fontSize:12, fontWeight:600, cursor:"pointer",
+                  transition:"all .2s",
+                }}
+              >
+                {copied===p.id ? "✓ Copied!" : "Copy Patient ID"}
+              </button>
+              {p.mrn && (
+                <button
+                  type="button"
+                  onClick={()=>copyText("MRN", p.mrn)}
+                  style={{
+                    background: copied===p.mrn ? "#dcfce7" : P.bg2,
+                    border:`1px solid ${P.border}`, borderRadius:20, padding:"8px 16px",
+                    color: copied===p.mrn ? "#166534" : P.text,
+                    fontSize:12, fontWeight:600, cursor:"pointer",
+                  }}
+                >
+                  {copied===p.mrn ? "✓ Copied!" : "Copy MRN"}
+                </button>
+              )}
+            </div>
           </div>
         </Card>
       ))}
 
       <Card style={{ background:"#eff6ff", border:"1px solid #bfdbfe", marginTop:"1rem" }}>
         <div style={{ fontSize:12, color:"#1e40af", lineHeight:1.7 }}>
-          💡 <strong>How to use:</strong> Copy a patient's ID, then paste it into the Visit Notes, Prescriptions, Appointment Review, or Patient Documents tab to access their records.
+          💡 <strong>How to use:</strong> Copy the <strong>Supabase Patient ID</strong> (UUID), then paste it into Visit Notes, Prescriptions, Appointment Review, or Patient Documents.
+          Most patients with an EHR chart appear when you search by name or MRN.
         </div>
       </Card>
     </div>

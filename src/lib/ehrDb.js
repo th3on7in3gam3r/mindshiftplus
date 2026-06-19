@@ -96,6 +96,147 @@ export function matchesChartSearch(chart, query) {
   return words.every((w) => haystack.includes(w));
 }
 
+/**
+ * Admin patient lookup — searches EHR charts (name/MRN), appointments, profiles, and intakes.
+ * Returns unified rows with Supabase patient_id for Visit Notes, Rx, etc.
+ */
+export async function searchAdminPatients(query) {
+  const q = query.trim();
+  if (!q) return { data: [], error: null };
+
+  const term = `%${q}%`;
+  const byPatientId = new Map();
+
+  const add = (patientId, row) => {
+    if (!patientId || patientId === "Public booking (no account)") return;
+    const existing = byPatientId.get(patientId);
+    if (!existing) {
+      byPatientId.set(patientId, row);
+      return;
+    }
+    byPatientId.set(patientId, {
+      ...existing,
+      name: row.name || existing.name,
+      mrn: row.mrn || existing.mrn,
+      email: row.email && row.email !== "—" ? row.email : existing.email,
+      phone: row.phone || existing.phone,
+      chartId: row.chartId || existing.chartId,
+      source: [existing.source, row.source].filter(Boolean).join(" · "),
+    });
+  };
+
+  const [
+    { data: charts, error: chartsErr },
+    { data: byApptEmail },
+    { data: byApptName },
+    { data: byProfile },
+    { data: byIntake },
+  ] = await Promise.all([
+    getChartsForPicker(),
+    supabase.from("appointments").select("patient_id, name, email, phone").ilike("email", term).limit(30),
+    supabase.from("appointments").select("patient_id, name, email, phone").ilike("name", term).limit(30),
+    supabase.from("patient_profiles").select("id, full_name, phone").ilike("full_name", term).limit(30),
+    supabase.from("intake_submissions").select("patient_id, full_name, phone").ilike("full_name", term).limit(30),
+  ]);
+
+  if (chartsErr) return { data: null, error: chartsErr };
+
+  for (const chart of charts ?? []) {
+    if (!matchesChartSearch(chart, q)) continue;
+    add(chart.patient_id, {
+      id: chart.patient_id,
+      name: chartDisplayName(chart),
+      mrn: chart.mrn || null,
+      email: "—",
+      phone: chart.phone || null,
+      chartId: chart.id,
+      source: "MindShift EHR",
+    });
+  }
+
+  for (const a of [...(byApptEmail ?? []), ...(byApptName ?? [])]) {
+    if (!a.patient_id) continue;
+    add(a.patient_id, {
+      id: a.patient_id,
+      name: a.name || "Unknown Patient",
+      mrn: null,
+      email: a.email || "—",
+      phone: a.phone || null,
+      chartId: null,
+      source: "Appointment",
+    });
+  }
+
+  for (const p of byProfile ?? []) {
+    add(p.id, {
+      id: p.id,
+      name: p.full_name || "Unknown Patient",
+      mrn: null,
+      email: "—",
+      phone: p.phone || null,
+      chartId: null,
+      source: "Patient profile",
+    });
+  }
+
+  for (const i of byIntake ?? []) {
+    add(i.patient_id, {
+      id: i.patient_id,
+      name: i.full_name || "Unknown Patient",
+      mrn: null,
+      email: "—",
+      phone: i.phone || null,
+      chartId: null,
+      source: "Intake",
+    });
+  }
+
+  // Exact MRN or patient UUID match (paste-friendly)
+  const compact = q.replace(/\s/g, "");
+  if (compact.length >= 4) {
+    const { data: byMrn } = await supabase
+      .from("ehr_charts")
+      .select("id, patient_id, mrn, full_name, phone")
+      .ilike("mrn", `%${compact}%`)
+      .limit(10);
+    for (const c of byMrn ?? []) {
+      add(c.patient_id, {
+        id: c.patient_id,
+        name: c.full_name || c.mrn || "Unknown Patient",
+        mrn: c.mrn,
+        email: "—",
+        phone: c.phone || null,
+        chartId: c.id,
+        source: "MindShift EHR",
+      });
+    }
+  }
+  if (/^[0-9a-f-]{36}$/i.test(compact)) {
+    const { data: byUuid } = await supabase
+      .from("ehr_charts")
+      .select("id, patient_id, mrn, full_name, phone")
+      .eq("patient_id", compact)
+      .limit(5);
+    for (const c of byUuid ?? []) {
+      add(c.patient_id, {
+        id: c.patient_id,
+        name: c.full_name || c.mrn || "Unknown Patient",
+        mrn: c.mrn,
+        email: "—",
+        phone: c.phone || null,
+        chartId: c.id,
+        source: "MindShift EHR",
+      });
+    }
+  }
+
+  const results = [...byPatientId.values()].sort((a, b) =>
+    (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
+  );
+
+  return { data: results, error: null };
+}
+
 export async function getChart(chartId) {
   const { data, error } = await supabase
     .from("ehr_charts")
