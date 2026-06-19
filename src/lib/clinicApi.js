@@ -75,7 +75,7 @@ export async function upsertPatientProfile(user_id, fields) {
 
 // ── Messages ───────────────────────────────────────────────────────────────────
 export async function getMessages(patient_id) {
-  const { data, error } = await supabase.from("portal_messages").select("*").eq("patient_id", patient_id).order("created_at", { ascending: false });
+  const { data, error } = await supabase.from("portal_messages").select("*").eq("patient_id", patient_id).is("archived_at", null).order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return data || [];
 }

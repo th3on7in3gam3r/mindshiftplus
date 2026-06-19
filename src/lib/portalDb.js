@@ -52,6 +52,7 @@ export async function getMessages(userId) {
     .from("portal_messages")
     .select("*")
     .eq("patient_id", userId)
+    .is("archived_at", null)
     .order("created_at", { ascending: false });
   return { data, error };
 }

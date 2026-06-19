@@ -22,6 +22,32 @@ export function isAdminEmail(email) {
   return ADMIN_EMAILS.includes(email?.toLowerCase());
 }
 
+/** Staff who may archive/delete portal messages after retention period. */
+export const PORTAL_MESSAGE_RETENTION_DAYS = 90;
+
+const PORTAL_MESSAGE_MANAGERS = [
+  "jerlessm@gmail.com",
+  "kmutegyeki@mindshiftwellnessclinic.org",
+  "kmutegyeki@gmail.com",
+  "rnakkazi@mindshiftwellnessclinic.org",
+];
+
+export function canManageOldPortalMessages(email) {
+  return PORTAL_MESSAGE_MANAGERS.includes(email?.toLowerCase());
+}
+
+export function isPortalMessageOldEnough(createdAt, days = PORTAL_MESSAGE_RETENTION_DAYS) {
+  if (!createdAt) return false;
+  const ageMs = Date.now() - new Date(createdAt).getTime();
+  return ageMs >= days * 24 * 60 * 60 * 1000;
+}
+
+export function daysUntilPortalMessageRetention(createdAt, days = PORTAL_MESSAGE_RETENTION_DAYS) {
+  if (!createdAt) return days;
+  const eligibleAt = new Date(createdAt).getTime() + days * 24 * 60 * 60 * 1000;
+  return Math.max(0, Math.ceil((eligibleAt - Date.now()) / (24 * 60 * 60 * 1000)));
+}
+
 // ── PATIENT CHARTS ─────────────────────────────────────────────────────────────
 export async function getAllCharts() {
   const { data, error } = await supabase
@@ -381,15 +407,18 @@ export async function getPatientMessages(patientId) {
     .from("portal_messages")
     .select("*")
     .eq("patient_id", patientId)
+    .is("archived_at", null)
     .order("created_at", { ascending: false });
   return { data, error };
 }
 
-export async function getAllPortalMessages() {
-  const { data: messages, error } = await supabase
+export async function getAllPortalMessages({ includeArchived = false } = {}) {
+  let q = supabase
     .from("portal_messages")
     .select("*")
     .order("created_at", { ascending: false });
+  if (!includeArchived) q = q.is("archived_at", null);
+  const { data: messages, error } = await q;
   if (error) return { data: null, error };
 
   const patientIds = [...new Set((messages ?? []).map((m) => m.patient_id).filter(Boolean))];
@@ -417,7 +446,8 @@ export async function getPortalPatientUnreadCount() {
     .from("portal_messages")
     .select("*", { count: "exact", head: true })
     .eq("sender_role", "patient")
-    .eq("read", false);
+    .eq("read", false)
+    .is("archived_at", null);
   return { count: count ?? 0, error };
 }
 
@@ -434,6 +464,43 @@ export async function deletePortalMessage(id) {
 export async function deletePortalThread(threadId) {
   const { error } = await supabase.from("portal_messages").delete().eq("thread_id", threadId);
   return { error };
+}
+
+export async function archivePortalMessage(id) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from("portal_messages")
+    .update({
+      archived_at: new Date().toISOString(),
+      archived_by: user?.id ?? null,
+    })
+    .eq("id", id)
+    .select()
+    .single();
+  return { data, error };
+}
+
+export async function archivePortalThread(threadId) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from("portal_messages")
+    .update({
+      archived_at: new Date().toISOString(),
+      archived_by: user?.id ?? null,
+    })
+    .eq("thread_id", threadId)
+    .is("archived_at", null)
+    .select();
+  return { data, error };
+}
+
+export async function restorePortalThread(threadId) {
+  const { data, error } = await supabase
+    .from("portal_messages")
+    .update({ archived_at: null, archived_by: null })
+    .eq("thread_id", threadId)
+    .select();
+  return { data, error };
 }
 
 export async function sendClinicianMessage(patientId, subject, body, threadId = null) {
