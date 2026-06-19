@@ -246,7 +246,7 @@ export async function pushToEHR(sessionId) {
   if (!chartId) {
     return {
       data: null,
-      error: 'Could not find this patient in the EHR. Go back and select the patient from the dropdown when starting the session.',
+      error: 'Could not find this patient in MindShift EHR. Go back and select the patient from the dropdown when starting the session.',
     };
   }
 

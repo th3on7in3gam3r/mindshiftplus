@@ -928,7 +928,7 @@ export default function AdminSchedule({ onBack }) {
           <div style={{ width:34, height:34, borderRadius:9, background:`linear-gradient(135deg,${P.accent},${P.teal})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, flexShrink:0 }}><img src="/logo.png" alt="" style={{width: 20, height: 20}} /></div>
           <div>
             <div style={{ fontSize:13, fontWeight:700, color:"#fff" }}>MindShift Wellness Clinic</div>
-            <div style={{ fontSize:11, color:"rgba(255,255,255,0.5)" }}>Scheduling Dashboard · Admin</div>
+            <div style={{ fontSize:11, color:"rgba(255,255,255,0.5)" }}>MindShift Admin</div>
           </div>
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>

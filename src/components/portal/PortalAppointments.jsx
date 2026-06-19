@@ -24,15 +24,8 @@ const SLOTS_BY_DOW = {
 };
 const AVAIL_DAYS = [1, 4, 5, 6];
 
-export function sessionWindowState(scheduledAt, telehealthUrl) {
-  if (!telehealthUrl) return "no_url";
-  const now = Date.now();
-  const start = new Date(scheduledAt).getTime() - 10 * 60 * 1000;
-  const end   = new Date(scheduledAt).getTime() + 60 * 60 * 1000;
-  if (now < start) return "before_window";
-  if (now > end)   return "after_window";
-  return "in_window";
-}
+import { sessionWindowState } from "../../lib/telehealthUtils";
+export { sessionWindowState };
 
 // ── Mini Calendar ──────────────────────────────────────────────────────────────
 function AppointmentCalendar({ appointments, onDayClick, selectedDate, fullDays }) {

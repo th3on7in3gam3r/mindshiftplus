@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useAuth } from "../lib/AuthContext";
-import { getChartsForPicker, chartDisplayName, matchesChartSearch } from "../lib/ehrDb";
+import { getChartsForPicker, chartDisplayName, matchesChartSearch, getPatientAppointments } from "../lib/ehrDb";
 import { getIntakesWithoutCharts, matchesIntakeSearch } from "../lib/intakeDb";
+import { sessionWindowState, pickTelehealthAppointment, formatApptDateTime } from "../lib/telehealthUtils";
 import {
   createScribeSession,
   saveGeneratedNote,
@@ -277,6 +278,7 @@ export default function AIScribe({ onBack }) {
   const [sessionData, setSessionData] = useState({
     patientId: '',
     patientChartId: null,
+    patientUuid: null,
     patientName: '',
     dateOfService: new Date().toISOString().split('T')[0],
     providerName: user?.user_metadata?.full_name || '',
@@ -340,7 +342,7 @@ export default function AIScribe({ onBack }) {
             />
             <div>
               <h1 style={{ fontSize: "clamp(1.2rem, 3vw, 1.7rem)", fontWeight: 700, marginBottom: 2 }}>
-                MindShift AI Scribe
+                MindShift Scribe
               </h1>
               <p style={{ color: "var(--muted)", fontSize: 13 }}>
                 Transform clinical sessions into billing-ready progress notes
@@ -478,6 +480,7 @@ function AIScribeContent({ state, setState, data, setData, sessionId, setSession
         setData({
           patientId: '',
           patientChartId: null,
+          patientUuid: null,
           patientName: '',
           dateOfService: new Date().toISOString().split('T')[0],
           providerName: data.providerName,
@@ -546,7 +549,7 @@ function PatientPicker({
   if (charts.length === 0) {
     return (
       <div style={{ fontSize: 13, color: "var(--gold)" }}>
-        No patients in EHR yet. Create a patient chart first (EHR → New Patient).
+        No patients in MindShift EHR yet. Create a patient chart first (MindShift EHR → New Patient).
       </div>
     );
   }
@@ -658,9 +661,118 @@ function PatientPicker({
             </div>
           ))}
           <div style={{ marginTop: 8, fontSize: 12, color: "var(--muted)" }}>
-            <strong style={{ color: "var(--white)" }}>EHR → Intakes → Create Chart</strong>, then return here.
+            <strong style={{ color: "var(--white)" }}>MindShift EHR → Intakes → Create Chart</strong>, then return here.
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+function TelehealthJoinPanel({ patientUuid, serviceDate }) {
+  const [loading, setLoading] = useState(false);
+  const [appt, setAppt] = useState(null);
+
+  useEffect(() => {
+    if (!patientUuid) {
+      setAppt(null);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    getPatientAppointments(patientUuid).then(({ data }) => {
+      if (cancelled) return;
+      setAppt(pickTelehealthAppointment(data, serviceDate));
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [patientUuid, serviceDate]);
+
+  const panelStyle = {
+    marginTop: 4,
+    padding: "0.875rem 1rem",
+    borderRadius: 12,
+    border: "1px solid rgba(14,165,160,0.35)",
+    background: "rgba(14,165,160,0.08)",
+  };
+
+  if (!patientUuid) {
+    return (
+      <div style={panelStyle}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>📹 Telehealth Video</div>
+        <p style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>
+          Select a patient above to connect to their video session.
+        </p>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div style={panelStyle}>
+        <div style={{ fontSize: 13, color: "var(--muted)" }}>Loading video session…</div>
+      </div>
+    );
+  }
+
+  if (!appt) {
+    return (
+      <div style={panelStyle}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>📹 Telehealth Video</div>
+        <p style={{ fontSize: 12, color: "var(--muted)", margin: 0, lineHeight: 1.5 }}>
+          No telehealth appointment found for this patient. Schedule one in{" "}
+          <strong style={{ color: "var(--white)" }}>MindShift EHR → Schedule</strong>, confirm it, and a
+          Whereby video link is created automatically.
+        </p>
+      </div>
+    );
+  }
+
+  const winState = sessionWindowState(appt.scheduled_at, appt.telehealth_url);
+  const apptLabel = formatApptDateTime(appt.scheduled_at);
+
+  return (
+    <div style={panelStyle}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 8 }}>
+        <div style={{ fontSize: 13, fontWeight: 600 }}>📹 Telehealth Video</div>
+        <span style={{ fontSize: 11, color: "var(--muted)", textAlign: "right" }}>{apptLabel}</span>
+      </div>
+
+      {appt.telehealth_url ? (
+        <>
+          <button
+            type="button"
+            onClick={() => window.open(appt.telehealth_url, "_blank")}
+            style={{
+              background: "linear-gradient(135deg,#4a6cf7,#0ea5a0)",
+              border: "none",
+              borderRadius: 20,
+              padding: "8px 18px",
+              color: "#fff",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+              width: "100%",
+            }}
+          >
+            Join Video Session with Patient
+          </button>
+          {winState === "before_window" && (
+            <p style={{ fontSize: 11, color: "var(--muted)", margin: "8px 0 0", lineHeight: 1.4 }}>
+              Patient portal opens 10 minutes before the appointment. You can join now as the clinician.
+            </p>
+          )}
+          {winState === "after_window" && (
+            <p style={{ fontSize: 11, color: "var(--muted)", margin: "8px 0 0", lineHeight: 1.4 }}>
+              This appointment window has passed. The link may still work if the room is active.
+            </p>
+          )}
+        </>
+      ) : (
+        <p style={{ fontSize: 12, color: "var(--muted)", margin: 0, lineHeight: 1.5 }}>
+          Video link coming soon — confirm this appointment in{" "}
+          <strong style={{ color: "var(--white)" }}>MindShift EHR → Schedule</strong> to generate the room.
+        </p>
       )}
     </div>
   );
@@ -709,7 +821,7 @@ function SessionSetup({ data, setData, onStart }) {
 
   const handleSelectPatient = (chartId) => {
     if (!chartId) {
-      setData({ ...data, patientChartId: null, patientId: "", patientName: "" });
+      setData({ ...data, patientChartId: null, patientUuid: null, patientId: "", patientName: "" });
       return;
     }
     const chart = charts.find((c) => c.id === chartId);
@@ -717,6 +829,7 @@ function SessionSetup({ data, setData, onStart }) {
     setData({
       ...data,
       patientChartId: chart.id,
+      patientUuid: chart.patient_id || null,
       patientId: chart.mrn || chart.display_name || chart.id,
       patientName: chartDisplayName(chart),
     });
@@ -743,7 +856,7 @@ function SessionSetup({ data, setData, onStart }) {
           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "1rem" }}>
             <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
               <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6, color: "var(--muted)" }}>
-                Select Patient from EHR *
+                Select Patient from MindShift EHR *
               </label>
               <PatientPicker
                 charts={charts}
@@ -763,6 +876,9 @@ function SessionSetup({ data, setData, onStart }) {
           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "1rem", justifyContent: "flex-start" }}>
             <SelectField label="Session Type" value={data.sessionType} onChange={e => setData({ ...data, sessionType: e.target.value })} options={sessionTypes} />
             <SelectField label="Modality" value={data.modality} onChange={e => setData({ ...data, modality: e.target.value })} options={modalities} />
+            {data.modality === "Telehealth" && (
+              <TelehealthJoinPanel patientUuid={data.patientUuid} serviceDate={data.dateOfService} />
+            )}
             <InputField label="Duration (minutes)" type="number" value={data.duration} onChange={e => setData({ ...data, duration: e.target.value })} placeholder="45" />
           </div>
         </GlassCard>
@@ -1158,6 +1274,10 @@ function DuringVisit({ data, setData, sessionId, onComplete }) {
   return (
     <div style={{ maxWidth: 800, margin: "0 auto", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
 
+      {data.modality === "Telehealth" && (
+        <TelehealthJoinPanel patientUuid={data.patientUuid} serviceDate={data.dateOfService} />
+      )}
+
       {/* Mic error banner */}
       {micError && (
         <div style={{
@@ -1388,7 +1508,7 @@ function AfterVisit({ data, sessionId, onNewSession, onNoteSaved }) {
     setIsPushing(false);
 
     if (error) {
-      alert('Error pushing to EHR: ' + error);
+      alert('Error pushing to MindShift EHR: ' + error);
       return;
     }
 
@@ -1484,14 +1604,14 @@ function AfterVisit({ data, sessionId, onNewSession, onNoteSaved }) {
           {pushResult && (
             <GlassCard style={{ background: "rgba(78,205,196,0.1)", border: "1px solid rgba(78,205,196,0.35)" }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: "var(--teal)", marginBottom: 8 }}>
-                ✓ Saved to EHR for {pushResult.patient_name || data.patientName}
+                ✓ Saved to MindShift EHR for {pushResult.patient_name || data.patientName}
               </div>
               <p style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.6, margin: "0 0 10px" }}>
                 The note is now in the patient chart. Kenneth, Rachel, and admin can find it here:
               </p>
               <ul style={{ margin: 0, paddingLeft: "1.2rem", fontSize: 13, color: "var(--white)", lineHeight: 1.8 }}>
-                <li><strong>EHR → Patients → {pushResult.patient_name || data.patientName} → 🎙️ AI Scribe</strong> — full generated note</li>
-                <li><strong>EHR → Patients → {pushResult.patient_name || data.patientName} → 📝 Notes</strong> — structured SOAP note (ready to sign)</li>
+                <li><strong>MindShift EHR → Patients → {pushResult.patient_name || data.patientName} → 🎙️ MindShift Scribe</strong> — full generated note</li>
+                <li><strong>MindShift EHR → Patients → {pushResult.patient_name || data.patientName} → 📝 Notes</strong> — structured SOAP note (ready to sign)</li>
               </ul>
             </GlassCard>
           )}
@@ -1506,7 +1626,7 @@ function AfterVisit({ data, sessionId, onNewSession, onNoteSaved }) {
               disabled={isPushing || pushedToEHR}
               style={{ padding: "1rem 2rem" }}
             >
-              {isPushing ? '⏳ Pushing...' : pushedToEHR ? '✓ Pushed to EHR' : <><img src="/logo.png" alt="" style={{width: 14, height: 14, verticalAlign: 'middle', display: 'inline-block', marginRight: 4}} /> Push to EHR</>}
+              {isPushing ? '⏳ Pushing...' : pushedToEHR ? '✓ Pushed to MindShift EHR' : <><img src="/logo.png" alt="" style={{width: 14, height: 14, verticalAlign: 'middle', display: 'inline-block', marginRight: 4}} /> Push to MindShift EHR</>}
             </Btn>
           </div>
         </>
@@ -1614,7 +1734,7 @@ No active suicidal or homicidal ideation elicited. Safety plan reviewed and in p
 
 Electronically signed by: ${data.providerName}
 Date: ${data.dateOfService}
-Generated by: MindShift AI Scribe`;
+Generated by: MindShift Scribe`;
 }
 
 // UI Helper Components
@@ -1833,7 +1953,7 @@ function SessionArchive({ sessions, onLoadSession, onDeleteSession }) {
                   color: session.status === 'pushed_to_ehr' ? 'var(--teal)' : session.status === 'completed' ? 'var(--lavender)' : 'var(--muted)',
                   whiteSpace: "nowrap"
                 }}>
-                  {session.status === 'pushed_to_ehr' ? '✓ EHR' : session.status === 'completed' ? 'Done' : 'Draft'}
+                  {session.status === 'pushed_to_ehr' ? '✓ MindShift EHR' : session.status === 'completed' ? 'Done' : 'Draft'}
                 </div>
               </div>
 

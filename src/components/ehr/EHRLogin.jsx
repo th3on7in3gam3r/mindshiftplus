@@ -80,7 +80,7 @@ export default function EHRLogin({ onBack }) {
             <img src="/logo.png" alt="MindShift Wellness Clinic" style={{ width: 44, height: 44, borderRadius: 12, objectFit: "contain", flexShrink: 0 }}/>
             <div>
               <div style={{ fontSize: 15, fontWeight: 700, color: "#e2e8f0", lineHeight: 1.2 }}>MindShift Wellness Clinic</div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", lineHeight: 1.2 }}>Electronic Health Records</div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", lineHeight: 1.2 }}>MindShift EHR</div>
             </div>
           </div>
 
@@ -88,7 +88,7 @@ export default function EHRLogin({ onBack }) {
             Clinical tools,<br /><span style={{ fontStyle: "italic", color: "#a89cf5" }}>built for care.</span>
           </h2>
           <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.75, marginBottom: "2rem" }}>
-            Secure EHR access for licensed clinicians and authorized staff of MindShift Wellness Clinic.
+            Secure MindShift EHR access for licensed clinicians and authorized staff of MindShift Wellness Clinic.
           </p>
 
           {[
@@ -134,7 +134,7 @@ export default function EHRLogin({ onBack }) {
           ) : mode === "signin" ? (
             <>
               <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#e2e8f0", marginBottom: 6 }}>Clinician Sign In</h2>
-              <p style={{ fontSize: 14, color: "#64748b", marginBottom: "1.5rem" }}>EHR — restricted to authorized personnel</p>
+              <p style={{ fontSize: 14, color: "#64748b", marginBottom: "1.5rem" }}>MindShift EHR — restricted to authorized personnel</p>
 
               {error && (
                 <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#f87171", marginBottom: 12 }}>
@@ -155,7 +155,7 @@ export default function EHRLogin({ onBack }) {
                   <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required style={inp} onFocus={focus} onBlur={blur} />
                 </div>
                 <button type="submit" disabled={loading} style={{ background: "linear-gradient(135deg,#7c6ff7,#4ecdc4)", border: "none", borderRadius: 10, padding: "13px", color: "#fff", fontSize: 14, fontWeight: 600, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1 }}>
-                  {loading ? "Signing in…" : "Sign In to EHR"}
+                  {loading ? "Signing in…" : "Sign In to MindShift EHR"}
                 </button>
               </form>
 

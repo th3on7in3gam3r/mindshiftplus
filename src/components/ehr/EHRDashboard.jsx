@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getAllCharts, getDashboardStats } from "../../lib/ehrDb";
 import {
   EhrCard, EhrBtn, EhrBadge, StatusBadge,
@@ -6,12 +6,14 @@ import {
 } from "./EHRUI";
 import { EHRBillingAggregate } from "./EHRBilling";
 
-export default function EHRDashboard({ clinician, onOpenChart, onNewChart }) {
+export default function EHRDashboard({ clinician, onOpenChart, onNewChart, onNavigateView }) {
   const [charts, setCharts]   = useState([]);
   const [stats, setStats]     = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch]   = useState("");
   const [filter, setFilter]   = useState("all");
+  const patientListRef = useRef(null);
+  const upcomingRef    = useRef(null);
 
   useEffect(() => { loadData(); }, []);
 
@@ -37,6 +39,64 @@ export default function EHRDashboard({ clinician, onOpenChart, onNewChart }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const firstName = clinician?.full_name?.split(" ")[0] ?? "Clinician";
+
+  const scrollToRef = (ref) => {
+    ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const statCards = [
+    {
+      label: "Total Patients",
+      value: stats?.totalPatients ?? 0,
+      icon: "👥",
+      color: "#a89cf5",
+      grad: "rgba(124,111,247,0.15)",
+      glow: "#7c6ff7",
+      hint: "View all patient charts",
+      onClick: () => {
+        setFilter("all");
+        setSearch("");
+        scrollToRef(patientListRef);
+      },
+    },
+    {
+      label: "Active Patients",
+      value: stats?.activePatients ?? 0,
+      icon: "✅",
+      color: "#4ecdc4",
+      grad: "rgba(78,205,196,0.12)",
+      glow: "#4ecdc4",
+      hint: "Filter to active patients",
+      onClick: () => {
+        setFilter("active");
+        setSearch("");
+        scrollToRef(patientListRef);
+      },
+    },
+    {
+      label: "Upcoming Appts",
+      value: upcomingAppts.length,
+      icon: "📅",
+      color: "#f5c842",
+      grad: "rgba(245,200,66,0.12)",
+      glow: "#f5c842",
+      hint: "Open Schedule",
+      onClick: () => {
+        if (onNavigateView) onNavigateView("schedule");
+        else scrollToRef(upcomingRef);
+      },
+    },
+    {
+      label: "In View",
+      value: filtered.length,
+      icon: "📋",
+      color: "#f093a0",
+      grad: "rgba(240,147,160,0.12)",
+      glow: "#f093a0",
+      hint: "Jump to filtered patient list",
+      onClick: () => scrollToRef(patientListRef),
+    },
+  ];
 
   return (
     <div className="ehr-root" style={{ minHeight: "100vh", background: "var(--ehr-bg)" }}>
@@ -76,25 +136,31 @@ export default function EHRDashboard({ clinician, onOpenChart, onNewChart }) {
 
         {/* Stats grid */}
         <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14, marginBottom:"2rem" }}>
-          {[
-            { label:"Total Patients",  value: stats?.totalPatients  ?? 0, icon:"👥", color:"#a89cf5", grad:"rgba(124,111,247,0.15)", glow:"#7c6ff7" },
-            { label:"Active Patients", value: stats?.activePatients ?? 0, icon:"✅", color:"#4ecdc4", grad:"rgba(78,205,196,0.12)",  glow:"#4ecdc4" },
-            { label:"Upcoming Appts",  value: upcomingAppts.length,       icon:"📅", color:"#f5c842", grad:"rgba(245,200,66,0.12)",  glow:"#f5c842" },
-            { label:"In View",         value: filtered.length,            icon:"📋", color:"#f093a0", grad:"rgba(240,147,160,0.12)", glow:"#f093a0" },
-          ].map(s => (
-            <div key={s.label} className="ehr-stat-card" style={{
-              background: s.grad,
-              border: `1px solid ${s.glow}30`,
-              borderRadius: 20,
-              padding: "1.3rem 1.4rem",
-              position: "relative", overflow: "hidden",
-              boxShadow: `0 4px 24px ${s.glow}18`,
-            }}>
+          {statCards.map(s => (
+            <button
+              key={s.label}
+              type="button"
+              title={s.hint}
+              onClick={s.onClick}
+              className="ehr-stat-card"
+              style={{
+                background: s.grad,
+                border: `1px solid ${s.glow}30`,
+                borderRadius: 20,
+                padding: "1.3rem 1.4rem",
+                position: "relative", overflow: "hidden",
+                boxShadow: `0 4px 24px ${s.glow}18`,
+                cursor: "pointer",
+                textAlign: "left",
+                fontFamily: "inherit",
+                width: "100%",
+              }}
+            >
               <div style={{ position:"absolute", top:-20, right:-20, width:80, height:80, borderRadius:"50%", background:`${s.glow}15`, filter:"blur(20px)" }} />
               <div style={{ fontSize:24, marginBottom:8 }}>{s.icon}</div>
               <div style={{ fontSize:32, fontWeight:800, color: s.color, lineHeight:1, letterSpacing:"-0.03em" }}>{s.value}</div>
               <div style={{ fontSize:12, color: "var(--ehr-muted)", marginTop:4, fontWeight:500 }}>{s.label}</div>
-            </div>
+            </button>
           ))}
         </div>
 
@@ -103,7 +169,7 @@ export default function EHRDashboard({ clinician, onOpenChart, onNewChart }) {
 
         <div style={{ display:"grid", gridTemplateColumns:"1fr 320px", gap:20, alignItems:"start" }}>
           {/* Left: Patient list */}
-          <div>
+          <div ref={patientListRef} style={{ scrollMarginTop: 72 }}>
             {/* Search + filters */}
             <div style={{ display:"flex", gap:10, marginBottom:"1.2rem", flexWrap:"wrap" }}>
               <div style={{ flex:1, minWidth:220, position:"relative" }}>
@@ -158,7 +224,7 @@ export default function EHRDashboard({ clinician, onOpenChart, onNewChart }) {
           </div>
 
           {/* Right: Upcoming appointments */}
-          <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+          <div ref={upcomingRef} style={{ display:"flex", flexDirection:"column", gap:14, scrollMarginTop: 72 }}>
             <EhrCard glow="#7c6ff7" style={{ padding:"1.4rem" }}>
               <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:"1.2rem" }}>
                 <div style={{ width:30, height:30, borderRadius:8, background:"rgba(124,111,247,0.2)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14 }}>📅</div>
@@ -202,7 +268,7 @@ export default function EHRDashboard({ clinician, onOpenChart, onNewChart }) {
                 </div>
               </div>
               <div style={{ fontSize:11, color: "var(--ehr-muted2)", lineHeight:1.6 }}>
-                MindShift Wellness Clinic · EHR System
+                MindShift Wellness Clinic · MindShift EHR
               </div>
             </div>
           </div>

@@ -48,7 +48,7 @@ export default function EHRScribeNotes({ patientId, patientChartId, mrn }) {
         animation: "ehrSpin 0.8s linear infinite",
         margin: "0 auto 1rem"
       }} />
-      <p style={{ color: "var(--ehr-muted)", fontSize: 14 }}>Loading AI Scribe notes…</p>
+      <p style={{ color: "var(--ehr-muted)", fontSize: 14 }}>Loading MindShift Scribe notes…</p>
     </div>
   );
 
@@ -63,11 +63,11 @@ export default function EHRScribeNotes({ patientId, patientChartId, mrn }) {
       }}>
         <div style={{ fontSize: 48, marginBottom: "1rem" }}>🎙️</div>
         <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--ehr-text)", marginBottom: 8 }}>
-          No AI Scribe Notes Yet
+          No MindShift Scribe Notes Yet
         </h3>
         <p style={{ fontSize: 13, color: "var(--ehr-muted)", lineHeight: 1.6, maxWidth: 340, margin: "0 auto" }}>
-          Use the <strong>AI Scribe</strong> tool to record a session and generate a progress note.
-          It will appear here automatically after pushing to EHR.
+          Use the <strong>MindShift Scribe</strong> tool to record a session and generate a progress note.
+          It will appear here automatically after pushing to MindShift EHR.
         </p>
         <div style={{
           marginTop: "1.5rem", display: "inline-flex", alignItems: "center", gap: 8,
@@ -75,7 +75,7 @@ export default function EHRScribeNotes({ patientId, patientChartId, mrn }) {
           border: "1px solid color-mix(in srgb, var(--ehr-accent) 20%, transparent)",
           borderRadius: 10, padding: "0.6rem 1rem", fontSize: 12, color: "var(--ehr-accent)"
         }}>
-          Admin Menu → 🎙️ AI Scribe → Record → Push to EHR
+          MindShift Admin → 🎙️ MindShift Scribe → Record → Push to MindShift EHR
         </div>
       </div>
     </div>
@@ -93,7 +93,7 @@ export default function EHRScribeNotes({ patientId, patientChartId, mrn }) {
       }}>
         <div>
           <h2 style={{ fontSize: 18, fontWeight: 800, color: "var(--ehr-text)", margin: 0 }}>
-            🎙️ AI Scribe Notes
+            🎙️ MindShift Scribe Notes
           </h2>
           <p style={{ fontSize: 12, color: "var(--ehr-muted)", marginTop: 3 }}>
             {sessions.length} session{sessions.length !== 1 ? 's' : ''} documented
@@ -162,7 +162,7 @@ export default function EHRScribeNotes({ patientId, patientChartId, mrn }) {
                         ? "color-mix(in srgb, var(--ehr-teal) 30%, transparent)"
                         : "color-mix(in srgb, var(--ehr-gold) 30%, transparent)"}`
                     }}>
-                      {inEHR ? "✓ In EHR" : "Draft"}
+                      {inEHR ? "✓ In MindShift EHR" : "Draft"}
                     </span>
 
                     {/* Quality badge */}
@@ -320,7 +320,7 @@ export default function EHRScribeNotes({ patientId, patientChartId, mrn }) {
                             border: "1.5px solid color-mix(in srgb, var(--ehr-gold) 30%, transparent)",
                             color: "var(--ehr-gold)", fontSize: 12, fontWeight: 600
                           }}>
-                            ⚠️ Not yet pushed to EHR
+                            ⚠️ Not yet pushed to MindShift EHR
                           </span>
                         )}
                       </div>

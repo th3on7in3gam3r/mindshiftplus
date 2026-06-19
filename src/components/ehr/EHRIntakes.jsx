@@ -102,7 +102,7 @@ export default function EHRIntakes({ clinician, onOpenChart }) {
               </span>
             )}
           </h1>
-          <p style={{ fontSize: 13, color: "var(--ehr-muted2)", marginTop: 3 }}>Review submitted patient intake forms and create EHR charts</p>
+          <p style={{ fontSize: 13, color: "var(--ehr-muted2)", marginTop: 3 }}>Review submitted patient intake forms and create MindShift EHR charts</p>
         </div>
       </div>
 
@@ -217,7 +217,7 @@ function IntakeDetail({ intake, clinician, working, onBack, onReview, onCreateCh
           )}
           {intake.status !== "chart_created" && (
             <EhrBtn onClick={onCreateChart} disabled={working}>
-              {working ? "Creating…" : "✨ Create EHR Chart"}
+              {working ? "Creating…" : "✨ Create MindShift EHR Chart"}
             </EhrBtn>
           )}
         </div>

@@ -20,7 +20,7 @@ const TABS = [
   { id: "overview",     label: "Overview",     icon: "🏠" },
   { id: "intake",       label: "Intake",       icon: "📋" },
   { id: "notes",        label: "Notes",        icon: "📝" },
-  { id: "scribe",       label: "AI Scribe",    icon: "🎙️" },
+  { id: "scribe",       label: "MindShift Scribe", icon: "🎙️" },
   { id: "medications",  label: "Medications",  icon: "💊" },
   { id: "appointments", label: "Appointments", icon: "📅" },
   { id: "messages",     label: "Messages",     icon: "💬" },

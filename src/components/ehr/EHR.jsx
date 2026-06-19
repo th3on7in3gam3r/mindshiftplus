@@ -125,7 +125,7 @@ export default function EHR({ onBack }) {
           <img src="/logo.png" alt="MindShift Wellness Clinic" style={{ width: 34, height: 34, borderRadius: 9, objectFit: "contain", flexShrink: 0 }}/>
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, background: "var(--ehr-grad)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", lineHeight: 1.2 }}>MindShift Wellness Clinic</div>
-            <div style={{ fontSize: 10, color: "var(--ehr-muted2)", lineHeight: 1.2, letterSpacing: "0.04em" }}>ELECTRONIC HEALTH RECORDS</div>
+            <div style={{ fontSize: 10, color: "var(--ehr-muted2)", lineHeight: 1.2, letterSpacing: "0.04em" }}>MINDSHIFT EHR</div>
           </div>
         </div>
 
@@ -249,6 +249,7 @@ export default function EHR({ onBack }) {
             clinician={clinician}
             onOpenChart={(id) => { setActiveChartId(id); setView("chart"); }}
             onNewChart={() => { setActiveChartId(null); setView("new-chart"); }}
+            onNavigateView={setView}
           />
         )}
         {view === "intakes" && (

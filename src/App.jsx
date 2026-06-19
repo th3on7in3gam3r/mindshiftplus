@@ -167,9 +167,9 @@ const navItems=[
 
 // Admin-only nav items — only shown to admin emails
 const adminNavItems=[
-  {id:"ehr-schedule",icon:"📋",label:"Admin Schedule"},
-  {id:"ehr",        icon:<img src="/logo.png" alt="" style={{width: 20, height: 20}} />,label:"EHR"},
-  {id:"ai-scribe",  icon:"🎙️",label:"AI Scribe"},
+  {id:"ehr-schedule",icon:"📋",label:"MindShift Admin"},
+  {id:"ehr",        icon:<img src="/logo.png" alt="" style={{width: 20, height: 20}} />,label:"MindShift EHR"},
+  {id:"ai-scribe",  icon:"🎙️",label:"MindShift Scribe"},
 ];
 
 function Sidebar({page,setPage,user,onSignOut,open,onClose,isClinician}){
