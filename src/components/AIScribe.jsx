@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useAuth } from "../lib/AuthContext";
 import { getAllCharts } from "../lib/ehrDb";
 import {
@@ -515,6 +515,7 @@ function SessionSetup({ data, setData, onStart }) {
   const [templateFilter, setTemplateFilter] = useState('all');
   const [charts, setCharts] = useState([]);
   const [chartsLoading, setChartsLoading] = useState(true);
+  const [patientSearch, setPatientSearch] = useState("");
 
   const specialties = [
     { id: 'psychiatry',   name: 'Psychiatry',   icon: '🧠' },
@@ -536,6 +537,23 @@ function SessionSetup({ data, setData, onStart }) {
       setChartsLoading(false);
     });
   }, []);
+
+  const sortedCharts = useMemo(
+    () => [...charts].sort((a, b) =>
+      (a.full_name || "Unknown").localeCompare(b.full_name || "Unknown", undefined, { sensitivity: "base" })
+    ),
+    [charts]
+  );
+
+  const filteredCharts = useMemo(() => {
+    const q = patientSearch.trim().toLowerCase();
+    if (!q) return sortedCharts;
+    return sortedCharts.filter((c) => {
+      const name = (c.full_name || "").toLowerCase();
+      const mrn = (c.mrn || "").toLowerCase();
+      return name.includes(q) || mrn.includes(q);
+    });
+  }, [sortedCharts, patientSearch]);
 
   const handleSelectTemplate = (tpl) => {
     setSelectedTemplate(tpl);
@@ -577,22 +595,47 @@ function SessionSetup({ data, setData, onStart }) {
                 No patients in EHR yet. Create a patient chart first (EHR → New Patient).
               </div>
             ) : (
-              <select
-                value={data.patientChartId || ''}
-                onChange={(e) => handleSelectPatient(e.target.value)}
-                style={{
-                  width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid var(--border)",
-                  borderRadius: 10, padding: "0.75rem", color: "var(--white)", fontSize: 14,
-                  fontFamily: "var(--font)", cursor: "pointer",
-                }}
-              >
-                <option value="" style={{ background: "var(--midnight)" }}>— Choose a patient —</option>
-                {charts.map((c) => (
-                  <option key={c.id} value={c.id} style={{ background: "var(--midnight)" }}>
-                    {c.full_name || 'Unknown'}{c.mrn ? ` (${c.mrn})` : ''}
-                  </option>
-                ))}
-              </select>
+              <>
+                <input
+                  type="search"
+                  value={patientSearch}
+                  onChange={(e) => setPatientSearch(e.target.value)}
+                  placeholder="Search by name or MRN…"
+                  style={{
+                    width: "100%", marginBottom: 8,
+                    background: "rgba(255,255,255,0.04)", border: "1px solid var(--border)",
+                    borderRadius: 10, padding: "0.65rem 0.75rem", color: "var(--white)",
+                    fontSize: 14, fontFamily: "var(--font)", boxSizing: "border-box",
+                  }}
+                />
+                <select
+                  value={data.patientChartId || ''}
+                  onChange={(e) => handleSelectPatient(e.target.value)}
+                  style={{
+                    width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid var(--border)",
+                    borderRadius: 10, padding: "0.75rem", color: "var(--white)", fontSize: 14,
+                    fontFamily: "var(--font)", cursor: "pointer",
+                  }}
+                >
+                  <option value="" style={{ background: "var(--midnight)" }}>— Choose a patient —</option>
+                  {filteredCharts.length === 0 ? (
+                    <option value="" disabled style={{ background: "var(--midnight)" }}>
+                      No patients match “{patientSearch}”
+                    </option>
+                  ) : (
+                    filteredCharts.map((c) => (
+                      <option key={c.id} value={c.id} style={{ background: "var(--midnight)" }}>
+                        {c.full_name || 'Unknown'}{c.mrn ? ` (${c.mrn})` : ''}
+                      </option>
+                    ))
+                  )}
+                </select>
+                {!patientSearch && sortedCharts.length > 0 && (
+                  <div style={{ fontSize: 11, color: "var(--muted2)", marginTop: 4 }}>
+                    {sortedCharts.length} patients · A–Z
+                  </div>
+                )}
+              </>
             )}
             {data.patientName && (
               <div style={{ fontSize: 12, color: "var(--teal)", marginTop: 6 }}>
