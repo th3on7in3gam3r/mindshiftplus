@@ -265,6 +265,26 @@ Deno.serve(async (req) => {
         break;
       }
 
+      // ── Instant telehealth (MindShift Scribe — patient needs help now) ─────
+      case "telehealth_instant": {
+        const { name, email, clinician, telehealth_url } = data;
+        if (!email) break;
+        await sendEmail(email, "Join Your Telehealth Session Now — MindShift Wellness Clinic", base(`
+          <span class="badge badge-purple">Telehealth Session</span>
+          <h1>Your clinician is ready for you</h1>
+          <p class="sub">Hi ${name}, ${clinician} has started a telehealth video session and is waiting for you to join.</p>
+          <table class="dt">
+            <tr><td>👨‍⚕️ Clinician</td><td>${clinician}</td></tr>
+            <tr><td>📍 Location</td><td>Telehealth (Video)</td></tr>
+          </table>
+          <a href="${telehealth_url}" class="btn">📹 Join Video Session Now</a>
+          <div class="info">• Join from any device with a camera and microphone<br/>
+          • This link is active for the next 24 hours<br/>
+          • Need help? Call <strong>(508) 306-1128</strong></div>
+        `, "Instant telehealth session — MindShift Wellness Clinic."));
+        break;
+      }
+
       // ── Crisis Alert ───────────────────────────────────────────────────────
       case "crisis_alert": {
         const { userId, patientName, source, severity, timestamp } = data;

@@ -13,6 +13,27 @@ export function computeEndDate(scheduledAt: string): string {
   return new Date(new Date(scheduledAt).getTime() + 24 * 60 * 60 * 1000).toISOString();
 }
 
+async function createWherebyRoom(apiKey: string, scheduledAt: string): Promise<string | null> {
+  const endDate = computeEndDate(scheduledAt);
+  const wherebyRes = await fetch("https://api.whereby.dev/v1/meetings", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({ endDate, roomMode: "group", isLocked: false }),
+  });
+
+  if (!wherebyRes.ok) {
+    const errText = await wherebyRes.text();
+    console.error("Whereby API error:", wherebyRes.status, errText);
+    return null;
+  }
+
+  const wherebyData = await wherebyRes.json();
+  return wherebyData.roomUrl ?? null;
+}
+
 Deno.serve(async (req) => {
   const preflight = handleCorsPreflight(req);
   if (preflight) return preflight;
@@ -25,42 +46,84 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { appointmentId, scheduledAt } = await req.json();
+    const body = await req.json();
+    const {
+      mode,
+      appointmentId,
+      scheduledAt,
+      patientId,
+      patientName,
+      patientEmail,
+      providerName,
+    } = body;
 
-    const endDate = computeEndDate(scheduledAt);
+    const startAt = scheduledAt || new Date().toISOString();
 
-    // Create Supabase service-role client for DB updates
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
-    // Call Whereby API to create a meeting room
-    let telehealth_url: string | null = null;
+    const telehealth_url = await createWherebyRoom(WHEREBY_API_KEY, startAt);
 
-    const wherebyRes = await fetch("https://api.whereby.dev/v1/meetings", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${WHEREBY_API_KEY}`,
-      },
-      body: JSON.stringify({ endDate, roomMode: "group", isLocked: false }),
-    });
+    // ── Instant session (MindShift Scribe — no prior appointment) ───────────
+    if (mode === "instant") {
+      if (!patientId) {
+        return jsonWithCors(req, { error: "patientId is required for instant telehealth" }, 400);
+      }
 
-    if (wherebyRes.ok) {
-      const wherebyData = await wherebyRes.json();
-      telehealth_url = wherebyData.roomUrl ?? null;
+      let resolvedEmail: string | null = patientEmail ?? null;
+      if (!resolvedEmail) {
+        const { data: userData } = await supabase.auth.admin.getUserById(patientId);
+        resolvedEmail = userData?.user?.email ?? null;
+      }
 
-      // Update appointment with telehealth_url and confirmed status
+      if (!telehealth_url) {
+        return jsonWithCors(req, { error: "Failed to create Whereby room" }, 502);
+      }
+
+      const { data: appt, error: insertErr } = await supabase
+        .from("appointments")
+        .insert({
+          patient_id: patientId,
+          name: patientName || "Patient",
+          email: resolvedEmail,
+          appointment_type: "telehealth",
+          scheduled_at: startAt,
+          status: "confirmed",
+          telehealth_url,
+          provider_name: providerName || "Kenneth Mutegyeki, PMHNP-BC",
+          location: "Telehealth (Video)",
+          notes: "Instant telehealth session started from MindShift Scribe",
+          duration_minutes: 60,
+        })
+        .select("id")
+        .single();
+
+      if (insertErr) {
+        console.error("Instant appointment insert error:", insertErr);
+        return jsonWithCors(req, { error: insertErr.message }, 500);
+      }
+
+      return jsonWithCors(req, {
+        telehealth_url,
+        appointmentId: appt?.id,
+        patientEmail: resolvedEmail,
+        status: "confirmed",
+      });
+    }
+
+    // ── Existing appointment confirmation ───────────────────────────────────
+    if (!appointmentId) {
+      return jsonWithCors(req, { telehealth_url, status: "confirmed" });
+    }
+
+    if (telehealth_url) {
       await supabase
         .from("appointments")
         .update({ telehealth_url, status: "confirmed" })
         .eq("id", appointmentId);
     } else {
-      const errText = await wherebyRes.text();
-      console.error("Whereby API error:", wherebyRes.status, errText);
-
-      // Still confirm the appointment, leave telehealth_url null
       await supabase
         .from("appointments")
         .update({ status: "confirmed" })

@@ -3,6 +3,7 @@ import { useAuth } from "../lib/AuthContext";
 import { getChartsForPicker, chartDisplayName, matchesChartSearch, getPatientAppointments } from "../lib/ehrDb";
 import { getIntakesWithoutCharts, matchesIntakeSearch } from "../lib/intakeDb";
 import { sessionWindowState, pickTelehealthAppointment, formatApptDateTime } from "../lib/telehealthUtils";
+import { startInstantTelehealthSession, ensureAppointmentTelehealthRoom } from "../lib/telehealthDb";
 import {
   createScribeSession,
   saveGeneratedNote,
@@ -285,6 +286,7 @@ export default function AIScribe({ onBack }) {
     sessionType: 'Follow-up',
     duration: '',
     modality: 'Telehealth',
+    telehealthUrl: null,
     transcript: '',
     patientContext: '',
     icd10Codes: [],
@@ -487,6 +489,7 @@ function AIScribeContent({ state, setState, data, setData, sessionId, setSession
           sessionType: 'Follow-up',
           duration: '',
           modality: 'Telehealth',
+          telehealthUrl: null,
           transcript: '',
           patientContext: '',
           icd10Codes: [],
@@ -669,9 +672,20 @@ function PatientPicker({
   );
 }
 
-function TelehealthJoinPanel({ patientUuid, serviceDate }) {
+function TelehealthJoinPanel({
+  patientUuid,
+  patientName,
+  providerName,
+  serviceDate,
+  telehealthUrl,
+  onTelehealthUrl,
+}) {
   const [loading, setLoading] = useState(false);
+  const [starting, setStarting] = useState(false);
   const [appt, setAppt] = useState(null);
+  const [startError, setStartError] = useState("");
+  const [patientNotified, setPatientNotified] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!patientUuid) {
@@ -686,7 +700,7 @@ function TelehealthJoinPanel({ patientUuid, serviceDate }) {
       setLoading(false);
     });
     return () => { cancelled = true; };
-  }, [patientUuid, serviceDate]);
+  }, [patientUuid, serviceDate, telehealthUrl]);
 
   const panelStyle = {
     marginTop: 4,
@@ -694,6 +708,66 @@ function TelehealthJoinPanel({ patientUuid, serviceDate }) {
     borderRadius: 12,
     border: "1px solid rgba(14,165,160,0.35)",
     background: "rgba(14,165,160,0.08)",
+  };
+
+  const joinBtnStyle = {
+    background: "linear-gradient(135deg,#4a6cf7,#0ea5a0)",
+    border: "none",
+    borderRadius: 20,
+    padding: "8px 18px",
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: "pointer",
+    width: "100%",
+  };
+
+  const activeUrl = telehealthUrl || appt?.telehealth_url || null;
+
+  const handleStartNow = async () => {
+    setStartError("");
+    setStarting(true);
+    try {
+      if (appt?.id && !appt.telehealth_url) {
+        const { data, error } = await ensureAppointmentTelehealthRoom(appt.id, appt.scheduled_at);
+        if (error) throw new Error(error);
+        if (!data?.telehealth_url) throw new Error("Could not create video room.");
+        onTelehealthUrl?.(data.telehealth_url);
+        setAppt({ ...appt, telehealth_url: data.telehealth_url, status: "confirmed" });
+        window.open(data.telehealth_url, "_blank");
+        return;
+      }
+
+      const { data, error } = await startInstantTelehealthSession({
+        patientUuid,
+        patientName,
+        providerName,
+      });
+      if (error) throw new Error(error);
+      onTelehealthUrl?.(data.telehealth_url);
+      setPatientNotified(true);
+      setAppt({
+        id: data.appointmentId,
+        scheduled_at: new Date().toISOString(),
+        telehealth_url: data.telehealth_url,
+        appointment_type: "telehealth",
+        status: "confirmed",
+      });
+      window.open(data.telehealth_url, "_blank");
+    } catch (err) {
+      setStartError(err.message || "Failed to start video session.");
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (!activeUrl) return;
+    try {
+      await navigator.clipboard.writeText(activeUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (_) {}
   };
 
   if (!patientUuid) {
@@ -715,64 +789,72 @@ function TelehealthJoinPanel({ patientUuid, serviceDate }) {
     );
   }
 
-  if (!appt) {
-    return (
-      <div style={panelStyle}>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>📹 Telehealth Video</div>
-        <p style={{ fontSize: 12, color: "var(--muted)", margin: 0, lineHeight: 1.5 }}>
-          No telehealth appointment found for this patient. Schedule one in{" "}
-          <strong style={{ color: "var(--white)" }}>MindShift EHR → Schedule</strong>, confirm it, and a
-          Whereby video link is created automatically.
-        </p>
-      </div>
-    );
-  }
-
-  const winState = sessionWindowState(appt.scheduled_at, appt.telehealth_url);
-  const apptLabel = formatApptDateTime(appt.scheduled_at);
+  const winState = appt?.scheduled_at
+    ? sessionWindowState(appt.scheduled_at, activeUrl)
+    : null;
+  const apptLabel = appt?.scheduled_at ? formatApptDateTime(appt.scheduled_at) : null;
 
   return (
     <div style={panelStyle}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 8 }}>
         <div style={{ fontSize: 13, fontWeight: 600 }}>📹 Telehealth Video</div>
-        <span style={{ fontSize: 11, color: "var(--muted)", textAlign: "right" }}>{apptLabel}</span>
+        {apptLabel && (
+          <span style={{ fontSize: 11, color: "var(--muted)", textAlign: "right" }}>{apptLabel}</span>
+        )}
       </div>
 
-      {appt.telehealth_url ? (
+      {activeUrl ? (
         <>
-          <button
-            type="button"
-            onClick={() => window.open(appt.telehealth_url, "_blank")}
-            style={{
-              background: "linear-gradient(135deg,#4a6cf7,#0ea5a0)",
-              border: "none",
-              borderRadius: 20,
-              padding: "8px 18px",
-              color: "#fff",
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: "pointer",
-              width: "100%",
-            }}
-          >
+          <button type="button" onClick={() => window.open(activeUrl, "_blank")} style={{ ...joinBtnStyle, marginBottom: 8 }}>
             Join Video Session with Patient
           </button>
-          {winState === "before_window" && (
-            <p style={{ fontSize: 11, color: "var(--muted)", margin: "8px 0 0", lineHeight: 1.4 }}>
-              Patient portal opens 10 minutes before the appointment. You can join now as the clinician.
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            style={{
+              ...joinBtnStyle,
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid var(--border)",
+              color: "var(--white)",
+              marginBottom: 8,
+            }}
+          >
+            {copied ? "✓ Link copied" : "Copy join link for patient"}
+          </button>
+          {patientNotified && (
+            <p style={{ fontSize: 11, color: "var(--teal)", margin: "0 0 8px", lineHeight: 1.4 }}>
+              ✓ Patient notified via portal message{appt?.telehealth_url ? " and email (if on file)" : ""}.
             </p>
           )}
-          {winState === "after_window" && (
-            <p style={{ fontSize: 11, color: "var(--muted)", margin: "8px 0 0", lineHeight: 1.4 }}>
-              This appointment window has passed. The link may still work if the room is active.
+          {winState === "before_window" && !patientNotified && (
+            <p style={{ fontSize: 11, color: "var(--muted)", margin: "0 0 8px", lineHeight: 1.4 }}>
+              Patient portal opens 10 minutes before the scheduled time. You can join now as the clinician.
             </p>
           )}
         </>
       ) : (
-        <p style={{ fontSize: 12, color: "var(--muted)", margin: 0, lineHeight: 1.5 }}>
-          Video link coming soon — confirm this appointment in{" "}
-          <strong style={{ color: "var(--white)" }}>MindShift EHR → Schedule</strong> to generate the room.
-        </p>
+        <>
+          <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 10px", lineHeight: 1.5 }}>
+            {appt
+              ? "This appointment does not have a video link yet."
+              : "No telehealth appointment scheduled — start a session immediately if the patient needs to talk now."}
+          </p>
+          <button
+            type="button"
+            onClick={handleStartNow}
+            disabled={starting}
+            style={{ ...joinBtnStyle, opacity: starting ? 0.7 : 1 }}
+          >
+            {starting ? "Starting video session…" : "⚡ Start Video Session Now"}
+          </button>
+          <p style={{ fontSize: 11, color: "var(--muted)", margin: "8px 0 0", lineHeight: 1.4 }}>
+            Creates a Whereby room, notifies the patient in their portal, and opens video for you.
+          </p>
+        </>
+      )}
+
+      {startError && (
+        <p style={{ fontSize: 11, color: "var(--rose)", margin: "8px 0 0", lineHeight: 1.4 }}>{startError}</p>
       )}
     </div>
   );
@@ -877,7 +959,14 @@ function SessionSetup({ data, setData, onStart }) {
             <SelectField label="Session Type" value={data.sessionType} onChange={e => setData({ ...data, sessionType: e.target.value })} options={sessionTypes} />
             <SelectField label="Modality" value={data.modality} onChange={e => setData({ ...data, modality: e.target.value })} options={modalities} />
             {data.modality === "Telehealth" && (
-              <TelehealthJoinPanel patientUuid={data.patientUuid} serviceDate={data.dateOfService} />
+              <TelehealthJoinPanel
+                patientUuid={data.patientUuid}
+                patientName={data.patientName}
+                providerName={data.providerName}
+                serviceDate={data.dateOfService}
+                telehealthUrl={data.telehealthUrl}
+                onTelehealthUrl={(url) => setData({ ...data, telehealthUrl: url })}
+              />
             )}
             <InputField label="Duration (minutes)" type="number" value={data.duration} onChange={e => setData({ ...data, duration: e.target.value })} placeholder="45" />
           </div>
@@ -1275,7 +1364,14 @@ function DuringVisit({ data, setData, sessionId, onComplete }) {
     <div style={{ maxWidth: 800, margin: "0 auto", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
 
       {data.modality === "Telehealth" && (
-        <TelehealthJoinPanel patientUuid={data.patientUuid} serviceDate={data.dateOfService} />
+        <TelehealthJoinPanel
+          patientUuid={data.patientUuid}
+          patientName={data.patientName}
+          providerName={data.providerName}
+          serviceDate={data.dateOfService}
+          telehealthUrl={data.telehealthUrl}
+          onTelehealthUrl={(url) => setData({ ...data, telehealthUrl: url })}
+        />
       )}
 
       {/* Mic error banner */}

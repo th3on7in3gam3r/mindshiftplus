@@ -31,3 +31,4 @@ export const emailPatientMessageReceived = (data) => send("patient_message_recei
 export const emailAppointmentReminder   = (data) => send("appointment_reminder",   data);
 export const emailIntakeSubmitted       = (data) => send("intake_submitted",       data);
 export const emailTelehealthReminder    = (data) => send("telehealth_reminder",    data);
+export const emailInstantTelehealth     = (data) => send("telehealth_instant",     data);
