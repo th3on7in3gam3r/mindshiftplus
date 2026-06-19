@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useAuth } from "../lib/AuthContext";
-import { getAllCharts } from "../lib/ehrDb";
+import { getChartsForPicker, chartDisplayName, matchesChartSearch } from "../lib/ehrDb";
 import {
   createScribeSession,
   saveGeneratedNote,
@@ -532,28 +532,16 @@ function SessionSetup({ data, setData, onStart }) {
     : GALLERY_TEMPLATES.filter(t => t.specialty === templateFilter);
 
   useEffect(() => {
-    getAllCharts().then(({ data: chartList }) => {
+    getChartsForPicker().then(({ data: chartList }) => {
       setCharts(chartList ?? []);
       setChartsLoading(false);
     });
   }, []);
 
-  const sortedCharts = useMemo(
-    () => [...charts].sort((a, b) =>
-      (a.full_name || "Unknown").localeCompare(b.full_name || "Unknown", undefined, { sensitivity: "base" })
-    ),
-    [charts]
-  );
-
   const filteredCharts = useMemo(() => {
-    const q = patientSearch.trim().toLowerCase();
-    if (!q) return sortedCharts;
-    return sortedCharts.filter((c) => {
-      const name = (c.full_name || "").toLowerCase();
-      const mrn = (c.mrn || "").toLowerCase();
-      return name.includes(q) || mrn.includes(q);
-    });
-  }, [sortedCharts, patientSearch]);
+    if (!patientSearch.trim()) return charts;
+    return charts.filter((c) => matchesChartSearch(c, patientSearch));
+  }, [charts, patientSearch]);
 
   const handleSelectTemplate = (tpl) => {
     setSelectedTemplate(tpl);
@@ -567,8 +555,8 @@ function SessionSetup({ data, setData, onStart }) {
     setData({
       ...data,
       patientChartId: chart.id,
-      patientId: chart.mrn || chart.full_name || chart.id,
-      patientName: chart.full_name || chart.mrn || 'Unknown',
+      patientId: chart.mrn || chart.display_name || chart.id,
+      patientName: chartDisplayName(chart),
     });
   };
 
@@ -625,14 +613,14 @@ function SessionSetup({ data, setData, onStart }) {
                   ) : (
                     filteredCharts.map((c) => (
                       <option key={c.id} value={c.id} style={{ background: "var(--midnight)" }}>
-                        {c.full_name || 'Unknown'}{c.mrn ? ` (${c.mrn})` : ''}
+                        {chartDisplayName(c)}{c.mrn ? ` (${c.mrn})` : ''}
                       </option>
                     ))
                   )}
                 </select>
-                {!patientSearch && sortedCharts.length > 0 && (
+                {!patientSearch && charts.length > 0 && (
                   <div style={{ fontSize: 11, color: "var(--muted2)", marginTop: 4 }}>
-                    {sortedCharts.length} patients · A–Z
+                    {charts.length} patients · A–Z
                   </div>
                 )}
               </>

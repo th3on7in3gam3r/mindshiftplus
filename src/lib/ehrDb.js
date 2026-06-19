@@ -31,6 +31,71 @@ export async function getAllCharts() {
   return { data, error };
 }
 
+/** Display name for a chart row (picker, lists). */
+export function chartDisplayName(chart) {
+  return chart?.display_name || chart?.full_name?.trim() || chart?.mrn || "Unknown Patient";
+}
+
+/**
+ * Charts for dropdowns — merges names from chart, intake, and patient profile.
+ * Sorted A–Z by display name.
+ */
+export async function getChartsForPicker() {
+  const { data: charts, error } = await supabase.from("ehr_charts").select("*");
+  if (error) return { data: null, error };
+
+  const patientIds = [...new Set((charts ?? []).map((c) => c.patient_id).filter(Boolean))];
+  const intakeMap = {};
+  const profileMap = {};
+
+  if (patientIds.length) {
+    const [{ data: intakes }, { data: profiles }] = await Promise.all([
+      supabase.from("intake_submissions").select("patient_id, full_name, phone").in("patient_id", patientIds),
+      supabase.from("patient_profiles").select("id, full_name, phone").in("id", patientIds),
+    ]);
+    for (const i of intakes ?? []) intakeMap[i.patient_id] = i;
+    for (const p of profiles ?? []) profileMap[p.id] = p;
+  }
+
+  const enriched = (charts ?? []).map((c) => {
+    const intake = intakeMap[c.patient_id];
+    const profile = profileMap[c.patient_id];
+    const display_name =
+      c.full_name?.trim() ||
+      intake?.full_name?.trim() ||
+      profile?.full_name?.trim() ||
+      c.mrn ||
+      "Unknown Patient";
+    return {
+      ...c,
+      display_name,
+      phone: c.phone || intake?.phone || profile?.phone || null,
+    };
+  });
+
+  enriched.sort((a, b) =>
+    a.display_name.localeCompare(b.display_name, undefined, { sensitivity: "base" })
+  );
+
+  return { data: enriched, error: null };
+}
+
+/** Match patient search — each word must appear in name, MRN, or phone. */
+export function matchesChartSearch(chart, query) {
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return true;
+  const haystack = [
+    chart.display_name,
+    chart.full_name,
+    chart.mrn,
+    chart.phone,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return words.every((w) => haystack.includes(w));
+}
+
 export async function getChart(chartId) {
   const { data, error } = await supabase
     .from("ehr_charts")
