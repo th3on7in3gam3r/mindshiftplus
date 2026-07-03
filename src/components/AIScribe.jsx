@@ -4,6 +4,8 @@ import { getChartsForPicker, chartDisplayName, matchesChartSearch, getPatientApp
 import { getIntakesWithoutCharts, matchesIntakeSearch } from "../lib/intakeDb";
 import { sessionWindowState, pickTelehealthAppointment, formatApptDateTime } from "../lib/telehealthUtils";
 import { startInstantTelehealthSession, ensureAppointmentTelehealthRoom } from "../lib/telehealthDb";
+import HeidiScribeButton from "./clinical/HeidiScribeButton";
+import HeidiWidgetHost from "./clinical/HeidiWidgetHost";
 import {
   createScribeSession,
   saveGeneratedNote,
@@ -271,6 +273,11 @@ function TemplatePreviewModal({ template, onClose, onSelect }) {
 
 export default function AIScribe({ onBack, onOpenDocs }) {
   const { user } = useAuth();
+  const scribeClinician = user ? {
+    user_id: user.id,
+    full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "Clinician",
+    title: "PMHNP-BC",
+  } : null;
   const [scribeState, setScribeState] = useState('setup'); // 'setup' | 'during' | 'after'
   const [currentSessionId, setCurrentSessionId] = useState(null);
   const [savedSessions, setSavedSessions] = useState([]);
@@ -321,6 +328,11 @@ export default function AIScribe({ onBack, onOpenDocs }) {
       padding: "1.5rem",
       paddingBottom: "90px"
     }}>
+      <HeidiWidgetHost
+        clinician={scribeClinician}
+        chartId={sessionData.patientChartId}
+        chartPatientName={sessionData.patientName}
+      />
       {/* Header */}
       <div style={{
         maxWidth: 1400,
@@ -373,6 +385,14 @@ export default function AIScribe({ onBack, onOpenDocs }) {
             <Btn variant="secondary" small onClick={() => setShowArchive(!showArchive)}>
               📁 {showArchive ? "Hide" : "Archive"} ({savedSessions.length})
             </Btn>
+            <HeidiScribeButton
+              patient={{
+                id: sessionData.patientUuid || sessionData.patientChartId || sessionData.patientId,
+                name: sessionData.patientName,
+              }}
+              context={sessionData.patientContext || undefined}
+              label="Heidi Scribe"
+            />
             {onOpenDocs && (
               <Btn variant="secondary" small onClick={onOpenDocs}>
                 📖 Docs
@@ -955,6 +975,12 @@ function SessionSetup({ data, setData, onStart }) {
             </div>
             <InputField label="Date of Service" type="date" value={data.dateOfService} onChange={e => setData({ ...data, dateOfService: e.target.value })} />
             <InputField label="Provider Name *" value={data.providerName} onChange={e => setData({ ...data, providerName: e.target.value })} placeholder="Dr. Jane Smith" />
+            <div style={{
+              background: "rgba(78,205,196,0.08)", border: "1px solid rgba(78,205,196,0.25)",
+              borderRadius: 10, padding: "0.65rem 0.85rem", fontSize: 12, color: "var(--muted)", lineHeight: 1.55,
+            }}>
+              <strong style={{ color: "#5eead4" }}>Importing from Heidi?</strong> Start the session, then paste your Heidi transcript or note on the next screen (Manual Transcript). Full steps: Clinical Suite → <strong style={{ color: "var(--lavender)" }}>Docs</strong> → <em>Export from Heidi → Import to MindShift</em>.
+            </div>
           </div>
         </GlassCard>
 
@@ -1405,7 +1431,7 @@ function DuringVisit({ data, setData, sessionId, onComplete }) {
             Manual Transcript
           </h3>
           <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: "0.75rem" }}>
-            Live transcription wasn't available. Type or paste the session notes here — they'll be used to generate the progress note.
+            Type or paste session notes here — including text copied from Heidi. They'll be used to generate the progress note.
           </p>
           <textarea
             value={data.transcript}

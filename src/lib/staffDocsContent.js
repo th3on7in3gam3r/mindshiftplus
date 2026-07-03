@@ -3,7 +3,7 @@
 export const STAFF_DOC_META = {
   title: "MindShift Staff Docs",
   subtitle: "Help guide for Kenneth, Rachel, and clinic staff",
-  lastUpdated: "June 2026",
+  lastUpdated: "July 2026",
   clinicPhone: "(508) 306-1128",
   clinicEmail: "info@mindshiftwellnessclinic.org",
   website: "https://mindshiftwellnessclinic.org",
@@ -14,7 +14,9 @@ export const STAFF_DOC_QUICK_LINKS = [
   { label: "Confirm an appointment", anchor: "admin-appointments" },
   { label: "Find a patient ID", anchor: "patient-lookup" },
   { label: "Record & push a note", anchor: "scribe-workflow" },
-  { label: "Start telehealth video", anchor: "telehealth" },
+  { label: "Heidi AI Scribe (pilot)", anchor: "heidi-scribe" },
+  { label: "Import notes from Heidi", anchor: "heidi-export-import" },
+  { label: "Heidi AI Scribe (pilot)", anchor: "heidi-scribe" },
   { label: "Clinic schedule / off days", anchor: "scheduling-hours" },
 ];
 
@@ -218,6 +220,154 @@ If the list is empty, create the chart in EHR first (Intakes → Create Chart, o
 • Try again; the app shows specific error text if the chart cannot be found
 
 If it keeps failing, note the patient name and error message and contact the site administrator.`,
+      },
+    ],
+  },
+  {
+    id: "heidi-export-import",
+    icon: "📤",
+    title: "Export from Heidi → Import to MindShift",
+    items: [
+      {
+        q: "Can I move my old Heidi notes into MindShift automatically?",
+        a: `**No automatic bulk import exists today.** Heidi and MindShift are separate systems. There is no one-click “sync all Heidi sessions” button.
+
+You **can** bring notes over manually in a few minutes per patient using the steps below. For day-to-day work, use **MindShift Scribe** going forward—you do not need to keep using Heidi.`,
+      },
+      {
+        q: "Step 1 — Export from Heidi (copy or download)",
+        a: `Open the session in **Heidi** (web app at scribe.heidihealth.com or the Heidi mobile app).
+
+**Option A — Copy note (most common)**
+1. Open the completed session / consult note
+2. Click **Copy** (or the dropdown next to Copy for formatted text)
+3. The full note is now on your clipboard
+
+**Option B — Export a document as PDF or Word**
+1. Open the document (referral letter, summary, etc.)
+2. Click the **⋮** (three dots) menu on the document
+3. Choose **Export as PDF** or **Word** if available
+4. Open the file and copy the text you need
+
+**Option C — Copy transcript only**
+If Heidi shows a separate transcript, copy that too—you can paste it into MindShift Scribe to regenerate a note.
+
+**Tip:** Export one patient visit at a time. Match the patient name in Heidi to the correct chart in MindShift EHR before importing.`,
+      },
+      {
+        q: "Step 2A — Import a FINISHED note into MindShift EHR (fastest)",
+        a: `Use this when Heidi already generated a note you are happy with and you just need it in the chart.
+
+1. **Clinical Suite → MindShift EHR**
+2. Open the **patient chart** (search by name or MRN)
+3. Click the **📝 Notes** tab
+4. Click **+ New Note**
+5. Set **Note Date** and **Note Type** (usually Progress Note)
+6. Paste Heidi content:
+   • If the note is one block → paste into **Subjective** or **Assessment**
+   • If Heidi used SOAP sections → paste each section into **Subjective**, **Objective**, **Assessment**, **Plan**
+7. Click **Save Note**
+8. Review, then click **Sign** when ready
+
+The note is now part of the official MindShift EHR chart. Patients do not see unsigned notes in the portal until your workflow shares them.`,
+      },
+      {
+        q: "Step 2B — Import via MindShift Scribe (keeps Scribe history)",
+        a: `Use this when you want the visit stored in **MindShift Scribe** (archive + Push to EHR) or you only have a **transcript** from Heidi.
+
+1. **Clinical Suite → MindShift Scribe**
+2. **Select the patient** from the MindShift EHR dropdown
+3. Set date of service, session type, and note template
+4. Click **Start Session**
+5. On the recording screen:
+   • You do **not** need to record again
+   • Scroll to **Manual Transcript** (or paste area)
+   • **Paste** the Heidi transcript or full note text
+6. Click **Complete Session** / finish the visit
+7. Review the generated progress note
+8. Click **Push to MindShift EHR**
+
+The note appears under the patient's **🎙️ MindShift Scribe** tab and **📝 Notes** tab in EHR.`,
+      },
+      {
+        q: "How do I map Heidi SOAP sections to MindShift?",
+        a: `When pasting into **EHR → Notes → + New Note**, use this mapping:
+
+• Chief complaint / HPI → **Presenting Concerns** or **Subjective**
+• Mental status / exam → **Objective**
+• Assessment / impression → **Assessment**
+• Plan / recommendations → **Plan**
+• Follow-up → **Follow-up Instructions**
+
+If Heidi gave one combined note with no sections, paste the full text into **Subjective** or **Assessment**, then split manually if needed.`,
+      },
+      {
+        q: "What about multiple Heidi sessions for one patient?",
+        a: `Repeat the import for **each visit**:
+1. Export that session from Heidi
+2. Import to MindShift with the **correct visit date** on the note
+
+There is no batch import. For many sessions, prioritize recent visits first, then older charts as time allows.`,
+      },
+      {
+        q: "Going forward — do I still need Heidi?",
+        a: `**No.** MindShift Scribe already records sessions, generates psychiatric note templates, and pushes to the EHR.
+
+Use this import guide only for **historical notes** already in Heidi. New visits should be documented in **MindShift Scribe** only.`,
+      },
+      {
+        q: "Troubleshooting import",
+        a: `**Patient not in dropdown (Scribe)** — Create the chart first: EHR → Intakes → Create Chart, or **+ New Patient Chart**.
+
+**Paste lost formatting** — Bullet lists may flatten; that's normal. Reformat in EHR Notes before signing.
+
+**Note won't save** — Ensure **Full Name** exists on the chart and you are signed in as clinic staff.
+
+**Heidi PDF won't copy well** — Open PDF, select all text, copy, or re-type key sections into EHR Notes.
+
+For technical issues, contact the site administrator with patient name, visit date, and what step failed.`,
+      },
+    ],
+  },
+  {
+    id: "heidi-scribe",
+    icon: "🩺",
+    title: "Heidi AI Scribe (Pilot)",
+    items: [
+      {
+        q: "What is Heidi and where do I open it?",
+        a: `**Heidi** is a third-party AI clinical scribe ([heidihealth.com](https://www.heidihealth.com/en-us)). MindShift includes a **pilot widget** so you can use Heidi inside the EHR without leaving the chart.
+
+Click **🩺 Heidi Scribe** from:
+• **MindShift EHR** → open a patient chart (top right), or
+• **MindShift Scribe** header (select a patient first for best results)
+
+The Heidi panel opens in the bottom-right of your screen.`,
+      },
+      {
+        q: "First-time Heidi setup for clinicians",
+        a: `The first time you open Heidi, you will be asked to **sign in or create a Heidi account**. Heidi links that account to your MindShift login.
+
+Heidi requires a **Together** plan for full widget use. Integrated users get a **30-day free trial** (no card required) per Heidi's integration docs.
+
+If the button says Heidi is not configured, the clinic admin must add **HEIDI_API_KEY** in Supabase secrets and deploy the \`heidi\` edge function.`,
+      },
+      {
+        q: "How do I push a Heidi note into MindShift EHR?",
+        a: `1. Open Heidi from a **patient chart** in MindShift EHR (so the chart is linked)
+2. Record or dictate in Heidi as usual
+3. In Heidi, click **Push Note** (or Push Document)
+4. MindShift saves a **draft progress note** to that patient's **Notes** tab
+5. Review and **sign** the note in EHR as you normally would
+
+**Tip:** Open the patient chart in EHR before pushing. If you push without a chart open, Heidi still saves the note in Heidi's library—you can copy it manually.`,
+      },
+      {
+        q: "Heidi vs MindShift Scribe — which should I use?",
+        a: `• **MindShift Scribe (recommended)** — built-in recording, templates, telehealth, and Push to EHR
+• **Heidi** — optional; only if you already use it or are migrating old notes (see **Export from Heidi → Import to MindShift**)
+
+For new visits, use MindShift Scribe only. Use the import guide for old Heidi content.`,
       },
     ],
   },
