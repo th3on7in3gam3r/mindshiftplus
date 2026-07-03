@@ -14,9 +14,8 @@ export const STAFF_DOC_QUICK_LINKS = [
   { label: "Confirm an appointment", anchor: "admin-appointments" },
   { label: "Find a patient ID", anchor: "patient-lookup" },
   { label: "Record & push a note", anchor: "scribe-workflow" },
-  { label: "Heidi AI Scribe (pilot)", anchor: "heidi-scribe" },
+  { label: "Bill insurance (superbill)", anchor: "insurance-billing" },
   { label: "Import notes from Heidi", anchor: "heidi-export-import" },
-  { label: "Heidi AI Scribe (pilot)", anchor: "heidi-scribe" },
   { label: "Clinic schedule / off days", anchor: "scheduling-hours" },
 ];
 
@@ -330,44 +329,52 @@ For technical issues, contact the site administrator with patient name, visit da
     ],
   },
   {
-    id: "heidi-scribe",
-    icon: "🩺",
-    title: "Heidi AI Scribe (Pilot)",
+    id: "insurance-billing",
+    icon: "💰",
+    title: "Insurance Billing (Phase 1)",
     items: [
       {
-        q: "What is Heidi and where do I open it?",
-        a: `**Heidi** is a third-party AI clinical scribe ([heidihealth.com](https://www.heidihealth.com/en-us)). MindShift includes a **pilot widget** so you can use Heidi inside the EHR without leaving the chart.
+        q: "How do we bill insurance companies in MindShift?",
+        a: `MindShift **prepares** insurance claims and **prints superbills** — it does **not** electronically submit to payers yet (that requires a clearinghouse in a future phase).
 
-Click **🩺 Heidi Scribe** from:
-• **MindShift EHR** → open a patient chart (top right), or
-• **MindShift Scribe** header (select a patient first for best results)
-
-The Heidi panel opens in the bottom-right of your screen.`,
+**Workflow:**
+1. Ensure patient **insurance** is on the chart (Overview or Intake)
+2. **Sign** the visit note with **CPT codes** attached
+3. **EHR → Insurance** → **+ Create Claim** from the signed note (or patient chart → **Billing** tab)
+4. Enter **amount billed**, verify ICD-10 and insurance info
+5. Click **🖨 Superbill** → Print / Save PDF
+6. Submit the superbill via your clearinghouse portal, fax, or mail
+7. **Mark Submitted** and update status when the payer responds (accepted / denied / paid)`,
       },
       {
-        q: "First-time Heidi setup for clinicians",
-        a: `The first time you open Heidi, you will be asked to **sign in or create a Heidi account**. Heidi links that account to your MindShift login.
+        q: "Where do I add Kenneth and Rachel's NPI numbers?",
+        a: `**EHR → Billing** (top nav) → **Billing Settings**
 
-Heidi requires a **Together** plan for full widget use. Integrated users get a **30-day free trial** (no card required) per Heidi's integration docs.
+Enter each provider's **10-digit NPI** when available. Superbills will show a warning until NPI is set.
 
-If the button says Heidi is not configured, the clinic admin must add **HEIDI_API_KEY** in Supabase secrets and deploy the \`heidi\` edge function.`,
+Taxonomy is pre-filled for psychiatric NP (\`363LP0808X\`).`,
       },
       {
-        q: "How do I push a Heidi note into MindShift EHR?",
-        a: `1. Open Heidi from a **patient chart** in MindShift EHR (so the chart is linked)
-2. Record or dictate in Heidi as usual
-3. In Heidi, click **Push Note** (or Push Document)
-4. MindShift saves a **draft progress note** to that patient's **Notes** tab
-5. Review and **sign** the note in EHR as you normally would
+        q: "What's the difference between Insurance Claims and Invoices?",
+        a: `• **Insurance Claims** (EHR → Insurance) — for billing **insurance companies**. Creates a draft claim + superbill. Patients do **not** see these in the portal.
 
-**Tip:** Open the patient chart in EHR before pushing. If you push without a chart open, Heidi still saves the note in Heidi's library—you can copy it manually.`,
+• **Invoices** (EHR → Invoices) — for **patient self-pay** balances sent to the **Patient Portal**.
+
+Do not use Invoices for insurance submission.`,
       },
       {
-        q: "Heidi vs MindShift Scribe — which should I use?",
-        a: `• **MindShift Scribe (recommended)** — built-in recording, templates, telehealth, and Push to EHR
-• **Heidi** — optional; only if you already use it or are migrating old notes (see **Export from Heidi → Import to MindShift**)
+        q: "What if the note has no CPT code?",
+        a: `Open the visit note → add CPT codes with the picker → **sign** the note → then create the claim.
 
-For new visits, use MindShift Scribe only. Use the import guide for old Heidi content.`,
+You can still create a claim without CPT, but the superbill will be incomplete until CPT codes are added.`,
+      },
+      {
+        q: "Telehealth visits — place of service?",
+        a: `When editing a claim, set **Place of Service** to:
+• **02** or **10** — Telehealth
+• **11** — Office (in-person)
+
+Match what you documented for the visit.`,
       },
     ],
   },

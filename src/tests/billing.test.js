@@ -8,9 +8,15 @@ import {
   filterCptCodes,
   computePatientBalance,
   validateFinancials,
+  buildClaimPayloadFromNote,
+  icd10FromNoteAndChart,
+  resolveRenderingProvider,
+  superbillNumber,
+  placeOfServiceLabel,
   createClaim,
   deleteClaim,
   updateClaim,
+  DEFAULT_BILLING_SETTINGS,
 } from "../lib/billingDb.js";
 
 // ── UNIT TESTS ─────────────────────────────────────────────────────────────────
@@ -379,5 +385,49 @@ describe("P5: non-draft claims cannot be deleted", () => {
       ),
       { numRuns: 50 }
     );
+  });
+});
+
+describe("icd10FromNoteAndChart", () => {
+  it("prefers note diagnoses", () => {
+    const result = icd10FromNoteAndChart(
+      { diagnoses: [{ code: "F41.1", label: "GAD" }] },
+      { primary_diagnosis: "F32.9" }
+    );
+    expect(result).toEqual([{ code: "F41.1", label: "GAD" }]);
+  });
+
+  it("falls back to chart primary diagnosis", () => {
+    const result = icd10FromNoteAndChart({}, { primary_diagnosis: "F32.9", primary_diagnosis_label: "Depression" });
+    expect(result).toEqual([{ code: "F32.9", label: "Depression" }]);
+  });
+});
+
+describe("buildClaimPayloadFromNote", () => {
+  it("builds insurance claim draft from note and chart", () => {
+    const payload = buildClaimPayloadFromNote({
+      note: { id: "n1", note_date: "2026-07-01", cpt_codes: [{ code: "90834", description: "Psychotherapy 45 min" }], diagnoses: [] },
+      chart: { id: "c1", patient_id: "p1", insurance_provider: "Aetna", insurance_member_id: "123", insurance_group: "G1", primary_diagnosis: "F41.1", primary_diagnosis_label: "GAD" },
+      clinician: { user_id: "u1", full_name: "Kenneth Mutegyeki" },
+      settings: DEFAULT_BILLING_SETTINGS,
+    });
+    expect(payload.claim_type).toBe("insurance_claim");
+    expect(payload.note_id).toBe("n1");
+    expect(payload.cpt_codes[0].code).toBe("90834");
+    expect(payload.icd10_codes[0].code).toBe("F41.1");
+    expect(payload.insurance_provider).toBe("Aetna");
+    expect(payload.claim_status).toBe("draft");
+  });
+});
+
+describe("superbillNumber", () => {
+  it("formats superbill id", () => {
+    expect(superbillNumber({ id: "abcdef12-3456-7890-abcd-ef1234567890" })).toBe("SB-ABCDEF12");
+  });
+});
+
+describe("placeOfServiceLabel", () => {
+  it("returns label for known POS", () => {
+    expect(placeOfServiceLabel("11")).toContain("Office");
   });
 });

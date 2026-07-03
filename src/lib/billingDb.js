@@ -14,6 +14,29 @@ export const CPT_CODES = [
   { code: "99215", description: "Office visit established patient high complexity" },
 ];
 
+export const PLACE_OF_SERVICE = [
+  { code: "11", label: "11 — Office" },
+  { code: "02", label: "02 — Telehealth" },
+  { code: "10", label: "10 — Telehealth (patient home)" },
+];
+
+export const DEFAULT_BILLING_SETTINGS = {
+  clinic_name: "MindShift Wellness Clinic",
+  billing_address: "31 Granite St. Suite #2, Milford, MA 01757",
+  phone: "(508) 306-1128",
+  email: "info@mindshiftwellnessclinic.org",
+  tax_id: "",
+  providers: [
+    { name: "Kenneth Mutegyeki", title: "PMHNP-BC", npi: "1487410999", taxonomy: "363LP0808X" },
+    { name: "Rachel Nakkazi", title: "PMHNP-BC", npi: "", taxonomy: "363LP0808X" },
+  ],
+};
+
+export const CLAIM_TYPES = {
+  insurance_claim: "Insurance Claim",
+  patient_invoice: "Patient Invoice",
+};
+
 // ── PURE UTILITY FUNCTIONS ─────────────────────────────────────────────────────
 
 /**
@@ -84,6 +107,62 @@ export function validateFinancials(claim) {
   return null;
 }
 
+/** Resolve rendering provider from clinic settings by clinician name/email. */
+export function resolveRenderingProvider(clinician, settings) {
+  const providers = settings?.providers ?? DEFAULT_BILLING_SETTINGS.providers;
+  if (!clinician) return providers[0] ?? null;
+  const name = (clinician.full_name || "").toLowerCase();
+  const match = providers.find((p) => name && p.name?.toLowerCase().includes(name.split(" ")[0]));
+  return match ?? providers[0] ?? null;
+}
+
+/** Build ICD-10 array from note diagnoses or chart primary diagnosis. */
+export function icd10FromNoteAndChart(note, chart) {
+  if (Array.isArray(note?.diagnoses) && note.diagnoses.length) {
+    return note.diagnoses.map((d) => ({ code: d.code, label: d.label ?? d.description ?? "" }));
+  }
+  if (chart?.primary_diagnosis) {
+    return [{ code: chart.primary_diagnosis, label: chart.primary_diagnosis_label ?? "" }];
+  }
+  return [];
+}
+
+/** Build insurance claim draft payload from a signed note + chart. */
+export function buildClaimPayloadFromNote({ note, chart, clinician, settings }) {
+  const provider = resolveRenderingProvider(clinician, settings);
+  return {
+    claim_type: "insurance_claim",
+    patient_id: chart.patient_id,
+    chart_id: chart.id,
+    note_id: note.id,
+    appointment_id: note.appointment_id ?? null,
+    service_date: note.note_date,
+    cpt_codes: Array.isArray(note.cpt_codes) ? note.cpt_codes : [],
+    icd10_codes: icd10FromNoteAndChart(note, chart),
+    insurance_provider: chart.insurance_provider ?? null,
+    insurance_member_id: chart.insurance_member_id ?? null,
+    insurance_group: chart.insurance_group ?? null,
+    rendering_provider_name: provider?.name ?? clinician?.full_name ?? "",
+    rendering_provider_npi: provider?.npi ?? "",
+    place_of_service: "11",
+    claim_status: "draft",
+    created_by: clinician.user_id,
+    amount_billed_cents: 0,
+    amount_paid_insurance_cents: 0,
+    patient_responsibility_cents: 0,
+    copay_collected_cents: 0,
+    notes: null,
+  };
+}
+
+export function superbillNumber(claim) {
+  return `SB-${claim.id.slice(0, 8).toUpperCase()}`;
+}
+
+export function placeOfServiceLabel(code) {
+  return PLACE_OF_SERVICE.find((p) => p.code === code)?.label ?? code ?? "—";
+}
+
 // ── VALID CLAIM STATUSES ───────────────────────────────────────────────────────
 const VALID_STATUSES = ["draft", "submitted", "accepted", "denied", "paid"];
 
@@ -103,21 +182,61 @@ export async function getClaims(patientId) {
 
 /**
  * Get aggregate claims (clinician-only).
- * Optional statusFilter and limit (default 10).
+ * Optional statusFilter, claimType, and limit (default 50).
  */
-export async function getAggregateClaims({ statusFilter, limit = 10 } = {}) {
+export async function getAggregateClaims({ statusFilter, claimType, limit = 50 } = {}) {
   let query = supabase
     .from("billing_claims")
     .select("*")
     .order("service_date", { ascending: false })
     .limit(limit);
 
-  if (statusFilter) {
-    query = query.eq("claim_status", statusFilter);
-  }
+  if (statusFilter) query = query.eq("claim_status", statusFilter);
+  if (claimType) query = query.eq("claim_type", claimType);
 
   const { data, error } = await query;
   if (error) return { data, error };
+
+  const patientIds = [...new Set((data ?? []).map((c) => c.patient_id).filter(Boolean))];
+  const chartIds = [...new Set((data ?? []).map((c) => c.chart_id).filter(Boolean))];
+  let nameMap = {};
+  if (patientIds.length) {
+    const { data: charts } = await supabase
+      .from("ehr_charts")
+      .select("patient_id, full_name")
+      .in("patient_id", patientIds);
+    for (const c of charts ?? []) if (c.full_name) nameMap[c.patient_id] = c.full_name;
+  }
+  if (chartIds.length) {
+    const { data: chartsById } = await supabase
+      .from("ehr_charts")
+      .select("id, full_name, patient_id")
+      .in("id", chartIds);
+    for (const c of chartsById ?? []) {
+      if (c.full_name && c.patient_id) nameMap[c.patient_id] = c.full_name;
+    }
+  }
+
+  return {
+    data: (data ?? []).map((c) => ({ ...c, patient_name: nameMap[c.patient_id] ?? null })),
+    error: null,
+  };
+}
+
+/**
+ * Insurance claims worklist with status counts (all insurance claims, not limited sample).
+ */
+export async function getInsuranceClaimsWorklist({ statusFilter } = {}) {
+  let query = supabase
+    .from("billing_claims")
+    .select("*")
+    .eq("claim_type", "insurance_claim")
+    .order("service_date", { ascending: false });
+
+  if (statusFilter) query = query.eq("claim_status", statusFilter);
+
+  const { data, error } = await query;
+  if (error) return { data, error, counts: {} };
 
   const patientIds = [...new Set((data ?? []).map((c) => c.patient_id).filter(Boolean))];
   let nameMap = {};
@@ -129,10 +248,132 @@ export async function getAggregateClaims({ statusFilter, limit = 10 } = {}) {
     for (const c of charts ?? []) if (c.full_name) nameMap[c.patient_id] = c.full_name;
   }
 
-  return {
-    data: (data ?? []).map((c) => ({ ...c, patient_name: nameMap[c.patient_id] ?? null })),
-    error: null,
+  const claims = (data ?? []).map((c) => ({ ...c, patient_name: nameMap[c.patient_id] ?? null }));
+  const counts = VALID_STATUSES.reduce((acc, s) => {
+    acc[s] = claims.filter((c) => c.claim_status === s).length;
+    return acc;
+  }, {});
+
+  return { data: claims, error: null, counts };
+}
+
+/**
+ * Signed notes that do not yet have a billing claim.
+ */
+export async function getSignedNotesWithoutClaims() {
+  const { data: notes, error: notesError } = await supabase
+    .from("ehr_notes")
+    .select("*, ehr_charts!inner(id, patient_id, full_name, insurance_provider, insurance_member_id, insurance_group, primary_diagnosis, primary_diagnosis_label)")
+    .eq("is_signed", true)
+    .order("note_date", { ascending: false });
+
+  if (notesError) return { data: [], error: notesError };
+
+  const noteIds = (notes ?? []).map((n) => n.id);
+  if (!noteIds.length) return { data: [], error: null };
+
+  const { data: linked, error: linkError } = await supabase
+    .from("billing_claims")
+    .select("note_id")
+    .in("note_id", noteIds);
+
+  if (linkError) return { data: [], error: linkError };
+
+  const linkedSet = new Set((linked ?? []).map((r) => r.note_id));
+  const ready = (notes ?? [])
+    .filter((n) => !linkedSet.has(n.id))
+    .map((n) => ({
+      ...n,
+      chart: n.ehr_charts,
+      patient_name: n.ehr_charts?.full_name ?? "Unknown",
+    }));
+
+  return { data: ready, error: null };
+}
+
+/**
+ * Signed notes for one chart without an existing claim.
+ */
+export async function getChartNotesReadyForClaim(chartId) {
+  const { data: notes, error } = await supabase
+    .from("ehr_notes")
+    .select("*")
+    .eq("chart_id", chartId)
+    .eq("is_signed", true)
+    .order("note_date", { ascending: false });
+
+  if (error) return { data: [], error };
+
+  const noteIds = (notes ?? []).map((n) => n.id);
+  if (!noteIds.length) return { data: [], error: null };
+
+  const { data: linked } = await supabase
+    .from("billing_claims")
+    .select("note_id")
+    .in("note_id", noteIds);
+
+  const linkedSet = new Set((linked ?? []).map((r) => r.note_id));
+  return { data: (notes ?? []).filter((n) => !linkedSet.has(n.id)), error: null };
+}
+
+/** Load clinic billing settings (defaults if none saved). */
+export async function getBillingSettings() {
+  const { data, error } = await supabase
+    .from("clinic_billing_settings")
+    .select("*")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) return { data: DEFAULT_BILLING_SETTINGS, error };
+  if (!data) return { data: { ...DEFAULT_BILLING_SETTINGS }, error: null };
+  return { data, error: null };
+}
+
+/** Save clinic billing settings (upsert single row). */
+export async function saveBillingSettings(payload, userId) {
+  const { data: existing } = await supabase
+    .from("clinic_billing_settings")
+    .select("id")
+    .limit(1)
+    .maybeSingle();
+
+  const row = {
+    clinic_name: payload.clinic_name,
+    billing_address: payload.billing_address,
+    phone: payload.phone,
+    email: payload.email,
+    tax_id: payload.tax_id || null,
+    providers: payload.providers ?? DEFAULT_BILLING_SETTINGS.providers,
+    updated_by: userId,
+    updated_at: new Date().toISOString(),
   };
+
+  if (existing?.id) {
+    const { data, error } = await supabase
+      .from("clinic_billing_settings")
+      .update(row)
+      .eq("id", existing.id)
+      .select()
+      .single();
+    return { data, error };
+  }
+
+  const { data, error } = await supabase
+    .from("clinic_billing_settings")
+    .insert(row)
+    .select()
+    .single();
+  return { data, error };
+}
+
+/**
+ * Create insurance claim from signed note (pre-filled).
+ */
+export async function createClaimFromNote({ note, chart, clinician }) {
+  const { data: settings } = await getBillingSettings();
+  const payload = buildClaimPayloadFromNote({ note, chart, clinician, settings });
+  return createClaim(payload);
 }
 
 /**
@@ -203,12 +444,14 @@ export async function deleteClaim(id) {
 
 /**
  * Get billing records for a patient (patient portal, read-only).
+ * Only patient invoices — not internal insurance claim drafts.
  */
 export async function getMyBilling(patientId) {
   const { data, error } = await supabase
     .from("billing_claims")
     .select("*")
     .eq("patient_id", patientId)
+    .eq("claim_type", "patient_invoice")
     .order("service_date", { ascending: false });
   return { data, error };
 }

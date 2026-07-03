@@ -5,7 +5,11 @@ import {
 import {
   getClaims, getAggregateClaims, createClaim, updateClaim, deleteClaim,
   formatCents, parseDollars, filterCptCodes, computePatientBalance, validateFinancials,
+  getChartNotesReadyForClaim, createClaimFromNote, getBillingSettings,
+  PLACE_OF_SERVICE,
 } from "../../lib/billingDb";
+import { getChart } from "../../lib/ehrDb";
+import SuperbillPrintView from "../billing/SuperbillPrintView";
 
 // ── Status badge colors ────────────────────────────────────────────────────────
 const STATUS_COLOR = {
@@ -160,20 +164,29 @@ function DollarInput({ label, valueCents, onChange }) {
 }
 
 // ── ClaimForm ─────────────────────────────────────────────────────────────────
-function ClaimForm({ claim, chartId, patientId, createdBy, onSaved, onCancel }) {
+function ClaimForm({ claim, chartId, patientId, chart, clinician, onSaved, onCancel }) {
+  const isInsurance = (claim?.claim_type ?? "insurance_claim") === "insurance_claim";
   const [form, setForm] = useState({
     id: claim?.id,
+    claim_type: claim?.claim_type ?? "insurance_claim",
     service_date: claim?.service_date ?? new Date().toISOString().slice(0, 10),
     cpt_codes: claim?.cpt_codes ?? [],
+    icd10_codes: claim?.icd10_codes ?? [],
     amount_billed_cents: claim?.amount_billed_cents ?? 0,
     amount_paid_insurance_cents: claim?.amount_paid_insurance_cents ?? 0,
     patient_responsibility_cents: claim?.patient_responsibility_cents ?? 0,
     copay_collected_cents: claim?.copay_collected_cents ?? 0,
     claim_status: claim?.claim_status ?? "draft",
     notes: claim?.notes ?? "",
+    place_of_service: claim?.place_of_service ?? "11",
+    insurance_provider: claim?.insurance_provider ?? chart?.insurance_provider ?? "",
+    insurance_member_id: claim?.insurance_member_id ?? chart?.insurance_member_id ?? "",
+    insurance_group: claim?.insurance_group ?? chart?.insurance_group ?? "",
+    rendering_provider_name: claim?.rendering_provider_name ?? "",
+    rendering_provider_npi: claim?.rendering_provider_npi ?? "",
     chart_id: chartId,
     patient_id: patientId,
-    created_by: createdBy,
+    created_by: clinician?.user_id,
     appointment_id: claim?.appointment_id ?? null,
     note_id: claim?.note_id ?? null,
   });
@@ -211,7 +224,7 @@ function ClaimForm({ claim, chartId, patientId, createdBy, onSaved, onCancel }) 
     <form onSubmit={handleSubmit}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.2rem" }}>
         <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--ehr-text)", margin: 0 }}>
-          {form.id ? "Edit Claim" : "New Claim"}
+          {form.id ? "Edit Claim" : "New Insurance Claim"}
         </h3>
         <div style={{ display: "flex", gap: 8 }}>
           <EhrBtn variant="secondary" onClick={onCancel} type="button" small>Cancel</EhrBtn>
@@ -242,6 +255,27 @@ function ClaimForm({ claim, chartId, patientId, createdBy, onSaved, onCancel }) 
           ]} />
         </div>
 
+        {isInsurance && (
+          <>
+            <EhrSelect label="Place of Service" value={form.place_of_service} onChange={e => set("place_of_service")(e.target.value)} options={PLACE_OF_SERVICE.map(p => ({ value: p.code, label: p.label }))} />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+              <EhrInput label="Insurance" value={form.insurance_provider} onChange={setE("insurance_provider")} />
+              <EhrInput label="Member ID" value={form.insurance_member_id} onChange={setE("insurance_member_id")} />
+              <EhrInput label="Group" value={form.insurance_group} onChange={setE("insurance_group")} />
+            </div>
+            {(form.icd10_codes ?? []).length > 0 && (
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: "var(--ehr-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>ICD-10</label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+                  {form.icd10_codes.map((d) => (
+                    <EhrBadge key={d.code} color="teal">{d.code} {d.label ? `— ${d.label}` : ""}</EhrBadge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
         <CptPicker value={form.cpt_codes} onChange={set("cpt_codes")} />
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -258,8 +292,9 @@ function ClaimForm({ claim, chartId, patientId, createdBy, onSaved, onCancel }) 
 }
 
 // ── ClaimRow ──────────────────────────────────────────────────────────────────
-function ClaimRow({ claim, onEdit, onDelete }) {
+function ClaimRow({ claim, onEdit, onDelete, onPrintSuperbill }) {
   const [expanded, setExpanded] = useState(false);
+  const isInsurance = claim.claim_type !== "patient_invoice";
 
   return (
     <EhrCard style={{ marginBottom: 8 }}>
@@ -271,6 +306,7 @@ function ClaimRow({ claim, onEdit, onDelete }) {
         <div style={{ flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ehr-text)" }}>{claim.service_date}</span>
+            {!isInsurance && <EhrBadge color="gold">Invoice</EhrBadge>}
             {(claim.cpt_codes ?? []).map(c => (
               <EhrBadge key={c.code} color="purple">{c.code}</EhrBadge>
             ))}
@@ -286,6 +322,12 @@ function ClaimRow({ claim, onEdit, onDelete }) {
       {/* Expanded detail */}
       {expanded && (
         <div style={{ marginTop: "1rem", borderTop: "1px solid var(--ehr-border)", paddingTop: "1rem" }}>
+          {isInsurance && claim.insurance_provider && (
+            <div style={{ fontSize: 12, color: "var(--ehr-muted)", marginBottom: "0.8rem" }}>
+              Insurance: {claim.insurance_provider}
+              {claim.insurance_member_id ? ` · ID ${claim.insurance_member_id}` : ""}
+            </div>
+          )}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: "1rem" }}>
             {[
               ["Billed",              formatCents(claim.amount_billed_cents)],
@@ -308,7 +350,10 @@ function ClaimRow({ claim, onEdit, onDelete }) {
               {claim.notes}
             </div>
           )}
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {isInsurance && onPrintSuperbill && (
+              <EhrBtn small variant="secondary" onClick={e => { e.stopPropagation(); onPrintSuperbill(claim); }}>🖨 Superbill</EhrBtn>
+            )}
             {claim.claim_status !== "paid" && (
               <EhrBtn small variant="secondary" onClick={e => { e.stopPropagation(); onEdit(claim); }}>✏️ Edit</EhrBtn>
             )}
@@ -323,9 +368,24 @@ function ClaimRow({ claim, onEdit, onDelete }) {
 }
 
 // ── ClaimList ─────────────────────────────────────────────────────────────────
-function ClaimList({ claims, onNew, onEdit, onDelete }) {
+function ClaimList({ claims, onNew, onEdit, onDelete, onPrintSuperbill, readyNotes, onCreateFromNote, creatingNoteId }) {
   return (
     <div>
+      {readyNotes?.length > 0 && (
+        <EhrCard style={{ marginBottom: "1rem" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, color: "var(--ehr-teal)" }}>Create from signed note</div>
+          {readyNotes.map((note) => (
+            <div key={note.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "0.5rem 0", borderTop: "1px solid var(--ehr-border)" }}>
+              <div style={{ flex: 1, fontSize: 13 }}>
+                {note.note_date} · {(note.cpt_codes ?? []).length ? `${note.cpt_codes.length} CPT` : "no CPT"}
+              </div>
+              <EhrBtn small disabled={creatingNoteId === note.id} onClick={() => onCreateFromNote(note)}>
+                {creatingNoteId === note.id ? "…" : "+ Claim"}
+              </EhrBtn>
+            </div>
+          ))}
+        </EhrCard>
+      )}
       <SectionHeader
         title={`Claims (${claims.length})`}
         action={<EhrBtn small onClick={onNew}>+ New Claim</EhrBtn>}
@@ -336,7 +396,7 @@ function ClaimList({ claims, onNew, onEdit, onDelete }) {
           <div style={{ color: "var(--ehr-muted)", fontSize: 14 }}>No claims on file.</div>
         </EhrCard>
       ) : claims.map(c => (
-        <ClaimRow key={c.id} claim={c} onEdit={onEdit} onDelete={onDelete} />
+        <ClaimRow key={c.id} claim={c} onEdit={onEdit} onDelete={onDelete} onPrintSuperbill={onPrintSuperbill} />
       ))}
     </div>
   );
@@ -345,20 +405,45 @@ function ClaimList({ claims, onNew, onEdit, onDelete }) {
 // ── EHRBilling (default export) ───────────────────────────────────────────────
 export default function EHRBilling({ patientId, chartId, clinician }) {
   const [claims, setClaims]     = useState([]);
+  const [chart, setChart]       = useState(null);
+  const [settings, setSettings] = useState(null);
+  const [readyNotes, setReadyNotes] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing]   = useState(null);
   const [error, setError]       = useState(null);
+  const [printClaim, setPrintClaim] = useState(null);
+  const [creatingNoteId, setCreatingNoteId] = useState(null);
 
-  useEffect(() => { load(); }, [patientId]);
+  useEffect(() => { load(); }, [patientId, chartId]);
 
   async function load() {
     setLoading(true);
-    const { data, error: err } = await getClaims(patientId);
-    if (err) setError(typeof err === "string" ? err : err.message ?? "Failed to load claims.");
-    else setClaims(data ?? []);
+    const [claimsRes, chartRes, notesRes, settingsRes] = await Promise.all([
+      getClaims(patientId),
+      getChart(chartId),
+      getChartNotesReadyForClaim(chartId),
+      getBillingSettings(),
+    ]);
+    if (claimsRes.error) setError(typeof claimsRes.error === "string" ? claimsRes.error : claimsRes.error.message ?? "Failed to load claims.");
+    else setClaims(claimsRes.data ?? []);
+    if (chartRes.data) setChart(chartRes.data);
+    if (!notesRes.error) setReadyNotes(notesRes.data ?? []);
+    setSettings(settingsRes.data);
     setLoading(false);
   }
+
+  const handleCreateFromNote = async (note) => {
+    if (!chart) return;
+    setCreatingNoteId(note.id);
+    const { data, error: err } = await createClaimFromNote({ note, chart, clinician });
+    setCreatingNoteId(null);
+    if (err) setError(typeof err === "string" ? err : err.message ?? "Could not create claim.");
+    else if (data) {
+      setClaims((prev) => [data, ...prev]);
+      setReadyNotes((prev) => prev.filter((n) => n.id !== note.id));
+    }
+  };
 
   const handleSaved = (saved) => {
     if (saved) {
@@ -403,7 +488,8 @@ export default function EHRBilling({ patientId, chartId, clinician }) {
             claim={editing}
             chartId={chartId}
             patientId={patientId}
-            createdBy={clinician?.user_id}
+            chart={chart}
+            clinician={clinician}
             onSaved={handleSaved}
             onCancel={() => { setShowForm(false); setEditing(null); }}
           />
@@ -411,9 +497,23 @@ export default function EHRBilling({ patientId, chartId, clinician }) {
       ) : (
         <ClaimList
           claims={claims}
+          readyNotes={readyNotes}
+          creatingNoteId={creatingNoteId}
+          onCreateFromNote={handleCreateFromNote}
           onNew={() => { setEditing(null); setShowForm(true); }}
           onEdit={(c) => { setEditing(c); setShowForm(true); }}
           onDelete={handleDelete}
+          onPrintSuperbill={(c) => setPrintClaim(c)}
+        />
+      )}
+
+      {printClaim && (
+        <SuperbillPrintView
+          claim={printClaim}
+          chart={chart}
+          settings={settings}
+          patientName={chart?.full_name}
+          onClose={() => setPrintClaim(null)}
         />
       )}
     </div>

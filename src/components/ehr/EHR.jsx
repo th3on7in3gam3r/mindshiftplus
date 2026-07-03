@@ -14,6 +14,8 @@ import EHRPatientMessages from "./EHRPatientMessages";
 import EHRReports from "./EHRReports";
 import EHRGiftCards from "./EHRGiftCards";
 import EHRInvoices from "./EHRInvoices";
+import EHRInsuranceClaims from "./EHRInsuranceClaims";
+import EHRBillingSettings from "./EHRBillingSettings";
 import EHRCrisisAlerts from "./EHRCrisisAlerts";
 import { Spinner, EhrStyles } from "./EHRUI";
 
@@ -168,9 +170,11 @@ export default function EHR({ onBack, onOpenDocs }) {
           </button>
           {[
             { key: "schedule",  label: "Schedule",   color: "teal" },
+            { key: "insurance-claims", label: "Insurance", color: "gold" },
             { key: "reports",   label: "Reports",    color: "purple" },
             { key: "giftcards", label: "Gift Cards", color: "green" },
             { key: "invoices",  label: "Invoices",   color: "accent" },
+            { key: "billing-settings", label: "Billing", color: "muted" },
           ].map(({ key, label, color }) => (
             <button key={key} onClick={() => setView(key)} style={{
               background: view === key ? `color-mix(in srgb,var(--ehr-${color}) 14%,transparent)` : "transparent",
@@ -287,6 +291,10 @@ export default function EHR({ onBack, onOpenDocs }) {
         {view === "crisis"    && <EHRCrisisAlerts />}
         {view === "giftcards" && <EHRGiftCards clinician={clinician} />}
         {view === "invoices"  && <EHRInvoices  clinician={clinician} />}
+        {view === "insurance-claims" && (
+          <EHRInsuranceClaims clinician={clinician} onOpenSettings={() => setView("billing-settings")} />
+        )}
+        {view === "billing-settings" && <EHRBillingSettings clinician={clinician} />}
       </div>
     </div>
   );

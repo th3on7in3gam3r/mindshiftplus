@@ -24,6 +24,7 @@ function SimpleInvoiceForm({ charts, clinician, onSaved, onCancel }) {
     const cents = parseDollars(amountDue);
     const cpt = CPT_CODES.find((c) => c.code === cptCode);
     return {
+      claim_type: "patient_invoice",
       patient_id: selectedChart.patient_id,
       chart_id: selectedChart.id,
       service_date: serviceDate,

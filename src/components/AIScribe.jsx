@@ -4,8 +4,6 @@ import { getChartsForPicker, chartDisplayName, matchesChartSearch, getPatientApp
 import { getIntakesWithoutCharts, matchesIntakeSearch } from "../lib/intakeDb";
 import { sessionWindowState, pickTelehealthAppointment, formatApptDateTime } from "../lib/telehealthUtils";
 import { startInstantTelehealthSession, ensureAppointmentTelehealthRoom } from "../lib/telehealthDb";
-import HeidiScribeButton from "./clinical/HeidiScribeButton";
-import HeidiWidgetHost from "./clinical/HeidiWidgetHost";
 import {
   createScribeSession,
   saveGeneratedNote,
@@ -328,11 +326,6 @@ export default function AIScribe({ onBack, onOpenDocs }) {
       padding: "1.5rem",
       paddingBottom: "90px"
     }}>
-      <HeidiWidgetHost
-        clinician={scribeClinician}
-        chartId={sessionData.patientChartId}
-        chartPatientName={sessionData.patientName}
-      />
       {/* Header */}
       <div style={{
         maxWidth: 1400,
@@ -385,14 +378,6 @@ export default function AIScribe({ onBack, onOpenDocs }) {
             <Btn variant="secondary" small onClick={() => setShowArchive(!showArchive)}>
               📁 {showArchive ? "Hide" : "Archive"} ({savedSessions.length})
             </Btn>
-            <HeidiScribeButton
-              patient={{
-                id: sessionData.patientUuid || sessionData.patientChartId || sessionData.patientId,
-                name: sessionData.patientName,
-              }}
-              context={sessionData.patientContext || undefined}
-              label="Heidi Scribe"
-            />
             {onOpenDocs && (
               <Btn variant="secondary" small onClick={onOpenDocs}>
                 📖 Docs
