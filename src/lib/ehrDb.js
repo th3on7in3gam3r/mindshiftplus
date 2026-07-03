@@ -282,7 +282,6 @@ export async function getChartByPatient(patientId) {
 }
 
 export async function upsertChart(chartData) {
-  // Allowed columns in ehr_charts — strip anything else to avoid 400 errors
   const ALLOWED = new Set([
     "id","patient_id","mrn","full_name","date_of_birth","gender","pronouns",
     "phone","address","emergency_contact_name","emergency_contact_phone",
@@ -291,12 +290,44 @@ export async function upsertChart(chartData) {
     "allergies","pharmacy","referral_source","intake_date","status","flags",
     "created_by","created_at","updated_at",
   ]);
-  const safe = Object.fromEntries(
-    Object.entries(chartData).filter(([k]) => ALLOWED.has(k))
-  );
+  const DATE_FIELDS = new Set(["date_of_birth", "intake_date"]);
+  const NULLABLE_FIELDS = new Set(["patient_id", ...DATE_FIELDS]);
+
+  const safe = {};
+  for (const [key, value] of Object.entries(chartData ?? {})) {
+    if (!ALLOWED.has(key)) continue;
+    if (value === "" || value === undefined) {
+      if (NULLABLE_FIELDS.has(key)) safe[key] = null;
+      continue;
+    }
+    safe[key] = value;
+  }
+
+  if (!Array.isArray(safe.secondary_diagnoses)) safe.secondary_diagnoses = [];
+  if (!Array.isArray(safe.flags)) safe.flags = [];
+  if (!safe.mrn) safe.mrn = generateMRN();
+  if (!safe.status) safe.status = "active";
+
+  if (safe.patient_id && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(safe.patient_id)) {
+    return { data: null, error: { message: "Portal Patient ID must be a valid Supabase UUID." } };
+  }
+
+  const now = new Date().toISOString();
+
+  if (safe.id) {
+    const { id, ...updates } = safe;
+    const { data, error } = await supabase
+      .from("ehr_charts")
+      .update({ ...updates, updated_at: now })
+      .eq("id", id)
+      .select()
+      .single();
+    return { data, error };
+  }
+
   const { data, error } = await supabase
     .from("ehr_charts")
-    .upsert({ ...safe, updated_at: new Date().toISOString() })
+    .insert({ ...safe, created_at: now, updated_at: now })
     .select()
     .single();
   return { data, error };

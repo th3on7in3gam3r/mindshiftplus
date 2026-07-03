@@ -29,7 +29,7 @@ const TABS = [
   { id: "ai",           label: "AI Assistant", icon: "🤖" },
 ];
 
-export default function EHRPatientChart({ chartId, clinician, onBack, isNew = false, newPatientId = null }) {
+export default function EHRPatientChart({ chartId, clinician, onBack, onCreated, isNew = false, newPatientId = null }) {
   const [tab, setTab]           = useState("overview");
   const [chart, setChart]       = useState(null);
   const [notes, setNotes]       = useState([]);
@@ -45,6 +45,7 @@ export default function EHRPatientChart({ chartId, clinician, onBack, isNew = fa
   const [showMsgForm, setShowMsgForm]   = useState(false);
   const [editingNote, setEditingNote]   = useState(null);
   const [editingMed, setEditingMed]     = useState(null);
+  const [saveError, setSaveError]       = useState("");
 
   useEffect(() => {
     if (isNew) {
@@ -125,11 +126,22 @@ export default function EHRPatientChart({ chartId, clinician, onBack, isNew = fa
       {/* Content */}
       <div style={{ padding: "1.8rem 2.5rem", maxWidth: 1100 }}>
         {editChart ? (
-          <ChartEditForm chart={chart} clinician={clinician} saving={saving}
+          <ChartEditForm chart={chart} clinician={clinician} saving={saving} saveError={saveError}
             onSave={async (updated) => {
               setSaving(true);
-              const { data } = await upsertChart(updated);
-              if (data) { setChart(data); setEditChart(false); if (isNew) onBack(); }
+              setSaveError("");
+              const { data, error } = await upsertChart(updated);
+              if (error) {
+                setSaveError(error.message || "Failed to save chart. Check required fields and try again.");
+                setSaving(false);
+                return;
+              }
+              if (data) {
+                setChart(data);
+                setEditChart(false);
+                if (isNew && onCreated) onCreated(data.id);
+                else if (isNew) onBack();
+              }
               setSaving(false);
             }}
             onCancel={() => { setEditChart(false); if (isNew) onBack(); }}
@@ -199,7 +211,7 @@ export default function EHRPatientChart({ chartId, clinician, onBack, isNew = fa
 }
 
 // ── Chart Edit Form ────────────────────────────────────────────────────────────
-function ChartEditForm({ chart, clinician, saving, onSave, onCancel }) {
+function ChartEditForm({ chart, clinician, saving, saveError, onSave, onCancel }) {
   const [form, setForm] = useState({
     id: chart?.id, patient_id: chart?.patient_id,
     mrn: chart?.mrn ?? "", full_name: chart?.full_name ?? "",
@@ -222,6 +234,11 @@ function ChartEditForm({ chart, clinician, saving, onSave, onCancel }) {
 
   return (
     <form onSubmit={handleSubmit}>
+      {saveError && (
+        <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#991b1b", marginBottom: "1rem" }}>
+          {saveError}
+        </div>
+      )}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
         <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--ehr-text)", margin: 0 }}>{form.id ? "Edit Patient Chart" : "New Patient Chart"}</h2>
         <div style={{ display: "flex", gap: 8 }}>
@@ -246,6 +263,13 @@ function ChartEditForm({ chart, clinician, saving, onSave, onCancel }) {
             <EhrInput label="Pronouns" value={form.pronouns} onChange={set("pronouns")} placeholder="e.g. she/her" />
             <EhrInput label="Phone" type="tel" value={form.phone} onChange={set("phone")} />
             <EhrInput label="Address" value={form.address} onChange={set("address")} style={{ gridColumn: "1 / -1" }} />
+            <EhrInput
+              label="Portal Patient ID (optional)"
+              value={form.patient_id ?? ""}
+              onChange={set("patient_id")}
+              placeholder="Supabase UUID — from Admin → Patient Lookup"
+              style={{ gridColumn: "1 / -1" }}
+            />
           </div>
         </EhrCard>
 

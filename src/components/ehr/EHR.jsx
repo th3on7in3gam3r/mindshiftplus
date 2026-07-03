@@ -276,6 +276,7 @@ export default function EHR({ onBack, onOpenDocs }) {
             newPatientId={null}
             clinician={clinician}
             onBack={() => setView("dashboard")}
+            onCreated={(id) => { setActiveChartId(id); setView("chart"); }}
           />
         )}
         {view === "schedule"  && <EHRSchedule  clinician={clinician} />}
