@@ -15,6 +15,8 @@ import EHRClinicalAI from "./EHRClinicalAI";
 import EHRBilling, { CptPicker } from "./EHRBilling";
 import EHRClinicalIntake from "./EHRClinicalIntake";
 import EHRScribeNotes from "./EHRScribeNotes";
+import HeidiScribeButton from "../clinical/HeidiScribeButton";
+import HeidiWidgetHost from "../clinical/HeidiWidgetHost";
 
 const TABS = [
   { id: "overview",     label: "Overview",     icon: "🏠" },
@@ -79,6 +81,13 @@ export default function EHRPatientChart({ chartId, clinician, onBack, onCreated,
   return (
     <div className="ehr-root" style={{ fontFamily: "inherit", minHeight: "100vh", background: "var(--ehr-bg)" }}>
       <EhrStyles />
+      {!isNew && chart?.id && (
+        <HeidiWidgetHost
+          clinician={clinician}
+          chartId={chart.id}
+          chartPatientName={chart.full_name}
+        />
+      )}
 
       {/* Patient header */}
       <div style={{
@@ -101,6 +110,23 @@ export default function EHRPatientChart({ chartId, clinician, onBack, onCreated,
           </div>
         </div>
         <StatusBadge status={chart?.status ?? "active"} />
+        {!editChart && !isNew && chart?.id && (
+          <HeidiScribeButton
+            variant="ehr"
+            patient={{
+              id: chart.patient_id || chart.id,
+              name: chart.full_name,
+              gender: chart.gender,
+              dob: chart.date_of_birth,
+            }}
+            context={[
+              chart.allergies && `Allergies: ${chart.allergies}`,
+              chart.primary_diagnosis && `Primary diagnosis: ${chart.primary_diagnosis} ${chart.primary_diagnosis_label || ""}`.trim(),
+              chart.pharmacy && `Pharmacy: ${chart.pharmacy}`,
+            ].filter(Boolean).join(". ")}
+            label="Heidi Scribe"
+          />
+        )}
         {!editChart && <EhrBtn variant="secondary" small onClick={() => setEditChart(true)}>✏️ Edit Chart</EhrBtn>}
       </div>
 
