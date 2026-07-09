@@ -11,6 +11,7 @@ import PortalJournal from "./PortalJournal";
 import PortalIntake from "./PortalIntake";
 import PortalBilling from "./PortalBilling";
 import { getMyIntake } from "../../lib/intakeDb";
+import { consumePortalPageIntent } from "../../lib/patientMode";
 
 // ── Inline auth screen — stays on portal, no redirect ─────────────────────────
 function PortalAuthScreen({ onBack }) {
@@ -218,7 +219,7 @@ function Avatar({ name="P", size=36 }) {
 
 export default function Portal({ onExit }) {
   const [session, setSession] = useState(undefined);
-  const [page, setPage] = useState("dashboard");
+  const [page, setPage] = useState(() => consumePortalPageIntent() || "dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [intakeStatus, setIntakeStatus] = useState(null);
   const [userId, setUserId] = useState(null);

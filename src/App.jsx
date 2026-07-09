@@ -8,25 +8,36 @@ import CrisisModal from "./components/CrisisModal";
 import EHR from "./components/ehr/EHR";
 import AIScribe from "./components/AIScribe";
 import StaffDocs from "./components/clinical/StaffDocs";
+import {
+  fetchClinicPatientContext,
+  getHomeModePreference,
+  setHomeModePreference,
+  resolveHomeMode,
+  openPortalPage,
+} from "./lib/patientMode";
 
 // ── Fonts ──────────────────────────────────────────────────────────────────────
 const GlobalStyles = () => (
   <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600;700&display=swap');
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
       --navy:#0a0e1a;--midnight:#0d1228;--indigo:#131b3a;--card:#161e3f;
       --card2:#1a2247;--glass:rgba(255,255,255,0.04);--glass2:rgba(255,255,255,0.07);
       --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);
-      --purple:#7c6ff7;--lavender:#a89cf5;--teal:#4ecdc4;--rose:#f093a0;
-      --gold:#f5c842;--white:#f0f0ff;--muted:rgba(240,240,255,0.5);
-      --muted2:rgba(240,240,255,0.3);--success:#4ade80;
-      --grad1:linear-gradient(135deg,#7c6ff7,#4ecdc4);
-      --grad2:linear-gradient(135deg,#a89cf5,#7c6ff7);
-      --grad3:linear-gradient(135deg,#f093a0,#7c6ff7);
-      --font:Outfit,sans-serif;--serif:Lora,serif;
+      --purple:#6b5fcf;--lavender:#9d8ff0;--teal:#2a9d8f;--rose:#e07a8f;
+      --gold:#c9a84c;--pearl:#f5f0ee;--cream:rgba(245,240,238,0.92);
+      --white:#f0f0ff;--muted:rgba(240,240,255,0.55);
+      --muted2:rgba(240,240,255,0.32);--success:#4ade80;
+      --grad1:linear-gradient(135deg,#6b5fcf,#2a9d8f);
+      --grad2:linear-gradient(135deg,#9d8ff0,#6b5fcf);
+      --grad3:linear-gradient(135deg,#e07a8f,#6b5fcf);
+      --font:'DM Sans',system-ui,sans-serif;--serif:'Cormorant Garamond',Georgia,serif;
     }
-    body{background:var(--navy);color:var(--white);font-family:var(--font);min-height:100vh;overflow-x:hidden}
+    body{
+      background:linear-gradient(165deg,#0a0e1a 0%,#0f1428 45%,#12102a 100%);
+      color:var(--white);font-family:var(--font);min-height:100vh;overflow-x:hidden;
+    }
     ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}
     ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:2px}
     button{cursor:pointer;font-family:var(--font)}
@@ -151,19 +162,87 @@ function useIsClinicianOrAdmin(user) {
   return isClinician;
 }
 
-const navItems=[
-  {id:"dashboard",icon:"⊞",label:"Dashboard"},
-  {id:"mia",icon:"◎",label:"Mia"},
-  {id:"journal",icon:"◈",label:"Journal"},
-  {id:"breathe",icon:"◉",label:"Breathe"},
-  {id:"constellation",icon:"✶",label:"Constellation"},
-  {id:"dailyLight",icon:"☀",label:"Daily Light"},
-  {id:"programs",icon:"◧",label:"Programs"},
-  {id:"insights",icon:"◐",label:"Insights"},
-  {id:"premium",icon:"◆",label:"Premium"},
-  {id:"portal",icon:<img src="/logo.png" alt="" style={{width: 20, height: 20}} />,label:"Patient Portal"},
-  {id:"settings",icon:"◎",label:"Settings"},
+const primaryNavItems = [
+  { id: "dashboard", icon: "🏠", label: "Home" },
+  { id: "mia", icon: "💬", label: "Mia" },
+  { id: "journal", icon: "📓", label: "Journal" },
+  { id: "breathe", icon: "🌬️", label: "Breathe" },
+  { id: "programs", icon: "📚", label: "Programs" },
+  { id: "portal", icon: "🏥", label: "Patient Portal" },
+  { id: "settings", icon: "⚙️", label: "Settings" },
 ];
+
+const exploreNavItems = [
+  { id: "constellation", icon: "✨", label: "Constellation" },
+  { id: "dailyLight", icon: "☀️", label: "Daily Light" },
+  { id: "insights", icon: "📊", label: "Insights" },
+  { id: "premium", icon: "✦", label: "Premium", badge: "PRO" },
+];
+
+const clinicNavItems = [
+  { id: "dashboard", icon: "🏠", label: "Home" },
+  { id: "portal", icon: "🏥", label: "Patient Portal", portalPage: "dashboard" },
+  { id: "portal-messages", icon: "💬", label: "Messages", portalPage: "messages", badgeKey: "unread" },
+  { id: "portal-appointments", icon: "📅", label: "Appointments", portalPage: "appointments" },
+  { id: "portal-journal", icon: "📓", label: "Care journal", portalPage: "journal" },
+  { id: "portal-documents", icon: "📄", label: "Documents", portalPage: "documents" },
+  { id: "settings", icon: "⚙️", label: "Settings" },
+];
+
+function HomeModeToggle({ mode, onChange, visible }) {
+  if (!visible) return null;
+  return (
+    <div style={{
+      display: "flex", gap: 4, background: "var(--glass2)", borderRadius: 10,
+      padding: 3, marginBottom: "1rem", border: "1px solid var(--border)",
+    }}>
+      {[{ id: "clinic", label: "My care" }, { id: "wellness", label: "Wellness" }].map((m) => (
+        <button
+          key={m.id}
+          type="button"
+          onClick={() => onChange(m.id)}
+          style={{
+            flex: 1, padding: "7px 12px", borderRadius: 8, border: "none",
+            background: mode === m.id ? "var(--grad1)" : "transparent",
+            color: mode === m.id ? "#fff" : "var(--muted)",
+            fontSize: 12, fontWeight: mode === m.id ? 700 : 500,
+            cursor: "pointer", fontFamily: "inherit",
+          }}
+        >
+          {m.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function usePatientHome(authUser, isClinician) {
+  const [preference, setPreference] = useState(getHomeModePreference);
+  const [context, setContext] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!authUser?.id) {
+      setContext(null);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    fetchClinicPatientContext(authUser.id).then((ctx) => {
+      setContext(ctx);
+      setLoading(false);
+    });
+  }, [authUser?.id]);
+
+  const effectiveMode = resolveHomeMode(preference, context, isClinician);
+
+  const setMode = (mode) => {
+    setPreference(mode);
+    setHomeModePreference(mode);
+  };
+
+  return { preference, effectiveMode, setMode, context, loading };
+}
 
 // Clinical tools — launched from Clinical Suite hub (not listed individually in sidebar)
 const clinicalTools = [
@@ -191,7 +270,7 @@ const clinicalTools = [
     id: "staff-docs",
     title: "Staff Docs & Help",
     shortTitle: "Docs",
-    description: "How-to guides for Admin, EHR, Scribe, scheduling, telehealth, and more.",
+    description: "How-to guides for EHR, Schedule, Scribe, billing, and telehealth.",
     icon: "📖",
     accent: "#f5c842",
     glow: "rgba(245,200,66,0.35)",
@@ -277,18 +356,24 @@ function ClinicalSuite({ setPage, userName }) {
 
       <GlassCard style={{ marginTop: "1.5rem", padding: "1rem 1.25rem", background: "rgba(255,255,255,0.03)" }}>
         <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.7 }}>
-          <strong style={{ color: "var(--white)" }}>Tip:</strong> Use <strong style={{ color: "var(--lavender)" }}>Admin</strong> for scheduling and patient IDs,
-          {" "}<strong style={{ color: "var(--lavender)" }}>EHR</strong> for charts and documentation,{" "}
-          <strong style={{ color: "var(--lavender)" }}>Scribe</strong> to record sessions and push notes to the chart, and{" "}
-          <strong style={{ color: "var(--gold)" }}>Docs</strong> when you need a refresher on how anything works.
+          <strong style={{ color: "var(--white)" }}>Tip:</strong> Use <strong style={{ color: "var(--lavender)" }}>EHR</strong> for patients, schedule, charts, and billing,{" "}
+          <strong style={{ color: "var(--lavender)" }}>Scribe</strong> to record sessions and push notes, and{" "}
+          <strong style={{ color: "var(--gold)" }}>Docs</strong> for step-by-step guides.
         </div>
       </GlassCard>
     </div>
   );
 }
 
-function Sidebar({page,setPage,user,onSignOut,open,onClose,isClinician}){
+function Sidebar({ page, setPage, user, onSignOut, open, onClose, isClinician, homeMode, patientContext, onOpenPortal }) {
   const clinicalActive = ["clinical", "ehr", "ai-scribe", "staff-docs"].includes(page);
+  const mainNav = homeMode === "clinic" ? clinicNavItems : primaryNavItems;
+
+  const handleNav = (n) => {
+    if (n.portalPage) onOpenPortal(n.portalPage);
+    else setPage(n.id);
+    onClose();
+  };
   return(
     <>
       {/* Mobile overlay — only shows on small screens when drawer is open */}
@@ -313,19 +398,66 @@ function Sidebar({page,setPage,user,onSignOut,open,onClose,isClinician}){
           <button onClick={onClose} className="mobile-only" style={{background:"transparent",border:"none",color:"var(--muted)",fontSize:18,cursor:"pointer",padding:4}}>✕</button>
         </div>
         <nav style={{flex:1,padding:"1rem 0.8rem",display:"flex",flexDirection:"column",gap:4,overflowY:"auto"}}>
-          {navItems.map(n=>(
-            <button key={n.id} onClick={()=>{setPage(n.id);onClose();}} style={{
+          {mainNav.map(n=>(
+            <button key={n.id} type="button" onClick={() => handleNav(n)} style={{
               display:"flex",alignItems:"center",gap:10,padding:"9px 14px",borderRadius:12,
               background:page===n.id?"var(--glass2)":"transparent",
               border:page===n.id?"1px solid var(--border2)":"1px solid transparent",
               color:page===n.id?"var(--white)":"var(--muted)",fontSize:14,fontWeight:page===n.id?600:400,
               cursor:"pointer",textAlign:"left",transition:"all .15s"
             }}>
-              <span style={{fontSize:15}}>{n.icon}</span>{n.label}
-              {n.id==="premium"&&<span style={{marginLeft:"auto",fontSize:10,background:"var(--grad1)",padding:"2px 7px",borderRadius:99,color:"#fff"}}>PRO</span>}
+              <span style={{fontSize:16,width:20,textAlign:"center"}}>{n.icon}</span>
+              <span style={{ flex: 1 }}>{n.label}</span>
+              {n.badgeKey === "unread" && (patientContext?.unreadCount ?? 0) > 0 && (
+                <span style={{ fontSize: 10, fontWeight: 700, background: "var(--rose)", color: "#fff", padding: "2px 7px", borderRadius: 99 }}>
+                  {patientContext.unreadCount}
+                </span>
+              )}
             </button>
           ))}
-          {/* Clinician workspace — single professional entry */}
+          {homeMode === "wellness" && (
+          <>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted2)", letterSpacing: "0.08em", textTransform: "uppercase", padding: "12px 14px 4px", marginTop: 4 }}>
+            Explore
+          </div>
+          {exploreNavItems.map(n=>(
+            <button key={n.id} type="button" onClick={()=>{setPage(n.id);onClose();}} style={{
+              display:"flex",alignItems:"center",gap:10,padding:"8px 14px",borderRadius:12,
+              background:page===n.id?"var(--glass2)":"transparent",
+              border:page===n.id?"1px solid var(--border2)":"1px solid transparent",
+              color:page===n.id?"var(--white)":"var(--muted2)",fontSize:13,fontWeight:page===n.id?600:400,
+              cursor:"pointer",textAlign:"left",transition:"all .15s", fontFamily: "inherit",
+            }}>
+              <span style={{fontSize:15,width:20,textAlign:"center"}}>{n.icon}</span>
+              <span style={{ flex: 1 }}>{n.label}</span>
+              {n.badge && <span style={{ fontSize: 9, background: "var(--grad1)", padding: "2px 7px", borderRadius: 99, color: "#fff", fontWeight: 700 }}>{n.badge}</span>}
+            </button>
+          ))}
+          </>
+          )}
+          {homeMode === "clinic" && (
+            <>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted2)", letterSpacing: "0.08em", textTransform: "uppercase", padding: "12px 14px 4px", marginTop: 4 }}>
+                Wellness
+              </div>
+              {[
+                { id: "mia", icon: "💬", label: "Talk to Mia" },
+                { id: "breathe", icon: "🌬️", label: "Breathe" },
+                { id: "programs", icon: "📚", label: "Programs" },
+              ].map((n) => (
+                <button key={n.id} type="button" onClick={() => { setPage(n.id); onClose(); }} style={{
+                  display: "flex", alignItems: "center", gap: 10, padding: "8px 14px", borderRadius: 12,
+                  background: page === n.id ? "var(--glass2)" : "transparent",
+                  border: page === n.id ? "1px solid var(--border2)" : "1px solid transparent",
+                  color: page === n.id ? "var(--white)" : "var(--muted2)", fontSize: 13,
+                  cursor: "pointer", textAlign: "left", fontFamily: "inherit",
+                }}>
+                  <span style={{ fontSize: 15, width: 20, textAlign: "center" }}>{n.icon}</span>
+                  {n.label}
+                </button>
+              ))}
+            </>
+          )}
           {user && isClinician && (
             <>
               <div style={{ height: 1, background: "var(--border)", margin: "8px 0 6px" }} />
@@ -353,7 +485,7 @@ function Sidebar({page,setPage,user,onSignOut,open,onClose,isClinician}){
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: "block", lineHeight: 1.25 }}>Clinical Suite</span>
                   <span style={{ display: "block", fontSize: 10, color: "var(--muted2)", fontWeight: 400, marginTop: 2 }}>
-                    Admin · EHR · Scribe · Docs
+                    EHR · Scribe · Docs
                   </span>
                 </span>
               </button>
@@ -376,14 +508,23 @@ function Sidebar({page,setPage,user,onSignOut,open,onClose,isClinician}){
 
 // ── MOBILE BOTTOM NAV ──────────────────────────────────────────────────────────
 const bottomNavItems = [
-  {id:"dashboard",icon:"⊞",label:"Home"},
-  {id:"journal",icon:"◈",label:"Journal"},
-  {id:"breathe",icon:"◉",label:"Breathe"},
-  {id:"mia",icon:"◎",label:"Mia"},
-  {id:"insights",icon:"◐",label:"Insights"},
+  { id: "dashboard", icon: "🏠", label: "Home" },
+  { id: "mia", icon: "💬", label: "Mia" },
+  { id: "journal", icon: "📓", label: "Journal" },
+  { id: "breathe", icon: "🌬️", label: "Breathe" },
+  { id: "portal", icon: "🏥", label: "Portal" },
 ];
 
-function BottomNav({page,setPage}){
+function BottomNav({ page, setPage, homeMode, patientContext, onOpenPortal }) {
+  const clinicBottom = [
+    { id: "dashboard", icon: "🏠", label: "Home" },
+    { id: "messages", icon: "💬", label: "Messages", portalPage: "messages", badge: patientContext?.unreadCount },
+    { id: "appointments", icon: "📅", label: "Appts", portalPage: "appointments" },
+    { id: "portal", icon: "🏥", label: "Portal", portalPage: "dashboard" },
+    { id: "settings", icon: "⚙️", label: "Settings", navPage: "settings" },
+  ];
+  const items = homeMode === "clinic" ? clinicBottom : bottomNavItems;
+
   return(
     <nav style={{
       position:"fixed",bottom:0,left:0,right:0,zIndex:90,
@@ -392,17 +533,29 @@ function BottomNav({page,setPage}){
       display:"flex",alignItems:"center",justifyContent:"space-around",
       padding:"8px 0 max(12px, env(safe-area-inset-bottom))",
     }}>
-      {bottomNavItems.map(n=>(
-        <button key={n.id} onClick={()=>setPage(n.id)} style={{
+      {items.map(n=>(
+        <button key={n.id} type="button" onClick={() => {
+          if (n.portalPage) onOpenPortal(n.portalPage);
+          else setPage(n.navPage || n.id);
+        }} style={{
           display:"flex",flexDirection:"column",alignItems:"center",gap:3,
           background:"transparent",border:"none",
           color:page===n.id?"var(--lavender)":"var(--muted2)",
           fontSize:10,fontWeight:page===n.id?600:400,
-          cursor:"pointer",padding:"4px 12px",borderRadius:10,
-          transition:"all .15s",minWidth:52,
+          cursor:"pointer",padding:"4px 10px",borderRadius:10,
+          transition:"all .15s",minWidth:52, position: "relative", fontFamily: "inherit",
         }}>
           <span style={{fontSize:20,lineHeight:1}}>{n.icon}</span>
           {n.label}
+          {(n.badge ?? 0) > 0 && (
+            <span style={{
+              position: "absolute", top: 0, right: 4, minWidth: 16, height: 16, borderRadius: 99,
+              background: "var(--rose)", color: "#fff", fontSize: 9, fontWeight: 700,
+              display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px",
+            }}>
+              {n.badge > 9 ? "9+" : n.badge}
+            </span>
+          )}
         </button>
       ))}
     </nav>
@@ -493,7 +646,10 @@ function Onboarding({setPage,setUser}){
 }
 
 // ── DASHBOARD ──────────────────────────────────────────────────────────────────
-function Dashboard({user,setPage,isClinician}){
+function Dashboard({
+  user, setPage, isClinician, homeMode, onHomeModeChange, patientContext,
+  patientContextLoading, onOpenPortal, showModeToggle,
+}) {
   const { user: authUser } = useAuth();
   const { show: showToast, el: toastEl } = useToast();
   const [mood, setMood] = useState(null);
@@ -552,27 +708,41 @@ function Dashboard({user,setPage,isClinician}){
   };
 
   return(
-    <div style={{padding:"1.2rem",maxWidth:900,margin:"0 auto",paddingBottom:"90px"}}>
+    <div style={{padding:"1.25rem 1.35rem",maxWidth:720,margin:"0 auto",paddingBottom:"90px"}}>
       {toastEl}
+
       {/* Header */}
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"1.2rem",gap:10}}>
-        <div style={{minWidth:0}}>
-          <div style={{color:"var(--muted)",fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{quote}</div>
-          <h1 style={{fontSize:"clamp(1.2rem,5vw,1.8rem)",fontWeight:700,marginTop:4}}>{greeting}, {user?.name||"Friend"} ✦</h1>
+      <div style={{marginBottom:"1.35rem"}}>
+        <div style={{ fontSize: 12, color: "var(--muted2)", letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 600, marginBottom: 6 }}>
+          {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
         </div>
-        <GlassCard style={{padding:"8px 14px",display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-          <span style={{fontSize:18}}>🔥</span>
-          <div><div style={{fontWeight:700,fontSize:16,color:"var(--gold)"}}>{streak}</div><div style={{color:"var(--muted2)",fontSize:10}}>day streak</div></div>
-        </GlassCard>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+          <div style={{ minWidth: 0 }}>
+            <h1 style={{
+              fontFamily: "var(--serif)", fontSize: "clamp(1.5rem, 5vw, 2rem)",
+              fontWeight: 600, lineHeight: 1.15, letterSpacing: "-0.02em", margin: 0,
+            }}>
+              {greeting}, {user?.name || "Friend"}
+            </h1>
+            <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 8, lineHeight: 1.55, maxWidth: 420 }}>{quote}</p>
+          </div>
+          <GlassCard style={{ padding: "10px 14px", display: "flex", alignItems: "center", gap: 8, flexShrink: 0, borderRadius: 14 }}>
+            <span style={{ fontSize: 18 }}>🔥</span>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 17, color: "var(--gold)", lineHeight: 1 }}>{streak}</div>
+              <div style={{ color: "var(--muted2)", fontSize: 10 }}>day streak</div>
+            </div>
+          </GlassCard>
+        </div>
       </div>
 
       {isClinician && (
         <GlassCard
           onClick={() => setPage("clinical")}
           style={{
-            marginBottom: "1rem", cursor: "pointer", padding: "1rem 1.2rem",
-            background: "linear-gradient(135deg, rgba(124,111,247,0.14), rgba(14,165,160,0.08))",
-            border: "1px solid rgba(124,111,247,0.28)",
+            marginBottom: "1rem", cursor: "pointer", padding: "1rem 1.15rem",
+            background: "linear-gradient(135deg, rgba(107,95,207,0.16), rgba(42,157,143,0.08))",
+            border: "1px solid rgba(107,95,207,0.28)",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -584,7 +754,7 @@ function Dashboard({user,setPage,isClinician}){
               }}>⚕</div>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 14 }}>Clinical Suite</div>
-                <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 2 }}>Admin · EHR · Scribe</div>
+                <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 2 }}>EHR · Scribe · Staff Docs</div>
               </div>
             </div>
             <span style={{ color: "var(--lavender)", fontSize: 18, flexShrink: 0 }}>→</span>
@@ -592,92 +762,240 @@ function Dashboard({user,setPage,isClinician}){
         </GlassCard>
       )}
 
+      <HomeModeToggle
+        mode={homeMode}
+        onChange={onHomeModeChange}
+        visible={showModeToggle}
+      />
+
       {/* Mood Check-in */}
-      <GlassCard style={{marginBottom:"1rem",background:"linear-gradient(135deg,rgba(124,111,247,0.12),rgba(78,205,196,0.08))"}}>
-        <div style={{fontWeight:600,marginBottom:10,fontSize:14}}>How are you feeling right now?</div>
-        <div style={{display:"flex",gap:8,justifyContent:"space-between"}}>
-          {moods.map((m,i)=>(
-            <button key={i} onClick={()=>handleMood(i)} style={{
-              flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3,
-              padding:"8px 4px",borderRadius:12,
-              border:`1px solid ${mood===i?"var(--purple)":"var(--border)"}`,
-              background:mood===i?"rgba(124,111,247,0.2)":"var(--glass)",
-              cursor:moodSaved?"default":"pointer",transition:"all .15s",
-              opacity:moodSaved&&mood!==i?0.4:1,
+      <GlassCard style={{ marginBottom: "1rem", background: "linear-gradient(135deg,rgba(107,95,207,0.1),rgba(42,157,143,0.06))", padding: "1.15rem 1.2rem" }}>
+        <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 14 }}>How are you feeling right now?</div>
+        <div style={{ display: "flex", gap: 8, justifyContent: "space-between" }}>
+          {moods.map((m, i) => (
+            <button key={i} onClick={() => handleMood(i)} style={{
+              flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+              padding: "8px 4px", borderRadius: 12,
+              border: `1px solid ${mood === i ? "var(--purple)" : "var(--border)"}`,
+              background: mood === i ? "rgba(107,95,207,0.18)" : "var(--glass)",
+              cursor: moodSaved ? "default" : "pointer", transition: "all .15s",
+              opacity: moodSaved && mood !== i ? 0.4 : 1,
             }}>
-              <span style={{fontSize:22}}>{m}</span>
-              <span style={{fontSize:10,color:mood===i?"var(--lavender)":"var(--muted)"}}>{moodLabels[i]}</span>
+              <span style={{ fontSize: 22 }}>{m}</span>
+              <span style={{ fontSize: 10, color: mood === i ? "var(--lavender)" : "var(--muted)" }}>{moodLabels[i]}</span>
             </button>
           ))}
         </div>
-        {moodSaved&&<p style={{color:"var(--teal)",fontSize:12,marginTop:8}}>✓ Mood logged. Thank you for checking in.</p>}
+        {moodSaved && <p style={{ color: "var(--teal)", fontSize: 12, marginTop: 8 }}>✓ Mood logged. Thank you for checking in.</p>}
       </GlassCard>
 
-      {/* Quick Actions */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:"0.75rem",marginBottom:"1rem"}}>
+      {homeMode === "clinic" ? (
+        <>
+          {(patientContext?.unreadCount ?? 0) > 0 && (
+            <GlassCard
+              onClick={() => onOpenPortal("messages")}
+              style={{
+                marginBottom: "1rem", cursor: "pointer", padding: "1rem 1.15rem",
+                background: "linear-gradient(135deg, rgba(224,122,143,0.12), rgba(107,95,207,0.08))",
+                border: "1px solid rgba(224,122,143,0.28)",
+              }}
+            >
+              <div style={{ fontWeight: 700, fontSize: 14 }}>💬 {patientContext.unreadCount} unread message{patientContext.unreadCount !== 1 ? "s" : ""} from the clinic</div>
+              <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 4 }}>Tap to open your secure messages</div>
+            </GlassCard>
+          )}
+
+          <GlassCard style={{ marginBottom: "1rem", padding: "1.15rem 1.2rem", background: "linear-gradient(135deg, rgba(107,95,207,0.12), rgba(42,157,143,0.08))" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--lavender)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>
+              MindShift Wellness Clinic
+            </div>
+            {patientContextLoading ? (
+              <div style={{ color: "var(--muted)", fontSize: 13 }}>Loading your care…</div>
+            ) : patientContext?.nextAppointment ? (
+              <>
+                <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>Next appointment</div>
+                <div style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.55 }}>
+                  {patientContext.nextAppointment.appointment_type?.replace(/_/g, " ") || "Visit"}<br />
+                  📅 {patientContext.nextAppointment.scheduled_at
+                    ? new Date(patientContext.nextAppointment.scheduled_at).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+                    : "TBD"}
+                  {patientContext.nextAppointment.provider_name && (
+                    <><br />👨‍⚕️ {patientContext.nextAppointment.provider_name.split(",")[0]}</>
+                  )}
+                </div>
+                <Btn small onClick={() => onOpenPortal("appointments")} style={{ marginTop: 12 }}>View appointments</Btn>
+              </>
+            ) : (
+              <>
+                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6 }}>No upcoming appointments</div>
+                <div style={{ color: "var(--muted)", fontSize: 12, marginBottom: 10 }}>Book or view your visits in the patient portal.</div>
+                <Btn small onClick={() => onOpenPortal("appointments")}>Open appointments</Btn>
+              </>
+            )}
+            {patientContext?.mrn && (
+              <div style={{ fontSize: 11, color: "var(--muted2)", marginTop: 12 }}>Chart MRN: {patientContext.mrn}</div>
+            )}
+          </GlassCard>
+
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted2)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>
+            Your care
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.65rem", marginBottom: "1.1rem" }}>
+            {[
+              { icon: "💬", label: "Messages", sub: "Contact your care team", portal: "messages" },
+              { icon: "📅", label: "Appointments", sub: "View & book visits", portal: "appointments" },
+              { icon: "📄", label: "Documents", sub: "Forms & records", portal: "documents" },
+              { icon: "📓", label: "Care journal", sub: "Session journal", portal: "journal" },
+            ].map((a) => (
+              <GlassCard key={a.label} onClick={() => onOpenPortal(a.portal)} style={{ cursor: "pointer", padding: "0.9rem 1rem", borderRadius: 14, display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 22 }}>{a.icon}</span>
+                <div style={{ textAlign: "left", minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 13 }}>{a.label}</div>
+                  <div style={{ color: "var(--muted)", fontSize: 11, marginTop: 2 }}>{a.sub}</div>
+                </div>
+              </GlassCard>
+            ))}
+          </div>
+
+          <GlassCard onClick={() => onOpenPortal("dashboard")} style={{ marginBottom: "1rem", cursor: "pointer", padding: "1rem 1.15rem" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>Open full patient portal</div>
+                <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 3 }}>Billing, prescriptions, intake, and profile</div>
+              </div>
+              <span style={{ color: "var(--lavender)", fontSize: 18 }}>→</span>
+            </div>
+          </GlassCard>
+
+          {showModeToggle && (
+            <button
+              type="button"
+              onClick={() => onHomeModeChange("wellness")}
+              style={{
+                width: "100%", marginBottom: "1rem", background: "transparent",
+                border: "1px solid var(--border)", borderRadius: 14, padding: "0.75rem 1rem",
+                cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+              }}
+            >
+              <div style={{ fontWeight: 600, fontSize: 13 }}>🌿 Wellness tools</div>
+              <div style={{ color: "var(--muted2)", fontSize: 11, marginTop: 2 }}>Mia, breathe, programs, and insights</div>
+            </button>
+          )}
+        </>
+      ) : (
+        <>
+      {/* Primary actions — wellness */}
+      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted2)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>
+        Start here
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.65rem", marginBottom: "1.1rem" }}>
         {[
-          {icon:"◎",label:"Talk to Mia",sub:"Your AI coach",page:"mia",color:"var(--purple)"},
-          {icon:"◈",label:"Journal",sub:"Reflect & grow",page:"journal",color:"var(--teal)"},
-          {icon:"◉",label:"Breathe",sub:"Find your calm",page:"breathe",color:"var(--lavender)"},
-          {icon:"◧",label:"Programs",sub:"Continue journey",page:"programs",color:"var(--rose)"},
-        ].map(a=>(
-          <GlassCard key={a.label} onClick={()=>setPage(a.page)} style={{cursor:"pointer",textAlign:"center",padding:"1rem"}}>
-            <div style={{fontSize:24,marginBottom:6,color:a.color}}>{a.icon}</div>
-            <div style={{fontWeight:600,fontSize:13}}>{a.label}</div>
-            <div style={{color:"var(--muted)",fontSize:11,marginTop:2}}>{a.sub}</div>
+          { icon: "💬", label: "Talk to Mia", sub: "AI wellness coach", page: "mia" },
+          { icon: "📓", label: "Journal", sub: "Reflect & grow", page: "journal" },
+          { icon: "🏥", label: "Portal", sub: "Care & messages", page: "portal" },
+        ].map((a) => (
+          <GlassCard key={a.label} onClick={() => setPage(a.page)} style={{ cursor: "pointer", textAlign: "center", padding: "1rem 0.65rem", borderRadius: 16 }}>
+            <div style={{ fontSize: 26, marginBottom: 6 }}>{a.icon}</div>
+            <div style={{ fontWeight: 600, fontSize: 12 }}>{a.label}</div>
+            <div style={{ color: "var(--muted)", fontSize: 10, marginTop: 3, lineHeight: 1.3 }}>{a.sub}</div>
           </GlassCard>
         ))}
       </div>
 
-      {/* Stats Row */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"0.75rem",marginBottom:"1rem"}}>
+      {/* Wellness tools */}
+      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted2)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>
+        Wellness tools
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.65rem", marginBottom: "1.1rem" }}>
         {[
-          {label:"Journal",val:loadingStats?"…":stats.journalCount,icon:"◈"},
-          {label:"Mood avg",val:loadingStats?"…":stats.avgMoodEmoji,icon:"◎"},
-          {label:"This week",val:loadingStats?"…":stats.thisWeek,icon:"◧"},
-        ].map(s=>(
-          <GlassCard key={s.label} style={{textAlign:"center",padding:"0.8rem"}}>
-            <div style={{fontSize:18,marginBottom:3,color:"var(--lavender)"}}>{s.icon}</div>
-            <div style={{fontSize:20,fontWeight:700,marginBottom:3}}>{s.val}</div>
-            <div style={{color:"var(--muted)",fontSize:11}}>{s.label}</div>
+          { icon: "🌬️", label: "Breathe", sub: "Calm your nervous system", page: "breathe" },
+          { icon: "📚", label: "Programs", sub: "Guided journeys", page: "programs" },
+          { icon: "📊", label: "Insights", sub: "Your patterns", page: "insights" },
+          { icon: "✨", label: "Explore", sub: "More activities", page: "constellation" },
+        ].map((a) => (
+          <GlassCard key={a.label} onClick={() => setPage(a.page)} style={{ cursor: "pointer", padding: "0.9rem 1rem", borderRadius: 14, display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ fontSize: 22 }}>{a.icon}</span>
+            <div style={{ textAlign: "left", minWidth: 0 }}>
+              <div style={{ fontWeight: 600, fontSize: 13 }}>{a.label}</div>
+              <div style={{ color: "var(--muted)", fontSize: 11, marginTop: 2 }}>{a.sub}</div>
+            </div>
+          </GlassCard>
+        ))}
+      </div>
+        </>
+      )}
+
+      {/* Stats Row — both modes */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.65rem", marginBottom: "1rem" }}>
+        {[
+          { label: "Journal entries", val: loadingStats ? "…" : stats.journalCount, icon: "📓" },
+          { label: "Mood avg", val: loadingStats ? "…" : stats.avgMoodEmoji, icon: "◎" },
+          { label: "This week", val: loadingStats ? "…" : stats.thisWeek, icon: "📅" },
+        ].map((s) => (
+          <GlassCard key={s.label} style={{ textAlign: "center", padding: "0.85rem 0.5rem", borderRadius: 14 }}>
+            <div style={{ fontSize: 16, marginBottom: 4 }}>{s.icon}</div>
+            <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 2 }}>{s.val}</div>
+            <div style={{ color: "var(--muted)", fontSize: 10, lineHeight: 1.3 }}>{s.label}</div>
           </GlassCard>
         ))}
       </div>
 
       {/* Wellness Progress */}
-      <GlassCard style={{marginBottom:"1rem"}}>
-        <div style={{fontWeight:600,marginBottom:"0.8rem",fontSize:14}}>Your Wellness Progress</div>
+      <GlassCard style={{ marginBottom: "0.85rem", padding: "1.15rem 1.2rem" }}>
+        <div style={{ fontWeight: 600, marginBottom: "0.8rem", fontSize: 14 }}>Your wellness progress</div>
         {!wellness?.hasData ? (
-          <div style={{color:"var(--muted)",fontSize:13,textAlign:"center",padding:"0.8rem 0"}}>
-            Log your mood and write journal entries to start tracking your progress.
+          <div style={{ color: "var(--muted)", fontSize: 13, textAlign: "center", padding: "0.6rem 0", lineHeight: 1.6 }}>
+            Log your mood and write journal entries to start tracking progress.
           </div>
         ) : (
           [
-            {label:"Emotional Regulation", pct:wellness.emotionalReg, color:"var(--purple)"},
-            {label:"Stress Management",    pct:wellness.stressScore,   color:"var(--teal)"},
-            {label:"Self-Awareness",       pct:wellness.selfAwareness, color:"var(--lavender)"},
-          ].map(p=>(
-            <div key={p.label} style={{marginBottom:10}}>
-              <div style={{display:"flex",justifyContent:"space-between",marginBottom:4,fontSize:12}}>
+            { label: "Emotional regulation", pct: wellness.emotionalReg, color: "var(--purple)" },
+            { label: "Stress management", pct: wellness.stressScore, color: "var(--teal)" },
+            { label: "Self-awareness", pct: wellness.selfAwareness, color: "var(--lavender)" },
+          ].map((p) => (
+            <div key={p.label} style={{ marginBottom: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: 12 }}>
                 <span>{p.label}</span>
-                <span style={{color:"var(--muted)"}}>{p.pct===null?"—":`${p.pct}%`}</span>
+                <span style={{ color: "var(--muted)" }}>{p.pct === null ? "—" : `${p.pct}%`}</span>
               </div>
-              <ProgressBar value={p.pct??0} color={p.color}/>
+              <ProgressBar value={p.pct ?? 0} color={p.color} />
             </div>
           ))
         )}
       </GlassCard>
 
-      {/* Premium Banner */}
-      <GlassCard style={{background:"linear-gradient(135deg,rgba(124,111,247,0.2),rgba(240,147,160,0.15))",border:"1px solid rgba(124,111,247,0.3)"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
-          <div>
-            <div style={{fontWeight:700,fontSize:14,marginBottom:3}}>◆ Unlock MindShift+ Premium</div>
-            <div style={{color:"var(--muted)",fontSize:12}}>Deeper insights, unlimited Mia, and more.</div>
-          </div>
-          <Btn onClick={()=>setPage("premium")} small>Upgrade</Btn>
+      {homeMode === "wellness" && showModeToggle && (
+        <button
+          type="button"
+          onClick={() => onHomeModeChange("clinic")}
+          style={{
+            width: "100%", marginBottom: "0.85rem", background: "rgba(107,95,207,0.08)",
+            border: "1px solid rgba(107,95,207,0.22)", borderRadius: 14, padding: "0.85rem 1rem",
+            cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+          }}
+        >
+          <div style={{ fontWeight: 600, fontSize: 13, color: "var(--cream)" }}>🏥 MindShift clinic patient?</div>
+          <div style={{ color: "var(--muted2)", fontSize: 11, marginTop: 2 }}>Switch to My care for appointments and messages</div>
+        </button>
+      )}
+
+      {homeMode === "wellness" && (
+      <button
+        type="button"
+        onClick={() => setPage("premium")}
+        style={{
+          width: "100%", background: "transparent", border: "1px dashed var(--border2)",
+          borderRadius: 14, padding: "0.85rem 1rem", cursor: "pointer", fontFamily: "inherit",
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+        }}
+      >
+        <div style={{ textAlign: "left" }}>
+          <div style={{ fontWeight: 600, fontSize: 13, color: "var(--cream)" }}>MindShift+ Premium</div>
+          <div style={{ color: "var(--muted2)", fontSize: 11, marginTop: 2 }}>Deeper insights & unlimited Mia</div>
         </div>
-      </GlassCard>
+        <span style={{ color: "var(--lavender)", fontSize: 13, fontWeight: 600 }}>Learn more →</span>
+      </button>
+      )}
     </div>
   );
 }
@@ -2816,6 +3134,8 @@ export default function App(){
 
   // Role-based access: owners + any clinician_roles member
   const isClinician = useIsClinicianOrAdmin(user);
+  const patientHome = usePatientHome(user, isClinician);
+  const handleOpenPortal = useCallback((subPage) => openPortalPage(setPage, subPage), []);
 
   // Check disclaimer acceptance when user logs in
   useEffect(()=>{
@@ -2966,6 +3286,9 @@ export default function App(){
             page={page} setPage={setPage} user={appUser} onSignOut={signOut}
             open={sidebarOpen} onClose={()=>setSidebarOpen(false)}
             isClinician={isClinician}
+            homeMode={patientHome.effectiveMode}
+            patientContext={patientHome.context}
+            onOpenPortal={handleOpenPortal}
           />
         )}
         <main className={`main-content${needsSidebar?" has-sidebar":""}`} style={{
@@ -2990,7 +3313,19 @@ export default function App(){
           )}
           {(!user || page==="landing") && <Landing/>}
           {user && page==="onboarding" && <Onboarding setPage={setPage} setUser={()=>{}}/>}
-          {user && page==="dashboard" && <Dashboard user={appUser} setPage={setPage} isClinician={isClinician}/>}
+          {user && page==="dashboard" && (
+            <Dashboard
+              user={appUser}
+              setPage={setPage}
+              isClinician={isClinician}
+              homeMode={patientHome.effectiveMode}
+              onHomeModeChange={patientHome.setMode}
+              patientContext={patientHome.context}
+              patientContextLoading={patientHome.loading}
+              onOpenPortal={handleOpenPortal}
+              showModeToggle={!isClinician && !!patientHome.context?.isClinicPatient}
+            />
+          )}
           {user && page==="clinical" && isClinician && <ClinicalSuite setPage={setPage} userName={appUser?.name}/>}
           {user && page==="mia" && <Mia/>}
           {user && page==="journal" && <Journal/>}
@@ -3004,7 +3339,13 @@ export default function App(){
         {/* Mobile bottom nav */}
         {needsSidebar&&(
           <div className="mobile-only mobile-bottomnav">
-            <BottomNav page={page} setPage={setPage}/>
+            <BottomNav
+              page={page}
+              setPage={setPage}
+              homeMode={patientHome.effectiveMode}
+              patientContext={patientHome.context}
+              onOpenPortal={handleOpenPortal}
+            />
           </div>
         )}
       </div>
