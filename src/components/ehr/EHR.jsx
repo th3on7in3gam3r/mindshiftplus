@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "../../lib/supabase";
 import { getClinicianRole, isAdminEmail, getTasks, getPortalPatientUnreadCount } from "../../lib/ehrDb";
 import { getUnreviewedCrisisCount } from "../../lib/crisisDb";
@@ -32,15 +33,42 @@ export default function EHR({ onBack, onOpenDocs }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [crisisCount, setCrisisCount] = useState(0);
   const [financeOpen, setFinanceOpen] = useState(false);
+  const [financeMenuPos, setFinanceMenuPos] = useState({ top: 0, left: 0 });
+  const financeBtnRef = useRef(null);
+  const financeMenuRef = useRef(null);
 
   const financeViews = ["insurance-claims", "invoices", "reports", "giftcards", "billing-settings"];
   const isFinanceView = financeViews.includes(view);
 
+  const FINANCE_LINKS = [
+    { key: "insurance-claims", label: "Insurance Claims", color: "gold" },
+    { key: "invoices", label: "Patient Invoices", color: "accent" },
+    { key: "reports", label: "Reports", color: "purple" },
+    { key: "giftcards", label: "Gift Cards", color: "green" },
+    { key: "billing-settings", label: "Billing Setup", color: "muted" },
+  ];
+
+  const openFinanceMenu = () => {
+    const btn = financeBtnRef.current;
+    if (btn) {
+      const r = btn.getBoundingClientRect();
+      setFinanceMenuPos({ top: r.bottom + 6, left: Math.max(8, r.left) });
+    }
+    setFinanceOpen(true);
+  };
+
   useEffect(() => {
     if (!financeOpen) return;
-    const close = () => setFinanceOpen(false);
-    document.addEventListener("click", close);
-    return () => document.removeEventListener("click", close);
+    const close = (e) => {
+      if (financeBtnRef.current?.contains(e.target)) return;
+      if (financeMenuRef.current?.contains(e.target)) return;
+      setFinanceOpen(false);
+    };
+    const t = setTimeout(() => document.addEventListener("mousedown", close), 0);
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener("mousedown", close);
+    };
   }, [financeOpen]);
 
   useEffect(() => {
@@ -152,6 +180,7 @@ export default function EHR({ onBack, onOpenDocs }) {
         backdropFilter: "blur(20px)",
         borderBottom: "1px solid var(--ehr-border)",
         boxShadow: "var(--ehr-shadow)",
+        overflow: "visible",
       }}>
         {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, minWidth: 0 }}>
@@ -169,57 +198,33 @@ export default function EHR({ onBack, onOpenDocs }) {
         </div>
 
         {/* Primary nav */}
-        <div style={{ display: "flex", alignItems: "center", gap: 4, flex: 1, overflowX: "auto", minWidth: 0, scrollbarWidth: "none" }}>
-          {navBtn("dashboard", "Patients")}
-          {navBtn("intakes", "Intakes", { color: "gold", badge: pendingIntakes })}
-          {navBtn("schedule", "Schedule", { color: "teal" })}
-          {navBtn("messages", "Messages", { color: "teal", badge: unreadCount })}
-          {navBtn("tasks", "Tasks", { color: "rose", badge: taskCount })}
-          {navBtn("crisis", "Crisis", { color: "rose", badge: crisisCount, icon: "🚨" })}
+        <div style={{ display: "flex", alignItems: "center", gap: 4, flex: 1, minWidth: 0, overflow: "visible" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 4, flex: 1, overflowX: "auto", minWidth: 0, scrollbarWidth: "none" }}>
+            {navBtn("dashboard", "Patients")}
+            {navBtn("intakes", "Intakes", { color: "gold", badge: pendingIntakes })}
+            {navBtn("schedule", "Schedule", { color: "teal" })}
+            {navBtn("messages", "Messages", { color: "teal", badge: unreadCount })}
+            {navBtn("tasks", "Tasks", { color: "rose", badge: taskCount })}
+            {navBtn("crisis", "Crisis", { color: "rose", badge: crisisCount, icon: "🚨" })}
+          </div>
 
-          {/* Finance dropdown */}
-          <div style={{ position: "relative", flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+          {/* Finance dropdown — outside scroll clip */}
+          <div style={{ position: "relative", flexShrink: 0 }}>
             <button
+              ref={financeBtnRef}
               type="button"
-              onClick={() => setFinanceOpen((o) => !o)}
+              onClick={() => (financeOpen ? setFinanceOpen(false) : openFinanceMenu())}
               style={{
-                background: isFinanceView ? "color-mix(in srgb,var(--ehr-gold) 14%,transparent)" : "transparent",
-                border: isFinanceView ? "1px solid color-mix(in srgb,var(--ehr-gold) 30%,transparent)" : "1px solid transparent",
+                background: isFinanceView || financeOpen ? "color-mix(in srgb,var(--ehr-gold) 14%,transparent)" : "transparent",
+                border: isFinanceView || financeOpen ? "1px solid color-mix(in srgb,var(--ehr-gold) 30%,transparent)" : "1px solid transparent",
                 borderRadius: 8, padding: "5px 11px", cursor: "pointer",
-                color: isFinanceView ? "var(--ehr-gold)" : "var(--ehr-muted)",
-                fontWeight: isFinanceView ? 600 : 400, fontFamily: "inherit", fontSize: 13,
+                color: isFinanceView || financeOpen ? "var(--ehr-gold)" : "var(--ehr-muted)",
+                fontWeight: isFinanceView || financeOpen ? 600 : 400, fontFamily: "inherit", fontSize: 13,
                 display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap",
               }}
             >
               Finance <span style={{ fontSize: 10, opacity: 0.7 }}>{financeOpen ? "▲" : "▼"}</span>
             </button>
-            {financeOpen && (
-              <div style={{
-                position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 200,
-                minWidth: 180, background: "var(--ehr-surface)",
-                border: "1px solid var(--ehr-border)", borderRadius: 12,
-                boxShadow: "0 12px 40px rgba(0,0,0,0.12)", padding: 6, overflow: "hidden",
-              }}>
-                {[
-                  { key: "insurance-claims", label: "Insurance Claims", color: "gold" },
-                  { key: "invoices", label: "Patient Invoices", color: "accent" },
-                  { key: "reports", label: "Reports", color: "purple" },
-                  { key: "giftcards", label: "Gift Cards", color: "green" },
-                  { key: "billing-settings", label: "Billing Setup", color: "muted" },
-                ].map(({ key, label, color }) => (
-                  <button key={key} type="button" onClick={() => { setView(key); setFinanceOpen(false); }} style={{
-                    display: "block", width: "100%", textAlign: "left",
-                    padding: "9px 12px", border: "none", borderRadius: 8,
-                    background: view === key ? `color-mix(in srgb,var(--ehr-${color}) 12%,transparent)` : "transparent",
-                    color: view === key ? `var(--ehr-${color})` : "var(--ehr-text)",
-                    fontWeight: view === key ? 600 : 400, fontSize: 13, cursor: "pointer", fontFamily: "inherit",
-                  }}
-                    onMouseEnter={(e) => { if (view !== key) e.currentTarget.style.background = "var(--ehr-card2)"; }}
-                    onMouseLeave={(e) => { if (view !== key) e.currentTarget.style.background = "transparent"; }}
-                  >{label}</button>
-                ))}
-              </div>
-            )}
           </div>
         </div>
 
@@ -251,6 +256,44 @@ export default function EHR({ onBack, onOpenDocs }) {
           </button>
         </div>
       </div>
+
+      {financeOpen && createPortal(
+        <div
+          ref={financeMenuRef}
+          style={{
+            position: "fixed",
+            top: financeMenuPos.top,
+            left: financeMenuPos.left,
+            zIndex: 10000,
+            minWidth: 200,
+            background: "var(--ehr-surface, #fff)",
+            border: "1px solid var(--ehr-border, #e2e8f0)",
+            borderRadius: 12,
+            boxShadow: "0 12px 40px rgba(0,0,0,0.18)",
+            padding: 6,
+          }}
+        >
+          {FINANCE_LINKS.map(({ key, label, color }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => { setView(key); setFinanceOpen(false); }}
+              style={{
+                display: "block", width: "100%", textAlign: "left",
+                padding: "10px 12px", border: "none", borderRadius: 8,
+                background: view === key ? `color-mix(in srgb,var(--ehr-${color}) 12%,transparent)` : "transparent",
+                color: view === key ? `var(--ehr-${color})` : "var(--ehr-text, #1a1f36)",
+                fontWeight: view === key ? 600 : 400, fontSize: 13, cursor: "pointer", fontFamily: "inherit",
+              }}
+              onMouseEnter={(e) => { if (view !== key) e.currentTarget.style.background = "var(--ehr-card2, #f8fafc)"; }}
+              onMouseLeave={(e) => { if (view !== key) e.currentTarget.style.background = "transparent"; }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>,
+        document.body
+      )}
 
       {/* Content */}
       <div style={{ minHeight: "calc(100vh - 58px)" }}>
