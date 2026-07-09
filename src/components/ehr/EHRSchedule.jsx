@@ -1,7 +1,49 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { EhrBtn, EhrBadge, EhrInput, EhrSelect, Spinner } from "./EHRUI";
 import { getAppointments, updateApptStatus } from "../../lib/clinicApi";
+import { getChartsForPicker } from "../../lib/ehrDb";
+import { isOffDayOfWeek, OFF_SUMMARY } from "../../lib/schedulingConstants";
 import { supabase } from "../../lib/supabase";
+
+const PROVIDERS = [
+  { name: "Kenneth Mutegyeki, PMHNP-BC", short: "Kenneth" },
+  { name: "Rachel Nakkazi, PMHNP-BC", short: "Rachel" },
+];
+
+function defaultProviderName(clinician) {
+  const n = (clinician?.full_name || "").toLowerCase();
+  if (n.includes("rachel")) return PROVIDERS[1].name;
+  if (n.includes("kenneth")) return PROVIDERS[0].name;
+  return PROVIDERS[0].name;
+}
+
+function defaultProviderFilter(clinician) {
+  const n = (clinician?.full_name || "").toLowerCase();
+  if (n.includes("rachel")) return PROVIDERS[1].name;
+  if (n.includes("kenneth")) return PROVIDERS[0].name;
+  return "all";
+}
+
+function apptMatchesProvider(appt, filter) {
+  if (filter === "all") return true;
+  const provider = (appt.provider_name || "").toLowerCase();
+  const short = filter.split(",")[0].trim().toLowerCase();
+  const first = short.split(" ")[0];
+  if (!provider) return filter === PROVIDERS[0].name;
+  return provider.includes(first) || provider.includes(short);
+}
+
+function filterChartOptions(charts, query) {
+  const q = query.trim().toLowerCase();
+  if (!q) return (charts ?? []).slice(0, 8);
+  return (charts ?? [])
+    .filter((c) => {
+      const name = (c.display_name || c.full_name || "").toLowerCase();
+      const mrn = (c.mrn || "").toLowerCase();
+      return name.includes(q) || mrn.includes(q);
+    })
+    .slice(0, 8);
+}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const SLOT_HEIGHT = 48;       // px per hour
@@ -68,8 +110,10 @@ function apptHeightPct(durationMin = 60) {
 
 const EMPTY_FORM = {
   name: "", email: "", phone: "",
+  patient_id: null, chart_id: null,
   appointment_type: "therapy",
   scheduled_at: "", duration: "60",
+  provider_name: "",
   location: "Milford, MA", notes: "",
 };
 
@@ -78,14 +122,54 @@ export default function EHRSchedule({ clinician }) {
   const [loading, setLoading]     = useState(true);
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
   const [viewMode, setViewMode]   = useState("week");
+  const [providerFilter, setProviderFilter] = useState(() => defaultProviderFilter(clinician));
   const [showForm, setShowForm]   = useState(false);
   const [form, setForm]           = useState(EMPTY_FORM);
+  const [patientQuery, setPatientQuery] = useState("");
+  const [chartOptions, setChartOptions] = useState([]);
+  const [showPatientDropdown, setShowPatientDropdown] = useState(false);
   const [saving, setSaving]       = useState(false);
   const [selected, setSelected]   = useState(null);
   const [error, setError]         = useState(null);
   const gridRef = useRef(null);
+  const patientSearchRef = useRef(null);
 
   useEffect(() => { load(); }, [weekStart]);
+
+  useEffect(() => {
+    if (!showForm) return;
+    getChartsForPicker().then(({ data }) => setChartOptions(data ?? []));
+    setForm((f) => ({
+      ...f,
+      provider_name: f.provider_name || defaultProviderName(clinician),
+    }));
+  }, [showForm, clinician]);
+
+  useEffect(() => {
+    if (!showPatientDropdown) return;
+    const onDocClick = (e) => {
+      if (patientSearchRef.current && !patientSearchRef.current.contains(e.target)) {
+        setShowPatientDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [showPatientDropdown]);
+
+  const filteredAppts = useMemo(
+    () => appts.filter((a) => apptMatchesProvider(a, providerFilter)),
+    [appts, providerFilter],
+  );
+
+  const pendingAppts = useMemo(
+    () => filteredAppts.filter((a) => ["pending", "requested"].includes(a.status)),
+    [filteredAppts],
+  );
+
+  const patientMatches = useMemo(
+    () => filterChartOptions(chartOptions, patientQuery),
+    [chartOptions, patientQuery],
+  );
 
   // Scroll to 8am on mount
   useEffect(() => {
@@ -116,6 +200,29 @@ export default function EHRSchedule({ clinician }) {
     } catch (e) { setError(e.message); }
   }
 
+  function openNewForm(prefill = {}) {
+    setForm({
+      ...EMPTY_FORM,
+      provider_name: defaultProviderName(clinician),
+      ...prefill,
+    });
+    setPatientQuery(prefill.name || "");
+    setShowForm(true);
+    setSelected(null);
+  }
+
+  function selectPatient(chart) {
+    setForm((f) => ({
+      ...f,
+      name: chart.display_name || chart.full_name || "",
+      phone: chart.phone || f.phone,
+      patient_id: chart.patient_id || null,
+      chart_id: chart.id || null,
+    }));
+    setPatientQuery(chart.display_name || chart.full_name || "");
+    setShowPatientDropdown(false);
+  }
+
   async function handleCreate(e) {
     e.preventDefault();
     if (!form.name || !form.scheduled_at) return;
@@ -125,16 +232,20 @@ export default function EHRSchedule({ clinician }) {
         name: form.name,
         email: form.email || null,
         phone: form.phone || null,
+        patient_id: form.patient_id || null,
         appointment_type: form.appointment_type,
         scheduled_at: new Date(form.scheduled_at).toISOString(),
+        duration_minutes: parseInt(form.duration, 10) || 60,
+        provider_name: form.provider_name || defaultProviderName(clinician),
         location: form.location,
         notes: form.notes || null,
         status: "confirmed",
       }).select().single();
       if (err) throw new Error(err.message);
-      if (data) setAppts(prev => [...prev, data]);
+      if (data) setAppts((prev) => [...prev, data]);
       setShowForm(false);
       setForm(EMPTY_FORM);
+      setPatientQuery("");
     } catch (e) { setError(e.message); }
     setSaving(false);
   }
@@ -151,9 +262,7 @@ export default function EHRSchedule({ clinician }) {
     const dt = new Date(dayDate);
     dt.setHours(h, m, 0, 0);
     const local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-    setForm(f => ({ ...f, scheduled_at: local }));
-    setShowForm(true);
-    setSelected(null);
+    openNewForm({ scheduled_at: local });
   }
 
   const weekDays = DAYS_SHORT.map((_, i) => addDays(weekStart, i));
@@ -193,10 +302,56 @@ export default function EHRSchedule({ clinician }) {
 
         <EhrBtn variant="secondary" small onClick={() => setWeekStart(getWeekStart(new Date()))}>Today</EhrBtn>
 
+        {/* Provider filter */}
+        <div style={{ display: "flex", gap: 4, background: "var(--ehr-card2)", border: "1px solid var(--ehr-border)", borderRadius: 10, padding: 3 }}>
+          {[{ value: "all", label: "All" }, ...PROVIDERS.map((p) => ({ value: p.name, label: p.short }))].map((p) => (
+            <button
+              key={p.value}
+              type="button"
+              onClick={() => setProviderFilter(p.value)}
+              style={{
+                padding: "5px 12px", borderRadius: 7, border: "1px solid transparent",
+                background: providerFilter === p.value ? "color-mix(in srgb, var(--ehr-accent) 18%, transparent)" : "transparent",
+                borderColor: providerFilter === p.value ? "color-mix(in srgb, var(--ehr-accent) 35%, transparent)" : "transparent",
+                color: providerFilter === p.value ? "var(--ehr-accent)" : "var(--ehr-muted)",
+                fontSize: 12, fontWeight: providerFilter === p.value ? 600 : 400,
+                cursor: "pointer", fontFamily: "inherit",
+              }}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
         <div style={{ marginLeft: "auto" }}>
-          <EhrBtn small onClick={() => { setShowForm(s => !s); setSelected(null); }}>+ New Appointment</EhrBtn>
+          <EhrBtn small onClick={() => openNewForm()}>+ New Appointment</EhrBtn>
         </div>
       </div>
+
+      {pendingAppts.length > 0 && (
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+          margin: "8px 16px 0", padding: "10px 14px",
+          background: "color-mix(in srgb, var(--ehr-gold) 12%, transparent)",
+          border: "1px solid color-mix(in srgb, var(--ehr-gold) 35%, transparent)",
+          borderRadius: 10, flexWrap: "wrap",
+        }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ehr-text)" }}>
+            ⚠️ {pendingAppts.length} appointment{pendingAppts.length !== 1 ? "s" : ""} awaiting confirmation
+          </span>
+          <EhrBtn
+            variant="secondary"
+            small
+            onClick={() => {
+              setViewMode("list");
+              setSelected(pendingAppts[0]);
+              setShowForm(false);
+            }}
+          >
+            Review now
+          </EhrBtn>
+        </div>
+      )}
 
       {error && (
         <div style={{ background:"color-mix(in srgb,var(--ehr-rose) 10%,transparent)", border:"1px solid color-mix(in srgb,var(--ehr-rose) 30%,transparent)", borderRadius:8, padding:"8px 16px", fontSize:12, color:"var(--ehr-rose)", margin:"8px 16px 0" }}>
@@ -217,9 +372,56 @@ export default function EHRSchedule({ clinician }) {
             <button onClick={() => setShowForm(false)} style={{ background:"transparent", border:"none", fontSize:20, cursor:"pointer", color:"var(--ehr-muted)" }}>✕</button>
           </div>
           <form onSubmit={handleCreate} style={{ display:"flex", flexDirection:"column", gap:12 }}>
-            <EhrInput label="Patient Name *" value={form.name} onChange={set("name")} placeholder="Full name…" required />
+            <div ref={patientSearchRef} style={{ position: "relative" }}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: "var(--ehr-muted2)", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 5 }}>
+                Patient *
+              </label>
+              <input
+                value={patientQuery}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setPatientQuery(v);
+                  setForm((f) => ({ ...f, name: v, patient_id: null, chart_id: null }));
+                  setShowPatientDropdown(true);
+                }}
+                onFocus={() => setShowPatientDropdown(true)}
+                placeholder="Search name or MRN…"
+                required
+                className="ehr-input"
+                style={{ width: "100%", padding: "9px 12px", fontSize: 13 }}
+              />
+              {showPatientDropdown && patientMatches.length > 0 && (
+                <div style={{
+                  position: "absolute", top: "100%", left: 0, right: 0, zIndex: 10, marginTop: 4,
+                  background: "var(--ehr-surface)", border: "1px solid var(--ehr-border)",
+                  borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", overflow: "hidden",
+                }}>
+                  {patientMatches.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => selectPatient(c)}
+                      style={{
+                        display: "block", width: "100%", textAlign: "left", padding: "10px 12px",
+                        background: "transparent", border: "none", borderBottom: "1px solid var(--ehr-border)",
+                        cursor: "pointer", fontFamily: "inherit",
+                      }}
+                    >
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ehr-text)" }}>
+                        {c.display_name || c.full_name}
+                      </div>
+                      {c.mrn && <div style={{ fontSize: 11, color: "var(--ehr-muted2)", marginTop: 2 }}>MRN {c.mrn}</div>}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div style={{ fontSize: 11, color: "var(--ehr-muted2)", marginTop: 5 }}>
+                Pick from your charts or type a new name.
+              </div>
+            </div>
             <EhrInput label="Email" type="email" value={form.email} onChange={set("email")} placeholder="patient@email.com" />
             <EhrInput label="Phone" value={form.phone} onChange={set("phone")} placeholder="(555) 000-0000" />
+            <EhrSelect label="Clinician" value={form.provider_name} onChange={set("provider_name")} options={PROVIDERS.map((p) => ({ value: p.name, label: p.name }))} />
             <EhrInput label="Date & Time *" type="datetime-local" value={form.scheduled_at} onChange={set("scheduled_at")} required />
             <EhrSelect label="Type" value={form.appointment_type} onChange={set("appointment_type")} options={[
               { value:"therapy",            label:"Therapy" },
@@ -269,7 +471,9 @@ export default function EHRSchedule({ clinician }) {
             </div>
             {[
               ["Date & Time", selected.scheduled_at ? new Date(selected.scheduled_at).toLocaleString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit"}) : "—"],
+              ["Clinician", selected.provider_name ?? "—"],
               ["Type", selected.appointment_type?.replace(/_/g," ") ?? "—"],
+              ["Duration", selected.duration_minutes ? `${selected.duration_minutes} min` : "60 min"],
               ["Location", selected.location ?? "—"],
               ["Email", selected.email ?? "—"],
               ["Phone", selected.phone ?? "—"],
@@ -306,11 +510,11 @@ export default function EHRSchedule({ clinician }) {
       {loading ? (
         <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center" }}><Spinner /></div>
       ) : viewMode === "list" ? (
-        <ListViewContent appts={appts} onSelect={setSelected} onStatusChange={handleStatusChange} />
+        <ListViewContent appts={filteredAppts} onSelect={setSelected} onStatusChange={handleStatusChange} />
       ) : (
         <WeekGrid
           weekDays={weekDays}
-          appts={appts}
+          appts={filteredAppts}
           todayStr={todayStr}
           gridRef={gridRef}
           onCellClick={handleGridClick}
@@ -342,13 +546,18 @@ function WeekGrid({ weekDays, appts, todayStr, gridRef, onCellClick, onApptClick
         {weekDays.map((day, i) => {
           const ds = fmtDate(day);
           const isToday = ds === todayStr;
+          const isClosed = isOffDayOfWeek(day.getDay());
           const dayApptCount = appts.filter(a => a.scheduled_at?.startsWith(ds)).length;
           return (
             <div key={i} style={{
               padding: "10px 8px",
               textAlign: "center",
               borderRight: i < 6 ? "1px solid var(--ehr-border)" : "none",
-              background: isToday ? "color-mix(in srgb,var(--ehr-accent) 6%,transparent)" : "transparent",
+              background: isToday
+                ? "color-mix(in srgb,var(--ehr-accent) 6%,transparent)"
+                : isClosed
+                  ? "color-mix(in srgb,var(--ehr-muted2) 6%,transparent)"
+                  : "transparent",
             }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: isToday ? "var(--ehr-accent)" : "var(--ehr-muted2)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
                 {DAYS_SHORT[i]}
@@ -368,9 +577,16 @@ function WeekGrid({ weekDays, appts, todayStr, gridRef, onCellClick, onApptClick
                   {dayApptCount} appt{dayApptCount !== 1 ? "s" : ""}
                 </div>
               )}
+              {isClosed && (
+                <div style={{ fontSize: 9, color: "var(--ehr-muted2)", marginTop: 2, fontWeight: 600 }}>Closed</div>
+              )}
             </div>
           );
         })}
+      </div>
+
+      <div style={{ fontSize: 10, color: "var(--ehr-muted2)", padding: "4px 12px 6px 68px", background: "var(--ehr-surface)", borderBottom: "1px solid var(--ehr-border)" }}>
+        Grey columns = clinic closed · {OFF_SUMMARY}
       </div>
 
       {/* Scrollable time grid */}
@@ -403,6 +619,7 @@ function WeekGrid({ weekDays, appts, todayStr, gridRef, onCellClick, onApptClick
           {weekDays.map((day, di) => {
             const ds = fmtDate(day);
             const isToday = ds === todayStr;
+            const isClosed = isOffDayOfWeek(day.getDay());
             const dayAppts = appts.filter(a => a.scheduled_at?.startsWith(ds));
 
             return (
@@ -412,7 +629,11 @@ function WeekGrid({ weekDays, appts, todayStr, gridRef, onCellClick, onApptClick
                 style={{
                   position: "relative",
                   borderRight: di < 6 ? "1px solid var(--ehr-border)" : "none",
-                  background: isToday ? "color-mix(in srgb,var(--ehr-accent) 3%,transparent)" : "transparent",
+                  background: isClosed
+                    ? "repeating-linear-gradient(-45deg, color-mix(in srgb,var(--ehr-muted2) 5%,transparent), color-mix(in srgb,var(--ehr-muted2) 5%,transparent) 6px, transparent 6px, transparent 12px)"
+                    : isToday
+                      ? "color-mix(in srgb,var(--ehr-accent) 3%,transparent)"
+                      : "transparent",
                   cursor: "crosshair",
                 }}
               >
@@ -544,6 +765,7 @@ function ListViewContent({ appts, onSelect, onStatusChange }) {
           <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ehr-text)" }}>{appt.name || "Patient"}</div>
           <div style={{ fontSize: 12, color: "var(--ehr-muted2)", marginTop: 2 }}>
             {appt.scheduled_at ? new Date(appt.scheduled_at).toLocaleString("en-US",{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}) : "—"}
+            {appt.provider_name ? ` · ${appt.provider_name.split(",")[0]}` : ""}
             {appt.appointment_type ? ` · ${appt.appointment_type.replace(/_/g," ")}` : ""}
             {appt.location ? ` · ${appt.location}` : ""}
           </div>
