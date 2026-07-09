@@ -20,12 +20,12 @@ import EHRBillingSettings from "./EHRBillingSettings";
 import EHRCrisisAlerts from "./EHRCrisisAlerts";
 import { Spinner, EhrStyles } from "./EHRUI";
 
-export default function EHR({ onBack, onOpenDocs }) {
+export default function EHR({ onBack, onOpenDocs, initialView }) {
   // ── ALL hooks must be declared unconditionally at the top ──────────────────
   const [session, setSession]         = useState(undefined);
   const [clinician, setClinician]     = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [view, setView]               = useState("dashboard");
+  const [view, setView]               = useState(initialView || "dashboard");
   const [activeChartId, setActiveChartId] = useState(null);
   const [chartContext, setChartContext] = useState(null);
   const [pendingIntakes, setPendingIntakes] = useState(0);
@@ -328,7 +328,12 @@ export default function EHR({ onBack, onOpenDocs }) {
             onCreated={(id) => { setActiveChartId(id); setView("chart"); }}
           />
         )}
-        {view === "schedule"  && <EHRSchedule  clinician={clinician} />}
+        {view === "schedule"  && (
+          <EHRSchedule
+            clinician={clinician}
+            onOpenChart={(id) => { setActiveChartId(id); setView("chart"); }}
+          />
+        )}
         {view === "tasks"     && <EHRTasks     clinician={clinician} />}
         {view === "messages"  && <EHRPatientMessages clinician={clinician} />}
         {view === "staff-messages" && <EHRMessages clinician={clinician} />}

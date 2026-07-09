@@ -10,8 +10,9 @@ export const STAFF_DOC_META = {
 };
 
 export const STAFF_DOC_QUICK_LINKS = [
+  { label: "Day 1 setup checklist", anchor: "day-1-onboarding" },
   { label: "Open Clinical Suite", anchor: "getting-started" },
-  { label: "Confirm an appointment", anchor: "admin-appointments" },
+  { label: "Confirm an appointment", anchor: "ehr-schedule" },
   { label: "MRN vs Portal Patient ID", anchor: "patient-lookup" },
   { label: "Record & push a note", anchor: "scribe-workflow" },
   { label: "Bill insurance (superbill)", anchor: "insurance-billing" },
@@ -20,6 +21,53 @@ export const STAFF_DOC_QUICK_LINKS = [
 ];
 
 export const STAFF_DOC_SECTIONS = [
+  {
+    id: "day-1-onboarding",
+    icon: "✅",
+    title: "Day 1 Setup Checklist",
+    items: [
+      {
+        q: "New clinic or new staff — what should I do first?",
+        a: `Use this checklist once per environment (production Supabase). Check off each step before seeing real patients.
+
+**1. Run database migrations (admin / site owner)**
+In Supabase SQL Editor, run these files from the project repo in order (skip any already applied):
+• \`billing_phase1_insurance.sql\`
+• \`billing_claims_patient_id_nullable.sql\`
+• \`ehr_charts_patient_id_nullable.sql\`
+• \`appointments_chart_id.sql\`
+
+**2. Billing setup**
+**MindShift EHR → Finance → Billing Setup**
+• Confirm clinic name, address, tax ID
+• Enter **Kenneth's NPI** (1487410999) and **Rachel's NPI** when available
+• Save settings
+
+**3. Create a test patient**
+**EHR → Patients → + New Patient Chart**
+• Enter a test name (e.g. "Test Patient Demo")
+• Save — note the auto-assigned **MRN** on the chart header
+
+**4. Book a test appointment**
+**EHR → Schedule → + New Appointment**
+• Search the test patient by name or MRN
+• Pick clinician, date/time, type → Create
+• Confirm it appears on the week calendar
+
+**5. Create an insurance claim**
+Open the test chart → **Billing** tab → create a claim from a signed note (or add a test signed note first)
+
+**6. Print a superbill**
+**EHR → Finance → Insurance Claims** → open the claim → **Print Superbill**
+Verify provider NPI, patient name, and CPT/ICD-10 appear correctly.
+
+**7. Staff access**
+Confirm Kenneth and Rachel can sign in to **Clinical Suite** with clinic emails and reach EHR, Schedule, and Scribe.
+
+If any step fails, note the exact error message before contacting the site administrator.`,
+      },
+    ],
+  },
   {
     id: "getting-started",
     icon: "🚀",
@@ -30,8 +78,7 @@ export const STAFF_DOC_SECTIONS = [
         a: `Sign in to MindShift+ with your clinic email and password, then open **Clinical Suite** from the left sidebar (⚕ icon).
 
 From there you can launch:
-• **MindShift Admin** — scheduling & patient lookup
-• **MindShift EHR** — charts, notes, medications
+• **MindShift EHR** — patients, schedule, charts, notes, medications, billing
 • **MindShift Scribe** — AI session recording & notes
 
 Use **← Exit** in any tool to return to the Clinical Suite hub.`,
@@ -44,13 +91,11 @@ If you see "Access denied," confirm you are signed in with your **@mindshiftwell
       },
       {
         q: "What is each tool for?",
-        a: `**MindShift Admin** — Appointments, availability, blocked times, patient ID lookup, visit notes, prescriptions, document review.
-
-**MindShift EHR** — Full patient charts, intakes, SOAP notes, medications, billing, crisis alerts, portal messages.
+        a: `**MindShift EHR** — Patient charts, **Schedule** (appointments, availability, blocked times), intakes, SOAP notes, medications, insurance billing, portal messages.
 
 **MindShift Scribe** — Record a session, generate a progress note with AI, push it into the EHR chart.
 
-**Rule of thumb:** Admin = scheduling ops · EHR = clinical chart · Scribe = documentation from a session.`,
+**Rule of thumb:** EHR = charts + schedule + billing · Scribe = documentation from a session.`,
       },
     ],
   },
@@ -61,7 +106,7 @@ If you see "Access denied," confirm you are signed in with your **@mindshiftwell
     items: [
       {
         q: "When is the clinic open for appointments?",
-        a: `Patients can only book on these days (same on the public booking page and in MindShift Admin):
+        a: `Patients can only book on these days (same on the public booking page and in **EHR → Schedule**):
 
 • **Monday** — evenings (6:00 PM & 7:00 PM)
 • **Thursday** — evenings (6:00 PM & 7:00 PM)
@@ -70,52 +115,68 @@ If you see "Access denied," confirm you are signed in with your **@mindshiftwell
 
 **Closed every week:** Sunday, Tuesday, Wednesday.
 
-The Admin **Appointments** tab calendar greys out closed days. The **Availability** tab will not let you add slots on closed days.`,
+The EHR **Schedule** week view greys out closed days. **Schedule → Availability** will not let you add slots on closed days.`,
       },
       {
         q: "Where do patients book online?",
         a: `Public booking page: **mindshiftwellnessclinic.org** → Book Appointment (or the /schedule route).
 
-Patients pick date → time → enter details → submit. New requests appear in **MindShift Admin → Appointments** with status **Pending**.`,
+Patients pick date → time → enter details → submit. New requests appear in **EHR → Schedule** with status **Pending** (yellow banner at top).`,
       },
       {
         q: "How do I block a specific day or time off?",
-        a: `**MindShift Admin → Blocked Times**
+        a: `**EHR → Schedule → Blocked**
 
 Choose a date, mark all-day or a time range, add a reason (optional), and save. Blocked times prevent new bookings on that window.`,
       },
     ],
   },
   {
-    id: "admin-appointments",
+    id: "ehr-schedule",
     icon: "📋",
-    title: "MindShift Admin — Appointments",
+    title: "EHR Schedule — Appointments",
     items: [
       {
         q: "How do I confirm or cancel an appointment?",
-        a: `**MindShift Admin → Appointments**
+        a: `**EHR → Schedule**
 
-• **Pending / Requested** — click **✓ Confirm** or **✕ Cancel**
-• **Confirmed** — click **✓ Complete** when the visit is done, or **✕ Cancel** if needed
-• **Completed / Cancelled** — click **🗄️ Archive** to tidy the list (archived items stay viewable under the Archived filter)
+Click an appointment on the week calendar or switch to **List** view.
 
-Confirming sends the patient an email (if email is on file). Telehealth confirmations also generate a video link (see Telehealth section).`,
+• **Pending / Requested** — open the appointment → **✓ Confirm** or **Cancel Appointment**
+• **Confirmed** — **Mark Complete** when the visit is done, or cancel if needed
+• **Completed / Cancelled** — **🗄️ Archive** to tidy the list (view under **Archived** list filter)
+
+Confirming sends the patient an email when email is on file. Telehealth confirmations also generate a video link.`,
       },
       {
-        q: "How do I use the appointment calendar?",
-        a: `At the top of **Appointments**, the monthly calendar shows:
-• Grey days = clinic closed (Sun, Tue, Wed)
-• Dots on open days = appointments (gold = pending, green = scheduled)
-• Click an open day to filter the list below; click again or use **Clear date filter** to show all.`,
+        q: "How do I use the schedule calendar?",
+        a: `**EHR → Schedule → Calendar**
+
+• **Week** — time-grid view with color-coded appointment blocks; click empty space to book
+• **List** — filter by All, Pending, Confirmed, Cancelled, Completed, or Archived
+• **Kenneth / Rachel / All** — provider filter in the toolbar
+• Grey striped columns = clinic closed (Sun, Tue, Wed)
+
+Use **Availability** and **Blocked** tabs for weekly hours and time off.`,
       },
       {
-        q: "What do the appointment filters mean?",
-        a: `**All** — everything except archived
+        q: "How do I book a patient from their chart?",
+        a: `**EHR → Schedule → + New Appointment**
+
+Search by **name or MRN** in the patient field — pick from the dropdown to link the appointment to their chart automatically.
+
+You can also type a new name for walk-ins not yet in the system.
+
+After booking, open the appointment and click **Open Patient Chart** when a chart is linked.`,
+      },
+      {
+        q: "What do the appointment list filters mean?",
+        a: `**All** — everything this week except archived
 **Pending** — needs your confirmation
 **Confirmed** — approved, upcoming
 **Cancelled** — patient or staff cancelled
 **Completed** — visit happened
-**Archived** — old records moved out of the main list`,
+**Archived** — old records moved out of the main calendar`,
       },
     ],
   },
@@ -160,15 +221,13 @@ They do **not** automatically get a **Portal Patient ID** unless they create a p
 
 **Only add a Portal Patient ID** (Edit Chart → Portal Patient ID) when the patient has signed up for the portal and you want to link their account.
 
-You can find Portal Patient IDs in **MindShift Admin → Patient Lookup** if they booked online or registered.`,
+You can find Portal Patient IDs on the patient chart (**Edit Chart → Portal Patient ID**) or by searching the patient in **EHR → Patients** or **Schedule** booking search when they have a linked portal account.`,
       },
       {
         q: "How do I find a patient's Portal Patient ID (UUID)?",
-        a: `**MindShift Admin → 👤 Patient Lookup**
+        a: `**EHR → Patients** — search by name or MRN and open the chart. The Portal Patient ID field is under **Edit Chart** when linking a portal login.
 
-Search by first name, last name, full name, MRN (e.g. MSW-…), email, or phone. Results pull from EHR charts, appointments, profiles, and intakes.
-
-Click **Copy** next to the Supabase Patient ID when you need the UUID to link a chart to the portal.`,
+For patients who booked online, the appointment may include their portal account — open **Schedule**, select the appointment, then **Open Patient Chart** if linked.`,
       },
       {
         q: "I searched a name and got nothing — what now?",
@@ -423,7 +482,7 @@ Match what you documented for the visit.`,
     items: [
       {
         q: "How does telehealth work for scheduled appointments?",
-        a: `When a **telehealth** appointment is **confirmed** (Admin → Appointments → Confirm), the system creates a **Whereby** video room and emails the patient a join link.
+        a: `When a **telehealth** appointment is **confirmed** (**EHR → Schedule** → Confirm), the system creates a **Whereby** video room and emails the patient a join link.
 
 In **MindShift Scribe**, if modality = Telehealth, a **Telehealth Video** panel shows the matching appointment and a **Join Video Session** button when a link exists.`,
       },
@@ -437,7 +496,7 @@ Use this when the patient needs to connect immediately and did not book ahead.`,
       },
       {
         q: "Where can I join video from besides Scribe?",
-        a: `• **MindShift Admin → Appointments** — confirmed telehealth rows show **📹 Join Video Session**
+        a: `• **EHR → Schedule** — confirmed telehealth appointments show **📹 Join Video Session** in the detail panel
 • **MindShift EHR → patient chart → Appointments** — join button on confirmed telehealth visits`,
       },
     ],
@@ -486,7 +545,7 @@ This is intentional for compliance and audit trail.`,
 • View prescriptions, documents, billing, and intake status
 • Connect wellness features from MindShift+
 
-The portal is separate from the staff Clinical Suite—patients never see Admin, EHR, or Scribe.`,
+The portal is separate from the staff Clinical Suite—patients never see EHR or Scribe.`,
       },
       {
         q: "How do patients book appointments?",
@@ -500,7 +559,7 @@ The portal is separate from the staff Clinical Suite—patients never see Admin,
     title: "Troubleshooting",
     items: [
       {
-        q: "I can't sign in to Admin / EHR / Scribe",
+        q: "I can't sign in to EHR / Scribe",
         a: `• Use your authorized clinic email and password
 • Sign out of any patient/test account first
 • Clear browser cache or try a private window
@@ -510,7 +569,7 @@ Still blocked? Contact the site administrator with your email address.`,
       },
       {
         q: "Telehealth link says 'Generating link…' forever",
-        a: `Confirm the appointment in Admin first. Telehealth links are created on **Confirm** for telehealth-type appointments.
+        a: `Confirm the appointment in **EHR → Schedule** first. Telehealth links are created on **Confirm** for telehealth-type appointments.
 
 For instant sessions, use Scribe's **Start Video Session Now**. If it still fails, the backend function may need redeployment—escalate to admin.`,
       },

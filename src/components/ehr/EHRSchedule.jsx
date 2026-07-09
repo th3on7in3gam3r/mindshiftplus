@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { EhrBtn, EhrBadge, EhrInput, EhrSelect, Spinner } from "./EHRUI";
 import { getAppointments, updateApptStatus } from "../../lib/clinicApi";
-import { getChartsForPicker } from "../../lib/ehrDb";
+import { getChartsForPicker, getChartByPatient } from "../../lib/ehrDb";
 import { isOffDayOfWeek, OFF_SUMMARY } from "../../lib/schedulingConstants";
 import { supabase } from "../../lib/supabase";
+import { EHRAvailabilityPanel, EHRBlockedPanel } from "./EHRScheduleOps";
 
 const PROVIDERS = [
   { name: "Kenneth Mutegyeki, PMHNP-BC", short: "Kenneth" },
@@ -43,6 +44,28 @@ function filterChartOptions(charts, query) {
       return name.includes(q) || mrn.includes(q);
     })
     .slice(0, 8);
+}
+
+async function enrichAppointmentsWithCharts(appts) {
+  const out = [];
+  for (const a of appts ?? []) {
+    if (a.chart_id) {
+      out.push(a);
+      continue;
+    }
+    if (!a.patient_id) {
+      out.push(a);
+      continue;
+    }
+    const { data: chart } = await getChartByPatient(a.patient_id);
+    if (chart?.id) {
+      await supabase.from("appointments").update({ chart_id: chart.id }).eq("id", a.id);
+      out.push({ ...a, chart_id: chart.id });
+    } else {
+      out.push(a);
+    }
+  }
+  return out;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -117,11 +140,13 @@ const EMPTY_FORM = {
   location: "Milford, MA", notes: "",
 };
 
-export default function EHRSchedule({ clinician }) {
+export default function EHRSchedule({ clinician, onOpenChart }) {
   const [appts, setAppts]         = useState([]);
   const [loading, setLoading]     = useState(true);
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
+  const [schedulePanel, setSchedulePanel] = useState("calendar");
   const [viewMode, setViewMode]   = useState("week");
+  const [listFilter, setListFilter] = useState("all");
   const [providerFilter, setProviderFilter] = useState(() => defaultProviderFilter(clinician));
   const [showForm, setShowForm]   = useState(false);
   const [form, setForm]           = useState(EMPTY_FORM);
@@ -157,9 +182,18 @@ export default function EHRSchedule({ clinician }) {
   }, [showPatientDropdown]);
 
   const filteredAppts = useMemo(
-    () => appts.filter((a) => apptMatchesProvider(a, providerFilter)),
+    () => appts
+      .filter((a) => a.status !== "archived")
+      .filter((a) => apptMatchesProvider(a, providerFilter)),
     [appts, providerFilter],
   );
+
+  const listAppts = useMemo(() => {
+    const base = appts.filter((a) => apptMatchesProvider(a, providerFilter));
+    if (listFilter === "archived") return base.filter((a) => a.status === "archived");
+    if (listFilter === "all") return base.filter((a) => a.status !== "archived");
+    return base.filter((a) => a.status === listFilter);
+  }, [appts, providerFilter, listFilter]);
 
   const pendingAppts = useMemo(
     () => filteredAppts.filter((a) => ["pending", "requested"].includes(a.status)),
@@ -185,7 +219,8 @@ export default function EHRSchedule({ clinician }) {
       const from = fmtDate(weekStart) + "T00:00:00";
       const to   = fmtDate(addDays(weekStart, 6)) + "T23:59:59";
       const data = await getAppointments(from, to);
-      setAppts(data ?? []);
+      const enriched = await enrichAppointmentsWithCharts(data ?? []);
+      setAppts(enriched);
     } catch (e) {
       setError(e.message ?? "Failed to load.");
     }
@@ -233,6 +268,7 @@ export default function EHRSchedule({ clinician }) {
         email: form.email || null,
         phone: form.phone || null,
         patient_id: form.patient_id || null,
+        chart_id: form.chart_id || null,
         appointment_type: form.appointment_type,
         scheduled_at: new Date(form.scheduled_at).toISOString(),
         duration_minutes: parseInt(form.duration, 10) || 60,
@@ -282,17 +318,37 @@ export default function EHRSchedule({ clinician }) {
       }}>
         {/* View toggle */}
         <div style={{ display: "flex", background: "var(--ehr-card2)", borderRadius: 8, padding: 3, gap: 2 }}>
-          {["week","list"].map(v => (
-            <button key={v} onClick={() => setViewMode(v)} style={{
-              padding: "5px 14px", borderRadius: 6, border: "none", fontSize: 12, fontWeight: viewMode===v ? 700 : 400,
-              background: viewMode===v ? "var(--ehr-surface)" : "transparent",
-              color: viewMode===v ? "var(--ehr-accent)" : "var(--ehr-muted)",
+          {[
+            { id: "calendar", label: "Calendar" },
+            { id: "availability", label: "Availability" },
+            { id: "blocked", label: "Blocked" },
+          ].map((v) => (
+            <button key={v.id} type="button" onClick={() => setSchedulePanel(v.id)} style={{
+              padding: "5px 14px", borderRadius: 6, border: "none", fontSize: 12, fontWeight: schedulePanel === v.id ? 700 : 400,
+              background: schedulePanel === v.id ? "var(--ehr-surface)" : "transparent",
+              color: schedulePanel === v.id ? "var(--ehr-accent)" : "var(--ehr-muted)",
               cursor: "pointer", fontFamily: "inherit",
-              boxShadow: viewMode===v ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
-            }}>{v === "week" ? "Week" : "List"}</button>
+              boxShadow: schedulePanel === v.id ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
+            }}>{v.label}</button>
           ))}
         </div>
 
+        {schedulePanel === "calendar" && (
+          <div style={{ display: "flex", background: "var(--ehr-card2)", borderRadius: 8, padding: 3, gap: 2 }}>
+            {["week", "list"].map((v) => (
+              <button key={v} type="button" onClick={() => setViewMode(v)} style={{
+                padding: "5px 14px", borderRadius: 6, border: "none", fontSize: 12, fontWeight: viewMode === v ? 700 : 400,
+                background: viewMode === v ? "var(--ehr-surface)" : "transparent",
+                color: viewMode === v ? "var(--ehr-accent)" : "var(--ehr-muted)",
+                cursor: "pointer", fontFamily: "inherit",
+                boxShadow: viewMode === v ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
+              }}>{v === "week" ? "Week" : "List"}</button>
+            ))}
+          </div>
+        )}
+
+        {schedulePanel === "calendar" && (
+          <>
         {/* Week nav */}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <button onClick={() => setWeekStart(d => addDays(d,-7))} style={{ width:28, height:28, borderRadius:6, border:"1px solid var(--ehr-border)", background:"var(--ehr-surface)", cursor:"pointer", fontSize:14, color:"var(--ehr-muted)", display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
@@ -326,9 +382,11 @@ export default function EHRSchedule({ clinician }) {
         <div style={{ marginLeft: "auto" }}>
           <EhrBtn small onClick={() => openNewForm()}>+ New Appointment</EhrBtn>
         </div>
+          </>
+        )}
       </div>
 
-      {pendingAppts.length > 0 && (
+      {schedulePanel === "calendar" && pendingAppts.length > 0 && (
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
           margin: "8px 16px 0", padding: "10px 14px",
@@ -490,27 +548,50 @@ export default function EHRSchedule({ clinician }) {
             </div>
           </div>
           <div style={{ display:"flex", flexDirection:"column", gap:8, marginTop:"1.5rem" }}>
+            {selected.chart_id && onOpenChart && (
+              <EhrBtn onClick={() => { onOpenChart(selected.chart_id); setSelected(null); }} style={{ justifyContent: "center" }}>
+                Open Patient Chart
+              </EhrBtn>
+            )}
             {(selected.status === "pending" || selected.status === "requested") && (
               <EhrBtn variant="green" onClick={() => handleStatusChange(selected.id, "confirmed")} style={{ justifyContent:"center" }}>✓ Confirm</EhrBtn>
             )}
             {selected.status === "confirmed" && (
-              <EhrBtn variant="teal" onClick={() => handleStatusChange(selected.id, "completed")} style={{ justifyContent:"center" }}>Mark Complete</EhrBtn>
+              <>
+                <EhrBtn variant="teal" onClick={() => handleStatusChange(selected.id, "completed")} style={{ justifyContent:"center" }}>Mark Complete</EhrBtn>
+                <EhrBtn variant="danger" onClick={() => { handleStatusChange(selected.id, "cancelled"); setSelected(null); }} style={{ justifyContent:"center" }}>Cancel Appointment</EhrBtn>
+              </>
             )}
             {selected.appointment_type === "telehealth" && selected.telehealth_url && (
               <EhrBtn variant="teal" onClick={() => window.open(selected.telehealth_url,"_blank")} style={{ justifyContent:"center" }}>📹 Join Video Session</EhrBtn>
             )}
-            {selected.status !== "cancelled" && selected.status !== "completed" && (
-              <EhrBtn variant="danger" onClick={() => { handleStatusChange(selected.id,"cancelled"); setSelected(null); }} style={{ justifyContent:"center" }}>Cancel Appointment</EhrBtn>
+            {selected.status !== "cancelled" && selected.status !== "completed" && selected.status !== "archived" && selected.status !== "confirmed" && (
+              <EhrBtn variant="danger" onClick={() => { handleStatusChange(selected.id, "cancelled"); setSelected(null); }} style={{ justifyContent:"center" }}>Cancel Appointment</EhrBtn>
+            )}
+            {["completed", "cancelled"].includes(selected.status) && (
+              <EhrBtn variant="secondary" onClick={() => { handleStatusChange(selected.id, "archived"); setSelected(null); }} style={{ justifyContent:"center" }}>🗄️ Archive</EhrBtn>
+            )}
+            {selected.status === "archived" && (
+              <EhrBtn variant="secondary" onClick={() => handleStatusChange(selected.id, "completed")} style={{ justifyContent:"center" }}>↩ Restore</EhrBtn>
             )}
           </div>
         </div>
       )}
 
       {/* ── Main calendar area ── */}
-      {loading ? (
+      {schedulePanel === "availability" ? (
+        <EHRAvailabilityPanel clinician={clinician} />
+      ) : schedulePanel === "blocked" ? (
+        <EHRBlockedPanel clinician={clinician} />
+      ) : loading ? (
         <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center" }}><Spinner /></div>
       ) : viewMode === "list" ? (
-        <ListViewContent appts={filteredAppts} onSelect={setSelected} onStatusChange={handleStatusChange} />
+        <ListViewContent
+          appts={listAppts}
+          listFilter={listFilter}
+          onListFilterChange={setListFilter}
+          onSelect={setSelected}
+        />
       ) : (
         <WeekGrid
           weekDays={weekDays}
@@ -740,10 +821,17 @@ function WeekGrid({ weekDays, appts, todayStr, gridRef, onCellClick, onApptClick
 }
 
 // ── List View ─────────────────────────────────────────────────────────────────
-function ListViewContent({ appts, onSelect, onStatusChange }) {
+const LIST_FILTERS = [
+  ["all", "All"],
+  ["pending", "Pending"],
+  ["confirmed", "Confirmed"],
+  ["cancelled", "Cancelled"],
+  ["completed", "Completed"],
+  ["archived", "Archived"],
+];
+
+function ListViewContent({ appts, listFilter, onListFilterChange, onSelect }) {
   const sorted = [...appts].sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at));
-  const upcoming = sorted.filter(a => !["cancelled","completed"].includes(a.status));
-  const past     = sorted.filter(a =>  ["cancelled","completed"].includes(a.status));
 
   const Row = ({ appt }) => {
     const color = getColor(appt);
@@ -756,6 +844,7 @@ function ListViewContent({ appts, onSelect, onStatusChange }) {
         borderLeft: `4px solid ${color.bg}`,
         borderRadius: 12, cursor: "pointer", marginBottom: 6,
         transition: "background .15s",
+        opacity: appt.status === "archived" ? 0.75 : 1,
       }}
         onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb,var(--ehr-accent) 4%,transparent)"}
         onMouseLeave={e => e.currentTarget.style.background = "var(--ehr-surface)"}
@@ -770,33 +859,39 @@ function ListViewContent({ appts, onSelect, onStatusChange }) {
             {appt.location ? ` · ${appt.location}` : ""}
           </div>
         </div>
-        <EhrBadge color={appt.status === "confirmed" ? "teal" : appt.status === "completed" ? "green" : appt.status === "cancelled" ? "rose" : "gold"}>{appt.status}</EhrBadge>
+        <EhrBadge color={appt.status === "confirmed" ? "teal" : appt.status === "completed" ? "green" : appt.status === "cancelled" ? "rose" : appt.status === "archived" ? "muted" : "gold"}>{appt.status}</EhrBadge>
       </div>
     );
   };
 
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: "1.2rem 1.5rem" }}>
-      {upcoming.length === 0 && past.length === 0 ? (
+      <div style={{ display: "flex", gap: 6, marginBottom: "1rem", flexWrap: "wrap" }}>
+        {LIST_FILTERS.map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => onListFilterChange(value)}
+            style={{
+              padding: "6px 12px", borderRadius: 8, border: "1px solid var(--ehr-border)",
+              background: listFilter === value ? "var(--ehr-accent)" : "var(--ehr-surface)",
+              color: listFilter === value ? "#fff" : "var(--ehr-muted)",
+              fontSize: 12, fontWeight: listFilter === value ? 600 : 400,
+              cursor: "pointer", fontFamily: "inherit",
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {sorted.length === 0 ? (
         <div style={{ textAlign: "center", padding: "4rem", color: "var(--ehr-muted)" }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>📅</div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>No appointments this week.</div>
+          <div style={{ fontSize: 15, fontWeight: 600 }}>No appointments match this filter.</div>
         </div>
       ) : (
-        <>
-          {upcoming.length > 0 && (
-            <>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ehr-muted2)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>Upcoming ({upcoming.length})</div>
-              {upcoming.map(a => <Row key={a.id} appt={a} />)}
-            </>
-          )}
-          {past.length > 0 && (
-            <>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ehr-muted2)", textTransform: "uppercase", letterSpacing: "0.07em", margin: "1.2rem 0 8px" }}>Past ({past.length})</div>
-              {past.map(a => <Row key={a.id} appt={a} />)}
-            </>
-          )}
-        </>
+        sorted.map((a) => <Row key={a.id} appt={a} />)
       )}
     </div>
   );

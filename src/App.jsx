@@ -3,7 +3,6 @@ import { useAuth } from "./lib/AuthContext";
 import AuthModal from "./components/AuthModal";
 import Portal from "./components/portal/Portal";
 import PublicBooking from "./components/scheduling/PublicBooking";
-import AdminSchedule from "./components/scheduling/AdminSchedule";
 import DisclaimerModal, { hasAcceptedDisclaimer } from "./components/DisclaimerModal";
 import CrisisModal from "./components/CrisisModal";
 import EHR from "./components/ehr/EHR";
@@ -169,20 +168,10 @@ const navItems=[
 // Clinical tools — launched from Clinical Suite hub (not listed individually in sidebar)
 const clinicalTools = [
   {
-    id: "ehr-schedule",
-    title: "MindShift Admin",
-    shortTitle: "Admin",
-    description: "Scheduling, appointments, availability, and patient lookup.",
-    icon: "📋",
-    accent: "#4a6cf7",
-    glow: "rgba(74,108,247,0.35)",
-    gradient: "linear-gradient(145deg, rgba(74,108,247,0.22) 0%, rgba(14,165,160,0.1) 100%)",
-  },
-  {
     id: "ehr",
     title: "MindShift EHR",
     shortTitle: "EHR",
-    description: "Patient charts, clinical notes, medications, and billing.",
+    description: "Patient charts, schedule, clinical notes, medications, and billing.",
     icon: "logo",
     accent: "#7c6ff7",
     glow: "rgba(124,111,247,0.35)",
@@ -299,7 +288,7 @@ function ClinicalSuite({ setPage, userName }) {
 }
 
 function Sidebar({page,setPage,user,onSignOut,open,onClose,isClinician}){
-  const clinicalActive = ["clinical", "ehr-schedule", "ehr", "ai-scribe", "staff-docs"].includes(page);
+  const clinicalActive = ["clinical", "ehr", "ai-scribe", "staff-docs"].includes(page);
   return(
     <>
       {/* Mobile overlay — only shows on small screens when drawer is open */}
@@ -2920,12 +2909,12 @@ export default function App(){
     );
   }
 
-  // Admin scheduling dashboard
+  // Legacy route — MindShift Admin scheduling merged into EHR → Schedule
   if(user && page==="ehr-schedule"){
     return(
       <>
         <GlobalStyles/>
-        <AdminSchedule onBack={()=>setPage("clinical")} onOpenDocs={()=>setPage("staff-docs")}/>
+        <EHR onBack={()=>setPage("clinical")} onOpenDocs={()=>setPage("staff-docs")} initialView="schedule" />
       </>
     );
   }
