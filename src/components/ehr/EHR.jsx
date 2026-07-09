@@ -31,6 +31,17 @@ export default function EHR({ onBack, onOpenDocs }) {
   const [taskCount, setTaskCount]     = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
   const [crisisCount, setCrisisCount] = useState(0);
+  const [financeOpen, setFinanceOpen] = useState(false);
+
+  const financeViews = ["insurance-claims", "invoices", "reports", "giftcards", "billing-settings"];
+  const isFinanceView = financeViews.includes(view);
+
+  useEffect(() => {
+    if (!financeOpen) return;
+    const close = () => setFinanceOpen(false);
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [financeOpen]);
 
   useEffect(() => {
     let mounted = true;
@@ -108,6 +119,25 @@ export default function EHR({ onBack, onOpenDocs }) {
     return <EHRLogin onBack={onBack} />;
   }
 
+  const navBtn = (key, label, { color = "accent", badge = 0, icon = null } = {}) => {
+    const active = view === key;
+    return (
+      <button key={key} onClick={() => { setView(key); setFinanceOpen(false); }} style={{
+        background: active ? `color-mix(in srgb,var(--ehr-${color}) 14%,transparent)` : "transparent",
+        border: active ? `1px solid color-mix(in srgb,var(--ehr-${color}) 30%,transparent)` : "1px solid transparent",
+        borderRadius: 8, padding: "5px 11px", cursor: "pointer",
+        color: active ? `var(--ehr-${color})` : "var(--ehr-muted)",
+        fontWeight: active ? 600 : 400, fontFamily: "inherit", fontSize: 13,
+        display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", flexShrink: 0,
+      }}>
+        {icon && <span>{icon}</span>}{label}
+        {badge > 0 && (
+          <span style={{ background: `var(--ehr-${color})`, color: color === "gold" ? "#000" : "#fff", fontSize: 10, fontWeight: 800, borderRadius: 20, padding: "1px 6px" }}>{badge}</span>
+        )}
+      </button>
+    );
+  };
+
   // ── Authenticated shell ────────────────────────────────────────────────────
   return (
     <div className="ehr-root" style={{ minHeight: "100vh", background: "var(--ehr-bg)", color: "var(--ehr-text)" }}>
@@ -116,141 +146,107 @@ export default function EHR({ onBack, onOpenDocs }) {
       {/* Top nav */}
       <div style={{
         position: "sticky", top: 0, zIndex: 50,
-        display: "flex", alignItems: "center", gap: 12,
-        padding: "0 2rem", height: 58,
+        display: "flex", alignItems: "center", gap: 10,
+        padding: "0 1.25rem", height: 56,
         background: "var(--ehr-surface)",
         backdropFilter: "blur(20px)",
         borderBottom: "1px solid var(--ehr-border)",
         boxShadow: "var(--ehr-shadow)",
       }}>
         {/* Logo */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
-          <img src="/logo.png" alt="MindShift Wellness Clinic" style={{ width: 34, height: 34, borderRadius: 9, objectFit: "contain", flexShrink: 0 }}/>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, background: "var(--ehr-grad)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", lineHeight: 1.2 }}>MindShift Wellness Clinic</div>
-            <div style={{ fontSize: 10, color: "var(--ehr-muted2)", lineHeight: 1.2, letterSpacing: "0.04em" }}>MINDSHIFT EHR</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, minWidth: 0 }}>
+          <img src="/logo.png" alt="MindShift" style={{ width: 32, height: 32, borderRadius: 8, objectFit: "contain" }}/>
+          <div style={{ lineHeight: 1.15, minWidth: 0 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ehr-text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>MindShift EHR</div>
+            {(view === "chart" && chartContext?.patientName) ? (
+              <div style={{ fontSize: 10, color: "var(--ehr-teal)", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 160 }}>
+                {chartContext.tabLabel ? `${chartContext.patientName} · ${chartContext.tabLabel}` : chartContext.patientName}
+              </div>
+            ) : (
+              <div style={{ fontSize: 10, color: "var(--ehr-muted2)" }}>Clinical Suite</div>
+            )}
           </div>
         </div>
 
-        {/* Breadcrumb */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
-          <button onClick={() => setView("dashboard")} style={{
-            background: view === "dashboard" ? "color-mix(in srgb,var(--ehr-accent) 14%,transparent)" : "transparent",
-            border: view === "dashboard" ? "1px solid color-mix(in srgb,var(--ehr-accent) 30%,transparent)" : "1px solid transparent",
-            borderRadius: 8, padding: "5px 12px", cursor: "pointer",
-            color: view === "dashboard" ? "var(--ehr-accent)" : "var(--ehr-muted)",
-            fontWeight: view === "dashboard" ? 600 : 400, fontFamily: "inherit", fontSize: 13,
-          }}>Patients</button>
-          <button onClick={() => setView("intakes")} style={{
-            background: view === "intakes" ? "color-mix(in srgb,var(--ehr-gold) 14%,transparent)" : "transparent",
-            border: view === "intakes" ? "1px solid color-mix(in srgb,var(--ehr-gold) 30%,transparent)" : "1px solid transparent",
-            borderRadius: 8, padding: "5px 12px", cursor: "pointer",
-            color: view === "intakes" ? "var(--ehr-gold)" : "var(--ehr-muted)",
-            fontWeight: view === "intakes" ? 600 : 400, fontFamily: "inherit", fontSize: 13,
-            display: "flex", alignItems: "center", gap: 6,
-          }}>
-            Intakes
-            {pendingIntakes > 0 && (
-              <span style={{ background: "var(--ehr-gold)", color: "#000", fontSize: 10, fontWeight: 800, borderRadius: 20, padding: "1px 7px" }}>{pendingIntakes}</span>
-            )}
-          </button>
+        {/* Primary nav */}
+        <div style={{ display: "flex", alignItems: "center", gap: 4, flex: 1, overflowX: "auto", minWidth: 0, scrollbarWidth: "none" }}>
+          {navBtn("dashboard", "Patients")}
+          {navBtn("intakes", "Intakes", { color: "gold", badge: pendingIntakes })}
+          {navBtn("schedule", "Schedule", { color: "teal" })}
+          {navBtn("messages", "Messages", { color: "teal", badge: unreadCount })}
+          {navBtn("tasks", "Tasks", { color: "rose", badge: taskCount })}
+          {navBtn("crisis", "Crisis", { color: "rose", badge: crisisCount, icon: "🚨" })}
 
-          {/* Phase 9 nav items */}
-          <button onClick={() => setView("crisis")} style={{
-            background: view === "crisis" ? "color-mix(in srgb,var(--ehr-rose) 14%,transparent)" : "transparent",
-            border: view === "crisis" ? "1px solid color-mix(in srgb,var(--ehr-rose) 30%,transparent)" : "1px solid transparent",
-            borderRadius: 8, padding: "5px 12px", cursor: "pointer",
-            color: view === "crisis" ? "var(--ehr-rose)" : "var(--ehr-muted)",
-            fontWeight: view === "crisis" ? 600 : 400, fontFamily: "inherit", fontSize: 13,
-            display: "flex", alignItems: "center", gap: 6,
-          }}>
-            🚨 Crisis
-            {crisisCount > 0 && (
-              <span style={{ background: "#dc2626", color: "#fff", fontSize: 10, fontWeight: 800, borderRadius: 20, padding: "1px 7px" }}>{crisisCount}</span>
+          {/* Finance dropdown */}
+          <div style={{ position: "relative", flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setFinanceOpen((o) => !o)}
+              style={{
+                background: isFinanceView ? "color-mix(in srgb,var(--ehr-gold) 14%,transparent)" : "transparent",
+                border: isFinanceView ? "1px solid color-mix(in srgb,var(--ehr-gold) 30%,transparent)" : "1px solid transparent",
+                borderRadius: 8, padding: "5px 11px", cursor: "pointer",
+                color: isFinanceView ? "var(--ehr-gold)" : "var(--ehr-muted)",
+                fontWeight: isFinanceView ? 600 : 400, fontFamily: "inherit", fontSize: 13,
+                display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap",
+              }}
+            >
+              Finance <span style={{ fontSize: 10, opacity: 0.7 }}>{financeOpen ? "▲" : "▼"}</span>
+            </button>
+            {financeOpen && (
+              <div style={{
+                position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 200,
+                minWidth: 180, background: "var(--ehr-surface)",
+                border: "1px solid var(--ehr-border)", borderRadius: 12,
+                boxShadow: "0 12px 40px rgba(0,0,0,0.12)", padding: 6, overflow: "hidden",
+              }}>
+                {[
+                  { key: "insurance-claims", label: "Insurance Claims", color: "gold" },
+                  { key: "invoices", label: "Patient Invoices", color: "accent" },
+                  { key: "reports", label: "Reports", color: "purple" },
+                  { key: "giftcards", label: "Gift Cards", color: "green" },
+                  { key: "billing-settings", label: "Billing Setup", color: "muted" },
+                ].map(({ key, label, color }) => (
+                  <button key={key} type="button" onClick={() => { setView(key); setFinanceOpen(false); }} style={{
+                    display: "block", width: "100%", textAlign: "left",
+                    padding: "9px 12px", border: "none", borderRadius: 8,
+                    background: view === key ? `color-mix(in srgb,var(--ehr-${color}) 12%,transparent)` : "transparent",
+                    color: view === key ? `var(--ehr-${color})` : "var(--ehr-text)",
+                    fontWeight: view === key ? 600 : 400, fontSize: 13, cursor: "pointer", fontFamily: "inherit",
+                  }}
+                    onMouseEnter={(e) => { if (view !== key) e.currentTarget.style.background = "var(--ehr-card2)"; }}
+                    onMouseLeave={(e) => { if (view !== key) e.currentTarget.style.background = "transparent"; }}
+                  >{label}</button>
+                ))}
+              </div>
             )}
-          </button>
-          {[
-            { key: "schedule",  label: "Schedule",   color: "teal" },
-            { key: "insurance-claims", label: "Insurance", color: "gold" },
-            { key: "reports",   label: "Reports",    color: "purple" },
-            { key: "giftcards", label: "Gift Cards", color: "green" },
-            { key: "invoices",  label: "Invoices",   color: "accent" },
-            { key: "billing-settings", label: "Billing", color: "muted" },
-          ].map(({ key, label, color }) => (
-            <button key={key} onClick={() => setView(key)} style={{
-              background: view === key ? `color-mix(in srgb,var(--ehr-${color}) 14%,transparent)` : "transparent",
-              border: view === key ? `1px solid color-mix(in srgb,var(--ehr-${color}) 30%,transparent)` : "1px solid transparent",
-              borderRadius: 8, padding: "5px 12px", cursor: "pointer",
-              color: view === key ? `var(--ehr-${color})` : "var(--ehr-muted)",
-              fontWeight: view === key ? 600 : 400, fontFamily: "inherit", fontSize: 13,
-            }}>{label}</button>
-          ))}
-
-          <button onClick={() => setView("tasks")} style={{
-            background: view === "tasks" ? "color-mix(in srgb,var(--ehr-rose) 14%,transparent)" : "transparent",
-            border: view === "tasks" ? "1px solid color-mix(in srgb,var(--ehr-rose) 30%,transparent)" : "1px solid transparent",
-            borderRadius: 8, padding: "5px 12px", cursor: "pointer",
-            color: view === "tasks" ? "var(--ehr-rose)" : "var(--ehr-muted)",
-            fontWeight: view === "tasks" ? 600 : 400, fontFamily: "inherit", fontSize: 13,
-            display: "flex", alignItems: "center", gap: 6,
-          }}>
-            Tasks
-            {taskCount > 0 && (
-              <span style={{ background: "var(--ehr-rose)", color: "#fff", fontSize: 10, fontWeight: 800, borderRadius: 20, padding: "1px 7px" }}>{taskCount}</span>
-            )}
-          </button>
-
-          <button onClick={() => setView("messages")} style={{
-            background: view === "messages" ? "color-mix(in srgb,var(--ehr-teal) 14%,transparent)" : "transparent",
-            border: view === "messages" ? "1px solid color-mix(in srgb,var(--ehr-teal) 30%,transparent)" : "1px solid transparent",
-            borderRadius: 8, padding: "5px 12px", cursor: "pointer",
-            color: view === "messages" ? "var(--ehr-teal)" : "var(--ehr-muted)",
-            fontWeight: view === "messages" ? 600 : 400, fontFamily: "inherit", fontSize: 13,
-            display: "flex", alignItems: "center", gap: 6,
-          }}>
-            Patient Messages
-            {unreadCount > 0 && (
-              <span style={{ background: "var(--ehr-teal)", color: "#fff", fontSize: 10, fontWeight: 800, borderRadius: 20, padding: "1px 7px" }}>{unreadCount}</span>
-            )}
-          </button>
-
-          {(view === "chart" || view === "new-chart") && (
-            <>
-              <span style={{ color: "var(--ehr-muted2)", fontSize: 16 }}>›</span>
-              <span style={{ background: "color-mix(in srgb,var(--ehr-teal) 14%,transparent)", border: "1px solid color-mix(in srgb,var(--ehr-teal) 30%,transparent)", borderRadius: 8, padding: "5px 12px", color: "var(--ehr-teal)", fontSize: 13, fontWeight: 600 }}>
-                {view === "new-chart"
-                  ? "New Patient"
-                  : chartContext?.tabLabel
-                    ? `${chartContext.patientName} · ${chartContext.tabLabel}`
-                    : (chartContext?.patientName || "Patient Chart")}
-              </span>
-            </>
-          )}
+          </div>
         </div>
 
-        {/* Clinician + theme + sign out */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        {/* Clinician + utilities */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
           {onOpenDocs && (
-            <button onClick={onOpenDocs} style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(245,200,66,0.12)", border: "1px solid rgba(245,200,66,0.3)", borderRadius: 20, padding: "6px 12px", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, color: "#ca8a04" }}>
-              📖 Docs
+            <button onClick={onOpenDocs} title="Staff Docs" style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(245,200,66,0.12)", border: "1px solid rgba(245,200,66,0.3)", borderRadius: 20, padding: "5px 10px", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, color: "#ca8a04" }}>
+              📖
             </button>
           )}
-          <button onClick={() => {
+          <button
+            title="Toggle theme"
+            onClick={() => {
             const isDark = document.documentElement.getAttribute("data-theme") === "dark";
             document.documentElement.setAttribute("data-theme", isDark ? "light" : "dark");
             try { localStorage.setItem("msw_theme", isDark ? "light" : "dark"); } catch {}
-          }} style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(128,128,128,0.1)", border: "1px solid rgba(128,128,128,0.2)", borderRadius: 20, padding: "6px 12px", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, color: "var(--ehr-muted)" }}>
-            🌙 Theme
+          }} style={{ display: "flex", alignItems: "center", background: "rgba(128,128,128,0.1)", border: "1px solid rgba(128,128,128,0.2)", borderRadius: 20, padding: "5px 10px", cursor: "pointer", fontFamily: "inherit", fontSize: 12, color: "var(--ehr-muted)" }}>
+            🌙
           </button>
-          <div style={{ width: 1, height: 24, background: "var(--ehr-border)" }} />
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ehr-text)" }}>{clinician.full_name}</div>
-            <div style={{ fontSize: 10, color: "var(--ehr-muted2)", letterSpacing: "0.03em" }}>{clinician.title}</div>
+          <div style={{ width: 1, height: 22, background: "var(--ehr-border)" }} />
+          <div style={{ textAlign: "right", display: "none" }} className="ehr-nav-user-name">
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ehr-text)" }}>{clinician.full_name}</div>
           </div>
-          <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--ehr-grad)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "#fff" }}>
+          <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--ehr-grad)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "#fff", flexShrink: 0 }} title={clinician.full_name}>
             {clinician.full_name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2)}
           </div>
-          <button onClick={signOut} style={{ background: "rgba(128,128,128,0.08)", border: "1px solid var(--ehr-border)", borderRadius: 8, padding: "7px 14px", color: "var(--ehr-muted)", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+          <button onClick={signOut} style={{ background: "transparent", border: "1px solid var(--ehr-border)", borderRadius: 8, padding: "5px 10px", color: "var(--ehr-muted)", fontSize: 12, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
             Sign Out
           </button>
         </div>

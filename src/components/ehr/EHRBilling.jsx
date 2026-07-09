@@ -473,12 +473,12 @@ export default function EHRBilling({ patientId, chartId, clinician, chart: initi
     <div>
       {noPortalPatient && (
         <div style={{
-          background: "color-mix(in srgb, var(--ehr-gold) 10%, transparent)",
-          border: "1px solid color-mix(in srgb, var(--ehr-gold) 30%, transparent)",
+          background: "color-mix(in srgb, var(--ehr-teal) 8%, transparent)",
+          border: "1px solid color-mix(in srgb, var(--ehr-teal) 22%, transparent)",
           borderRadius: 10, padding: "10px 14px", fontSize: 13,
-          color: "var(--ehr-gold)", marginBottom: "1rem", lineHeight: 1.5,
+          color: "var(--ehr-muted)", marginBottom: "1rem", lineHeight: 1.55,
         }}>
-          No portal patient linked — insurance billing still works from this chart. Link a Portal Patient ID in <strong>Edit Chart</strong> if they use the patient portal.
+          <strong style={{ color: "var(--ehr-teal)" }}>EHR-only patient.</strong> Kenneth (or staff) added this chart manually — that’s normal. Notes, insurance claims, and superbills all work from here. A Portal Patient ID is <em>only</em> needed if they use the patient portal for messages, appointments, or online invoices.
         </div>
       )}
       {error && (
