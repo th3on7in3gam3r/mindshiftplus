@@ -9,6 +9,7 @@ import CrisisModal from "./components/CrisisModal";
 import EHR from "./components/ehr/EHR";
 import AIScribe from "./components/AIScribe";
 import StaffDocs from "./components/clinical/StaffDocs";
+import { STAFF_ASSISTANT_NAME } from "./lib/staffAssistant";
 import {
   fetchClinicPatientContext,
   getHomeModePreference,
@@ -290,10 +291,10 @@ const clinicalTools = [
   },
   {
     id: "ehr-schedule",
-    title: "MindShift Admin",
-    shortTitle: "Admin",
-    description: "Patient lookup, visit notes, prescriptions, and documents. Calendar scheduling is in EHR → Schedule.",
-    icon: "📋",
+    title: "Patient Lookup & Tools",
+    shortTitle: "Lookup",
+    description: "Portal Patient ID lookup, visit notes, prescriptions, and documents. Use EHR → Schedule for the calendar.",
+    icon: "🔍",
     accent: "#4a6cf7",
     glow: "rgba(74,108,247,0.35)",
     gradient: "linear-gradient(145deg, rgba(74,108,247,0.22) 0%, rgba(14,165,160,0.1) 100%)",
@@ -324,6 +325,20 @@ function ClinicalSuite({ setPage, userName }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const firstName = (userName || "Clinician").split(" ")[0];
+  const [miloIntroDismissed, setMiloIntroDismissed] = useState(
+    () => localStorage.getItem("milo_intro_dismissed") === "1"
+  );
+
+  const dismissMiloIntro = () => {
+    localStorage.setItem("milo_intro_dismissed", "1");
+    setMiloIntroDismissed(true);
+  };
+
+  const showMiloIntroAgain = () => {
+    localStorage.removeItem("milo_intro_dismissed");
+    setMiloIntroDismissed(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   return (
     <div style={{ padding: "1.5rem", maxWidth: 920, margin: "0 auto", paddingBottom: "90px" }}>
@@ -338,6 +353,60 @@ function ClinicalSuite({ setPage, userName }) {
           Choose a clinical tool below. These modules are for authorized MindShift Wellness Clinic staff only.
         </p>
       </div>
+
+      {!miloIntroDismissed && (
+        <GlassCard style={{
+          marginBottom: "1.25rem",
+          padding: "1.15rem 1.25rem",
+          background: "linear-gradient(135deg, rgba(124,111,247,0.18), rgba(78,205,196,0.1))",
+          border: "1px solid rgba(124,111,247,0.3)",
+        }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--teal)", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 6 }}>
+                New — meet {STAFF_ASSISTANT_NAME}
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, letterSpacing: "-0.01em" }}>
+                Your staff guide, like Mia for patients
+              </div>
+              <p style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.6, margin: 0, maxWidth: 520 }}>
+                {STAFF_ASSISTANT_NAME} answers how-to questions from Staff Docs — scheduling, EHR, Scribe, billing, and more.
+                Open <strong style={{ color: "var(--white)" }}>Staff Docs → {STAFF_ASSISTANT_NAME}</strong>, or tap <strong style={{ color: "var(--white)" }}>💬</strong> in the EHR toolbar anytime.
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+                <button
+                  type="button"
+                  onClick={() => setPage("staff-docs")}
+                  style={{
+                    padding: "8px 14px", borderRadius: 10, border: "none",
+                    background: "var(--lavender)", color: "#fff", fontWeight: 600,
+                    fontSize: 12, cursor: "pointer", fontFamily: "var(--font)",
+                  }}
+                >
+                  Open {STAFF_ASSISTANT_NAME}
+                </button>
+                <button
+                  type="button"
+                  onClick={dismissMiloIntro}
+                  style={{
+                    padding: "8px 14px", borderRadius: 10,
+                    border: "1px solid var(--border2)", background: "transparent",
+                    color: "var(--muted)", fontSize: 12, cursor: "pointer", fontFamily: "var(--font)",
+                  }}
+                >
+                  Got it
+                </button>
+              </div>
+            </div>
+            <div style={{
+              width: 48, height: 48, borderRadius: 14, flexShrink: 0,
+              background: "linear-gradient(135deg, var(--lavender), var(--teal))",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 22,
+            }}>✦</div>
+          </div>
+        </GlassCard>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "1rem" }}>
         {clinicalTools.map((tool) => (
@@ -400,7 +469,23 @@ function ClinicalSuite({ setPage, userName }) {
         <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.7 }}>
           <strong style={{ color: "var(--white)" }}>Tip:</strong> Use <strong style={{ color: "var(--lavender)" }}>EHR</strong> for patients, schedule, charts, and billing,{" "}
           <strong style={{ color: "var(--lavender)" }}>Scribe</strong> to record sessions and push notes, and{" "}
-          <strong style={{ color: "var(--gold)" }}>Docs</strong> for step-by-step guides.
+          <strong style={{ color: "var(--gold)" }}>Docs</strong> for step-by-step guides and <strong style={{ color: "var(--gold)" }}>{STAFF_ASSISTANT_NAME}</strong> (your AI staff guide).
+          {miloIntroDismissed && (
+            <>
+              {" "}
+              <button
+                type="button"
+                onClick={showMiloIntroAgain}
+                style={{
+                  marginLeft: 4, padding: 0, border: "none", background: "none",
+                  color: "var(--teal)", fontWeight: 600, cursor: "pointer", fontFamily: "var(--font)",
+                  fontSize: 12, textDecoration: "underline",
+                }}
+              >
+                Show {STAFF_ASSISTANT_NAME} intro again
+              </button>
+            </>
+          )}
         </div>
       </GlassCard>
     </div>

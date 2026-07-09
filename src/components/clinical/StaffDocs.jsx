@@ -149,6 +149,16 @@ export default function StaffDocs({ onBack, onOpenTool }) {
             <button type="button" onClick={() => setView("docs")} style={headerBtnActive(view === "docs")}>
               📖 Browse docs
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.removeItem("milo_intro_dismissed");
+                alert(`${STAFF_ASSISTANT_NAME} intro will appear when you return to Clinical Suite.`);
+              }}
+              style={headerBtn}
+            >
+              ↺ Show intro again
+            </button>
             {onBack && (
               <button type="button" onClick={onBack} style={headerBtn}>
                 ← Clinical Suite

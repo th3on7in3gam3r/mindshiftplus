@@ -70,10 +70,10 @@ export default function StaffAssistant({ onBrowseDocs, onScrollToSection, welcom
               {STAFF_ASSISTANT_NAME}
             </div>
             <h2 style={{ fontSize: "clamp(1.1rem, 3vw, 1.35rem)", fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>
-              Ask {STAFF_ASSISTANT_NAME} before you text the administrator
+              Meet {STAFF_ASSISTANT_NAME} — your staff guide
             </h2>
             <p style={{ fontSize: 13, color: C.muted, marginTop: 6, lineHeight: 1.55, maxWidth: 560 }}>
-              Answers come from Staff Docs — scheduling, EHR, Admin, Scribe, billing, and portal how-tos.
+              Like Mia helps patients, {STAFF_ASSISTANT_NAME} helps you with EHR, Schedule, Scribe, billing, and Staff Docs — step by step.
             </p>
           </div>
           {onBrowseDocs && (

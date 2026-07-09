@@ -73,11 +73,11 @@ Milo greets you by name — e.g. *"Good morning, Dr. Kenneth"* or *"Good afterno
 
 Milo answers **how-to questions** from Staff Docs — e.g. where to confirm appointments, MRN vs Portal Patient ID, Scribe → EHR push, superbills, telehealth.
 
-**Use Milo when:** You are stuck on a workflow and want an answer before texting the site administrator.
+**Use Milo when:** You want step-by-step help with a clinic workflow — appointments, charts, billing, Scribe, or portal tools.
 
 **Do not use Milo for:** Patient mental health coaching (that is **Mia**), clinical diagnosis, or per-patient chart questions (use **EHR → open chart → Clinical AI**).
 
-**Still contact the administrator for:** Login failures, data not saving, migration/SQL errors, or anything broken in production.`,
+**Contact the site administrator for:** Login failures, data not saving, migration/SQL errors, or anything broken in production.`,
       },
       {
         q: "Do I need to contact the site administrator about this?",
@@ -89,7 +89,7 @@ Contact the site administrator only for:
 • Database migrations not yet run in Supabase
 • Bugs that block patient care
 
-Everything in this section is documented so you can self-serve without texting the admin.`,
+Everything in this section is in Staff Docs — browse the topics below or ask Milo.`,
       },
     ],
   },
