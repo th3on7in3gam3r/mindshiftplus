@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { getAllCharts, getDashboardStats } from "../../lib/ehrDb";
 import {
   EhrCard, EhrBtn, EhrBadge, StatusBadge,
@@ -6,12 +6,19 @@ import {
 } from "./EHRUI";
 import { EHRBillingAggregate } from "./EHRBilling";
 
+const PAGE_SIZE = 10;
+
+function chartDisplayName(c) {
+  return c.full_name || c.patient?.raw_user_meta_data?.full_name || c.patient?.email || "Unknown Patient";
+}
+
 export default function EHRDashboard({ clinician, onOpenChart, onNewChart, onNavigateView }) {
   const [charts, setCharts]   = useState([]);
   const [stats, setStats]     = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch]   = useState("");
   const [filter, setFilter]   = useState("all");
+  const [page, setPage]       = useState(1);
   const patientListRef = useRef(null);
   const upcomingRef    = useRef(null);
 
@@ -28,12 +35,25 @@ export default function EHRDashboard({ clinician, onOpenChart, onNewChart, onNav
     setLoading(false);
   }
 
-  const filtered = (charts ?? []).filter(c => {
-    const name = c.full_name || c.patient?.raw_user_meta_data?.full_name || c.patient?.email || "";
-    const matchesSearch = !search || name.toLowerCase().includes(search.toLowerCase()) || (c.mrn?.toLowerCase().includes(search.toLowerCase()));
-    const matchesFilter = filter === "all" || c.status === filter;
-    return matchesSearch && matchesFilter;
-  });
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return (charts ?? [])
+      .filter((c) => {
+        const name = chartDisplayName(c).toLowerCase();
+        const matchesSearch = !q || name.includes(q) || (c.mrn?.toLowerCase().includes(q) ?? false);
+        const matchesFilter = filter === "all" || c.status === filter;
+        return matchesSearch && matchesFilter;
+      })
+      .sort((a, b) => chartDisplayName(a).localeCompare(chartDisplayName(b)));
+  }, [charts, search, filter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * PAGE_SIZE;
+  const pagePatients = filtered.slice(pageStart, pageStart + PAGE_SIZE);
+
+  useEffect(() => { setPage(1); }, [search, filter]);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
 
   const upcomingAppts = stats?.upcomingAppointments ?? [];
   const hour = new Date().getHours();
@@ -170,57 +190,99 @@ export default function EHRDashboard({ clinician, onOpenChart, onNewChart, onNav
         <div style={{ display:"grid", gridTemplateColumns:"1fr 320px", gap:20, alignItems:"start" }}>
           {/* Left: Patient list */}
           <div ref={patientListRef} style={{ scrollMarginTop: 72 }}>
-            {/* Search + filters */}
-            <div style={{ display:"flex", gap:10, marginBottom:"1.2rem", flexWrap:"wrap" }}>
-              <div style={{ flex:1, minWidth:220, position:"relative" }}>
-                <span style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", fontSize:15, opacity:0.4 }}>🔍</span>
-                <input
-                  value={search} onChange={e => setSearch(e.target.value)}
-                  placeholder="Search by name or MRN…"
-                  style={{
-                    width:"100%", background:"rgba(255,255,255,0.04)",
-                    border:`1px solid #cbd5e1`, borderRadius:12,
-                    padding:"10px 12px 10px 36px",
-                    color: "var(--ehr-text)", fontSize:14, fontFamily:"inherit", outline:"none",
-                  }}
-                />
-              </div>
-              <div style={{ display:"flex", gap:6, background:"rgba(255,255,255,0.03)", border:`1px solid rgba(226,232,240,0.8)`, borderRadius:12, padding:"4px" }}>
-                {["all","active","inactive","discharged"].map(f => (
-                  <button key={f} onClick={() => setFilter(f)} style={{
-                    background: filter===f ? "rgba(124,111,247,0.2)" : "transparent",
-                    border: filter===f ? "1px solid rgba(124,111,247,0.35)" : "1px solid transparent",
-                    borderRadius:8, padding:"6px 14px",
-                    color: filter===f ? "var(--ehr-accent)" : "var(--ehr-muted)",
-                    fontSize:12, fontWeight: filter===f ? 600 : 400,
-                    cursor:"pointer", textTransform:"capitalize", fontFamily:"inherit",
-                    transition:"all .15s",
-                  }}>{f}</button>
-                ))}
-              </div>
-            </div>
+            <EhrCard style={{ padding: "1.25rem 1.35rem" }}>
+              {/* Toolbar */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: "1rem" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                  <h2 style={{ fontSize: 15, fontWeight: 700, color: "var(--ehr-text)", margin: 0 }}>Patients</h2>
+                  <span style={{ fontSize: 12, color: "var(--ehr-muted)" }}>
+                    {filtered.length === 0
+                      ? "No matches"
+                      : filtered.length <= PAGE_SIZE
+                        ? `${filtered.length} patient${filtered.length !== 1 ? "s" : ""}`
+                        : `Showing ${pageStart + 1}–${Math.min(pageStart + PAGE_SIZE, filtered.length)} of ${filtered.length}`}
+                  </span>
+                </div>
 
-            {loading ? <Spinner /> : filtered.length === 0 ? (
-              <div style={{
-                textAlign:"center", padding:"4rem 2rem",
-                background:"rgba(255,255,255,0.02)", border:`1px solid rgba(226,232,240,0.8)`,
-                borderRadius:20,
-              }}>
-                <div style={{ fontSize:48, marginBottom:12, opacity:0.4 }}>📂</div>
-                <div style={{ fontSize:16, fontWeight:600, color: "var(--ehr-muted)", marginBottom:6 }}>
-                  {search ? "No patients match your search." : "No patient charts yet."}
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <div style={{ flex: 1, minWidth: 200, position: "relative" }}>
+                    <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14, opacity: 0.45 }}>🔍</span>
+                    <input
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search by name or MRN…"
+                      className="ehr-input"
+                      style={{ width: "100%", padding: "9px 12px 9px 36px", fontSize: 13 }}
+                    />
+                  </div>
+                  <div style={{ display: "flex", gap: 4, background: "var(--ehr-card2)", border: "1px solid var(--ehr-border)", borderRadius: 10, padding: 3 }}>
+                    {["all", "active", "inactive", "discharged"].map((f) => (
+                      <button key={f} type="button" onClick={() => setFilter(f)} style={{
+                        background: filter === f ? "color-mix(in srgb, var(--ehr-accent) 18%, transparent)" : "transparent",
+                        border: filter === f ? "1px solid color-mix(in srgb, var(--ehr-accent) 35%, transparent)" : "1px solid transparent",
+                        borderRadius: 7, padding: "5px 12px",
+                        color: filter === f ? "var(--ehr-accent)" : "var(--ehr-muted)",
+                        fontSize: 12, fontWeight: filter === f ? 600 : 400,
+                        cursor: "pointer", textTransform: "capitalize", fontFamily: "inherit",
+                      }}>{f}</button>
+                    ))}
+                  </div>
                 </div>
-                {!search && <div style={{ fontSize:13, color: "var(--ehr-muted2)", marginBottom:20 }}>Create your first chart to get started.</div>}
-                {!search && <EhrBtn onClick={onNewChart}>+ Create First Chart</EhrBtn>}
               </div>
-            ) : (
-              <div style={{ display:"flex", flexDirection:"column", gap:8, animation:"ehrFadeUp .3s ease" }}>
-                <div style={{ fontSize:12, color: "var(--ehr-muted2)", marginBottom:4, paddingLeft:4 }}>
-                  {filtered.length} patient{filtered.length !== 1 ? "s" : ""}
+
+              {loading ? <Spinner /> : filtered.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "2.5rem 1rem" }}>
+                  <div style={{ fontSize: 40, marginBottom: 10, opacity: 0.35 }}>📂</div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: "var(--ehr-muted)", marginBottom: 6 }}>
+                    {search || filter !== "all" ? "No patients match your search." : "No patient charts yet."}
+                  </div>
+                  {!search && filter === "all" && (
+                    <>
+                      <div style={{ fontSize: 13, color: "var(--ehr-muted2)", marginBottom: 16 }}>Create your first chart to get started.</div>
+                      <EhrBtn onClick={onNewChart}>+ Create First Chart</EhrBtn>
+                    </>
+                  )}
                 </div>
-                {filtered.map(c => <PatientRow key={c.id} chart={c} onClick={() => onOpenChart(c.id)} />)}
-              </div>
-            )}
+              ) : (
+                <>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {pagePatients.map((c) => (
+                      <PatientRow key={c.id} chart={c} onClick={() => onOpenChart(c.id)} />
+                    ))}
+                  </div>
+
+                  {totalPages > 1 && (
+                    <div style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+                      marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid var(--ehr-border)",
+                      flexWrap: "wrap",
+                    }}>
+                      <span style={{ fontSize: 12, color: "var(--ehr-muted)" }}>
+                        Page {currentPage} of {totalPages}
+                      </span>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <EhrBtn
+                          variant="secondary"
+                          small
+                          disabled={currentPage <= 1}
+                          onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        >
+                          ← Previous
+                        </EhrBtn>
+                        <EhrBtn
+                          variant="secondary"
+                          small
+                          disabled={currentPage >= totalPages}
+                          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        >
+                          Next →
+                        </EhrBtn>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </EhrCard>
           </div>
 
           {/* Right: Upcoming appointments */}
@@ -279,12 +341,10 @@ export default function EHRDashboard({ clinician, onOpenChart, onNewChart, onNav
 }
 
 function PatientRow({ chart, onClick }) {
-  const name = chart.full_name || chart.patient?.raw_user_meta_data?.full_name || "Unknown Patient";
-  const email = chart.patient?.email ?? "";
+  const name = chartDisplayName(chart);
   const patientAge = age(chart.date_of_birth);
-  const initials = name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0,2);
+  const initials = name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
 
-  // Pick a consistent avatar gradient per patient
   const gradients = [
     "linear-gradient(135deg,#7c6ff7,#4ecdc4)",
     "linear-gradient(135deg,#f093a0,#7c6ff7)",
@@ -293,33 +353,45 @@ function PatientRow({ chart, onClick }) {
   ];
   const grad = gradients[(name.charCodeAt(0) ?? 0) % gradients.length];
 
+  const meta = [
+    chart.mrn && `MRN ${chart.mrn}`,
+    patientAge && `${patientAge} yrs`,
+    chart.gender,
+  ].filter(Boolean).join(" · ");
+
   return (
-    <div className="ehr-patient-row" onClick={onClick} style={{
-      display:"flex", alignItems:"center", gap:14,
-      background:"rgba(255,255,255,0.03)",
-      border:`1px solid rgba(226,232,240,0.8)`,
-      borderRadius:16, padding:"0.95rem 1.2rem",
-      cursor:"pointer",
-    }}>
-      <div style={{ width:44, height:44, borderRadius:"50%", flexShrink:0, background:grad, display:"flex", alignItems:"center", justifyContent:"center", fontSize:15, fontWeight:800, color:"#fff", boxShadow:"0 4px 12px rgba(0,0,0,0.3)" }}>
+    <button
+      type="button"
+      className="ehr-patient-row"
+      onClick={onClick}
+      style={{
+        display: "flex", alignItems: "center", gap: 12, width: "100%",
+        background: "var(--ehr-card2)",
+        border: "1px solid var(--ehr-border)",
+        borderRadius: 12, padding: "0.75rem 1rem",
+        cursor: "pointer", textAlign: "left", fontFamily: "inherit",
+      }}
+    >
+      <div style={{
+        width: 40, height: 40, borderRadius: "50%", flexShrink: 0, background: grad,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 14, fontWeight: 800, color: "#fff",
+      }}>
         {initials}
       </div>
-      <div style={{ flex:1, minWidth:0 }}>
-        <div style={{ fontSize:14, fontWeight:700, color: "var(--ehr-text)", marginBottom:3 }}>{name}</div>
-        <div style={{ fontSize:12, color: "var(--ehr-muted2)", display:"flex", gap:10, flexWrap:"wrap" }}>
-          {chart.mrn && <span style={{ color: "var(--ehr-muted)" }}>MRN: {chart.mrn}</span>}
-          {patientAge && <span>{patientAge} yrs</span>}
-          {chart.gender && <span>{chart.gender}</span>}
-          {email && <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:160 }}>{email}</span>}
-        </div>
-      </div>
-      <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:5, flexShrink:0 }}>
-        <StatusBadge status={chart.status} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ehr-text)", marginBottom: 2 }}>{name}</div>
+        {meta && <div style={{ fontSize: 12, color: "var(--ehr-muted2)" }}>{meta}</div>}
         {chart.primary_diagnosis && (
-          <span style={{ fontSize:11, color: "var(--ehr-accent)", fontWeight:500 }}>{chart.primary_diagnosis}</span>
+          <div style={{ fontSize: 11, color: "var(--ehr-teal)", marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {chart.primary_diagnosis}{chart.primary_diagnosis_label ? ` — ${chart.primary_diagnosis_label}` : ""}
+          </div>
         )}
       </div>
-      <span style={{ color:"rgba(124,111,247,0.5)", fontSize:18, fontWeight:300 }}>›</span>
-    </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+        <StatusBadge status={chart.status} />
+        <span style={{ color: "var(--ehr-muted2)", fontSize: 16 }}>›</span>
+      </div>
+    </button>
   );
 }
