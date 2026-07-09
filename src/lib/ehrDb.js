@@ -424,6 +424,7 @@ export async function getEhrDocuments(chartId) {
 
 // ── APPOINTMENTS (patient-linked) ─────────────────────────────────────────────
 export async function getPatientAppointments(patientId) {
+  if (!patientId) return { data: [], error: null };
   const { data, error } = await supabase
     .from("appointments")
     .select("*")
@@ -434,6 +435,7 @@ export async function getPatientAppointments(patientId) {
 
 // ── MESSAGES (patient portal secure messaging) ────────────────────────────────
 export async function getPatientMessages(patientId) {
+  if (!patientId) return { data: [], error: null };
   const { data, error } = await supabase
     .from("portal_messages")
     .select("*")

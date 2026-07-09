@@ -29,7 +29,7 @@ const TABS = [
   { id: "ai",           label: "AI Assistant", icon: "🤖" },
 ];
 
-export default function EHRPatientChart({ chartId, clinician, onBack, onCreated, isNew = false, newPatientId = null }) {
+export default function EHRPatientChart({ chartId, clinician, onBack, onCreated, isNew = false, newPatientId = null, onChartContext }) {
   const [tab, setTab]           = useState("overview");
   const [chart, setChart]       = useState(null);
   const [notes, setNotes]       = useState([]);
@@ -57,6 +57,15 @@ export default function EHRPatientChart({ chartId, clinician, onBack, onCreated,
     }
   }, [chartId]);
 
+  useEffect(() => {
+    if (!onChartContext || isNew) return;
+    const active = TABS.find((t) => t.id === tab);
+    onChartContext({
+      patientName: chart?.full_name || "Patient",
+      tabLabel: active?.label ?? null,
+    });
+  }, [chart?.full_name, tab, isNew, onChartContext]);
+
   async function loadAll() {
     setLoading(true);
     const { data } = await getChart(chartId);
@@ -73,6 +82,7 @@ export default function EHRPatientChart({ chartId, clinician, onBack, onCreated,
 
   const patientName = chart?.full_name || "New Patient";
   const patientAge  = age(chart?.date_of_birth);
+  const activeTab   = TABS.find((t) => t.id === tab);
 
   if (loading) return <Spinner />;
 
@@ -89,10 +99,22 @@ export default function EHRPatientChart({ chartId, clinician, onBack, onCreated,
         padding: "1.2rem 2rem",
         display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap",
       }}>
-        <button onClick={onBack} style={{ background: localStorage.getItem('msw_theme') === 'dark' ? "rgba(255,255,255,0.05)" : "#f1f5f9", border: `1px solid #cbd5e1`, borderRadius: 8, padding: "6px 12px", color: "var(--ehr-muted)", cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit", flexShrink: 0 }}>← Patients</button>
+        <button onClick={onBack} style={{ background: localStorage.getItem('msw_theme') === 'dark' ? "rgba(255,255,255,0.05)" : "#f1f5f9", border: `1px solid #cbd5e1`, borderRadius: 8, padding: "6px 12px", color: "var(--ehr-muted)", cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit", flexShrink: 0 }}>← All Patients</button>
         <div style={{ width: 1, height: 24, background: "var(--ehr-border)" }} />
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 18, fontWeight: 800, color: "var(--ehr-text)", letterSpacing: "-0.02em" }}>{patientName}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "var(--ehr-text)", letterSpacing: "-0.02em" }}>{patientName}</div>
+            {!isNew && activeTab && (
+              <span style={{
+                fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em",
+                color: "var(--ehr-accent)", background: "color-mix(in srgb, var(--ehr-accent) 12%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--ehr-accent) 28%, transparent)",
+                borderRadius: 20, padding: "3px 10px",
+              }}>
+                {activeTab.label}
+              </span>
+            )}
+          </div>
           <div style={{ fontSize: 12, color: "var(--ehr-muted2)", marginTop: 2, display: "flex", gap: 10, flexWrap: "wrap" }}>
             {chart?.mrn && <span style={{ color: "var(--ehr-accent)", fontWeight: 600 }}>MRN: {chart.mrn}</span>}
             {patientAge && <span>{patientAge} yrs</span>}
@@ -195,7 +217,7 @@ export default function EHRPatientChart({ chartId, clinician, onBack, onCreated,
         ) : tab === "scribe" ? (
           <EHRScribeNotes patientId={chart.patient_id} patientChartId={chart.id} mrn={chart.mrn} />
         ) : tab === "billing" ? (
-          <EHRBilling patientId={chart.patient_id} chartId={chart.id} clinician={clinician} />
+          <EHRBilling patientId={chart.patient_id ?? null} chartId={chart.id} clinician={clinician} chart={chart} />
         ) : tab === "ai" ? (
           <EHRClinicalAI
             chart={chart}

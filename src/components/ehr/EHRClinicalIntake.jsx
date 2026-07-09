@@ -70,6 +70,7 @@ function CSection({ title, color = T.accent, desc, children }) {
 
 // ── DB helpers ────────────────────────────────────────────────────────────────
 async function loadClinicalIntake(patientId) {
+  if (!patientId) return null;
   const { data } = await supabase
     .from("clinical_intake_records")
     .select("*")
@@ -79,6 +80,7 @@ async function loadClinicalIntake(patientId) {
 }
 
 async function saveClinicalIntake(patientId, fields, clinicianId) {
+  if (!patientId) return { data: null, error: "Link a portal patient ID on the chart to save clinical intake." };
   const { data, error } = await supabase
     .from("clinical_intake_records")
     .upsert({ patient_id: patientId, ...fields, updated_by: clinicianId, updated_at: new Date().toISOString() })
@@ -124,11 +126,15 @@ export default function EHRClinicalIntake({ chart, clinician }) {
   const set = (key) => (val) => setForm(f => ({ ...f, [key]: val }));
 
   useEffect(() => {
-    loadClinicalIntake(chart.patient_id).then(data => {
+    if (!chart?.patient_id) {
+      setLoading(false);
+      return;
+    }
+    loadClinicalIntake(chart.patient_id).then((data) => {
       if (data) setForm(f => ({ ...f, ...Object.fromEntries(Object.entries(data).filter(([k, v]) => v !== null && k in f)) }));
       setLoading(false);
     });
-  }, [chart.patient_id]);
+  }, [chart?.patient_id]);
 
   const handleSave = async () => {
     setSaving(true);

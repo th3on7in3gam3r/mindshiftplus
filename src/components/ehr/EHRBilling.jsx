@@ -6,6 +6,7 @@ import {
   getClaims, getAggregateClaims, createClaim, updateClaim, deleteClaim,
   formatCents, parseDollars, filterCptCodes, computePatientBalance, validateFinancials,
   getChartNotesReadyForClaim, createClaimFromNote, getBillingSettings,
+  getClaimsForChart,
   PLACE_OF_SERVICE,
 } from "../../lib/billingDb";
 import { getChart } from "../../lib/ehrDb";
@@ -185,7 +186,7 @@ function ClaimForm({ claim, chartId, patientId, chart, clinician, onSaved, onCan
     rendering_provider_name: claim?.rendering_provider_name ?? "",
     rendering_provider_npi: claim?.rendering_provider_npi ?? "",
     chart_id: chartId,
-    patient_id: patientId,
+    patient_id: claim?.patient_id ?? patientId ?? chart?.patient_id ?? null,
     created_by: clinician?.user_id,
     appointment_id: claim?.appointment_id ?? null,
     note_id: claim?.note_id ?? null,
@@ -403,9 +404,9 @@ function ClaimList({ claims, onNew, onEdit, onDelete, onPrintSuperbill, readyNot
 }
 
 // ── EHRBilling (default export) ───────────────────────────────────────────────
-export default function EHRBilling({ patientId, chartId, clinician }) {
+export default function EHRBilling({ patientId, chartId, clinician, chart: initialChart }) {
   const [claims, setClaims]     = useState([]);
-  const [chart, setChart]       = useState(null);
+  const [chart, setChart]       = useState(initialChart ?? null);
   const [settings, setSettings] = useState(null);
   const [readyNotes, setReadyNotes] = useState([]);
   const [loading, setLoading]   = useState(true);
@@ -419,8 +420,9 @@ export default function EHRBilling({ patientId, chartId, clinician }) {
 
   async function load() {
     setLoading(true);
+    setError(null);
     const [claimsRes, chartRes, notesRes, settingsRes] = await Promise.all([
-      getClaims(patientId),
+      getClaimsForChart({ patientId, chartId }),
       getChart(chartId),
       getChartNotesReadyForClaim(chartId),
       getBillingSettings(),
@@ -465,8 +467,20 @@ export default function EHRBilling({ patientId, chartId, clinician }) {
 
   if (loading) return <Spinner />;
 
+  const noPortalPatient = !patientId && !chart?.patient_id;
+
   return (
     <div>
+      {noPortalPatient && (
+        <div style={{
+          background: "color-mix(in srgb, var(--ehr-gold) 10%, transparent)",
+          border: "1px solid color-mix(in srgb, var(--ehr-gold) 30%, transparent)",
+          borderRadius: 10, padding: "10px 14px", fontSize: 13,
+          color: "var(--ehr-gold)", marginBottom: "1rem", lineHeight: 1.5,
+        }}>
+          No portal patient linked — insurance billing still works from this chart. Link a Portal Patient ID in <strong>Edit Chart</strong> if they use the patient portal.
+        </div>
+      )}
       {error && (
         <div style={{
           background: "color-mix(in srgb, var(--ehr-rose) 10%, transparent)",

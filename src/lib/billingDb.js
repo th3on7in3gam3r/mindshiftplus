@@ -172,12 +172,32 @@ const VALID_STATUSES = ["draft", "submitted", "accepted", "denied", "paid"];
  * Get all claims for a patient, ordered by service_date DESC.
  */
 export async function getClaims(patientId) {
+  if (!patientId) return { data: [], error: null };
   const { data, error } = await supabase
     .from("billing_claims")
     .select("*")
     .eq("patient_id", patientId)
     .order("service_date", { ascending: false });
   return { data, error };
+}
+
+/**
+ * Get claims for a chart (used when no portal patient_id is linked).
+ */
+export async function getClaimsByChart(chartId) {
+  if (!chartId) return { data: [], error: null };
+  const { data, error } = await supabase
+    .from("billing_claims")
+    .select("*")
+    .eq("chart_id", chartId)
+    .order("service_date", { ascending: false });
+  return { data, error };
+}
+
+/** Resolve claims by patient_id or chart_id. */
+export async function getClaimsForChart({ patientId, chartId }) {
+  if (patientId) return getClaims(patientId);
+  return getClaimsByChart(chartId);
 }
 
 /**
@@ -381,9 +401,14 @@ export async function createClaimFromNote({ note, chart, clinician }) {
  * Manual invoices from EHR → Invoices do not require appointment_id or note_id.
  */
 export async function createClaim(payload) {
+  const row = {
+    ...payload,
+    claim_status: payload.claim_status ?? "draft",
+    patient_id: payload.patient_id || null,
+  };
   const { data, error } = await supabase
     .from("billing_claims")
-    .insert({ ...payload, claim_status: payload.claim_status ?? "draft" })
+    .insert(row)
     .select()
     .single();
   return { data, error };

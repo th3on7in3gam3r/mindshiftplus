@@ -26,6 +26,7 @@ export default function EHR({ onBack, onOpenDocs }) {
   const [authLoading, setAuthLoading] = useState(true);
   const [view, setView]               = useState("dashboard");
   const [activeChartId, setActiveChartId] = useState(null);
+  const [chartContext, setChartContext] = useState(null);
   const [pendingIntakes, setPendingIntakes] = useState(0);
   const [taskCount, setTaskCount]     = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -217,7 +218,11 @@ export default function EHR({ onBack, onOpenDocs }) {
             <>
               <span style={{ color: "var(--ehr-muted2)", fontSize: 16 }}>›</span>
               <span style={{ background: "color-mix(in srgb,var(--ehr-teal) 14%,transparent)", border: "1px solid color-mix(in srgb,var(--ehr-teal) 30%,transparent)", borderRadius: 8, padding: "5px 12px", color: "var(--ehr-teal)", fontSize: 13, fontWeight: 600 }}>
-                {view === "new-chart" ? "New Patient" : "Chart"}
+                {view === "new-chart"
+                  ? "New Patient"
+                  : chartContext?.tabLabel
+                    ? `${chartContext.patientName} · ${chartContext.tabLabel}`
+                    : (chartContext?.patientName || "Patient Chart")}
               </span>
             </>
           )}
@@ -271,7 +276,8 @@ export default function EHR({ onBack, onOpenDocs }) {
           <EHRPatientChart
             chartId={activeChartId}
             clinician={clinician}
-            onBack={() => { setView("dashboard"); setActiveChartId(null); }}
+            onChartContext={setChartContext}
+            onBack={() => { setChartContext(null); setView("dashboard"); setActiveChartId(null); }}
           />
         )}
         {view === "new-chart" && (
