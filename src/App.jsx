@@ -10,6 +10,7 @@ import EHR from "./components/ehr/EHR";
 import AIScribe from "./components/AIScribe";
 import StaffDocs from "./components/clinical/StaffDocs";
 import { STAFF_ASSISTANT_NAME } from "./lib/staffAssistant";
+import MiloAvatar from "./components/clinical/MiloAvatar";
 import {
   fetchClinicPatientContext,
   getHomeModePreference,
@@ -371,7 +372,7 @@ function ClinicalSuite({ setPage, userName }) {
               </div>
               <p style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.6, margin: 0, maxWidth: 520 }}>
                 {STAFF_ASSISTANT_NAME} answers how-to questions from Staff Docs — scheduling, EHR, Scribe, billing, and more.
-                Open <strong style={{ color: "var(--white)" }}>Staff Docs → {STAFF_ASSISTANT_NAME}</strong>, or tap <strong style={{ color: "var(--white)" }}>💬</strong> in the EHR toolbar anytime.
+                Open <strong style={{ color: "var(--white)" }}>Staff Docs → {STAFF_ASSISTANT_NAME}</strong>, or tap <strong style={{ color: "var(--white)" }}>Milo</strong> in the EHR toolbar anytime.
               </p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
                 <button
@@ -398,12 +399,12 @@ function ClinicalSuite({ setPage, userName }) {
                 </button>
               </div>
             </div>
-            <div style={{
-              width: 48, height: 48, borderRadius: 14, flexShrink: 0,
-              background: "linear-gradient(135deg, var(--lavender), var(--teal))",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 22,
-            }}>✦</div>
+            <MiloAvatar
+              size={56}
+              style={{
+                boxShadow: "0 4px 16px rgba(124,111,247,0.2)",
+              }}
+            />
           </div>
         </GlassCard>
       )}

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import StaffAssistant from "../clinical/StaffAssistant";
 import { buildStaffWelcomeMessage, STAFF_ASSISTANT_NAME } from "../../lib/staffAssistant";
+import MiloAvatar from "../clinical/MiloAvatar";
 
 /**
  * Floating Milo — staff guide inside MindShift EHR.
@@ -39,7 +40,7 @@ export default function EHRStaffHelper({ clinician, onOpenDocs }) {
           boxShadow: open ? "0 4px 16px color-mix(in srgb, var(--ehr-accent) 25%, transparent)" : "none",
         }}
       >
-        💬
+        <MiloAvatar size={28} />
       </button>
 
       {open && createPortal(
@@ -83,12 +84,7 @@ export default function EHRStaffHelper({ clinician, onOpenDocs }) {
               background: "linear-gradient(135deg, rgba(124,111,247,0.2), rgba(78,205,196,0.08))",
             }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                <div style={{
-                  width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                  background: "linear-gradient(135deg, #7c6ff7, #4ecdc4)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 18,
-                }}>✦</div>
+                <MiloAvatar size={36} rounded={10} />
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 700 }}>{STAFF_ASSISTANT_NAME}</div>
                   <div style={{ fontSize: 11, color: "rgba(240,240,255,0.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

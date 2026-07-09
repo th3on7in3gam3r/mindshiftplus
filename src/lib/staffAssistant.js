@@ -3,6 +3,7 @@ import { callAiProxy } from "./aiProxy";
 
 /** Staff-facing AI guide — counterpart to Mia (patient wellness coach). */
 export const STAFF_ASSISTANT_NAME = "Milo";
+export const STAFF_ASSISTANT_AVATAR = "/milo-avatar.png";
 
 export function getStaffTimeGreeting() {
   const hour = new Date().getHours();

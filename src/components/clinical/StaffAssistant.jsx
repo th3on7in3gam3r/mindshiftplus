@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { askStaffAssistant, STARTER_PROMPTS, buildStaffWelcomeMessage, STAFF_ASSISTANT_NAME } from "../../lib/staffAssistant";
+import MiloAvatar from "./MiloAvatar";
 
 const C = {
   surface: "rgba(255,255,255,0.04)",
@@ -65,16 +66,19 @@ export default function StaffAssistant({ onBrowseDocs, onScrollToSection, welcom
       {!embedded && (
       <div style={{ padding: "1.15rem 1.25rem", borderBottom: `1px solid ${C.border}` }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: C.teal, letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 6 }}>
-              {STAFF_ASSISTANT_NAME}
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 12, flex: 1, minWidth: 220 }}>
+            <MiloAvatar size={48} />
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.teal, letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 6 }}>
+                {STAFF_ASSISTANT_NAME}
+              </div>
+              <h2 style={{ fontSize: "clamp(1.1rem, 3vw, 1.35rem)", fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>
+                Meet {STAFF_ASSISTANT_NAME} — your staff guide
+              </h2>
+              <p style={{ fontSize: 13, color: C.muted, marginTop: 6, lineHeight: 1.55, maxWidth: 560 }}>
+                Like Mia helps patients, {STAFF_ASSISTANT_NAME} helps you with EHR, Schedule, Scribe, billing, and Staff Docs — step by step.
+              </p>
             </div>
-            <h2 style={{ fontSize: "clamp(1.1rem, 3vw, 1.35rem)", fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>
-              Meet {STAFF_ASSISTANT_NAME} — your staff guide
-            </h2>
-            <p style={{ fontSize: 13, color: C.muted, marginTop: 6, lineHeight: 1.55, maxWidth: 560 }}>
-              Like Mia helps patients, {STAFF_ASSISTANT_NAME} helps you with EHR, Schedule, Scribe, billing, and Staff Docs — step by step.
-            </p>
           </div>
           {onBrowseDocs && (
             <button type="button" onClick={onBrowseDocs} style={chipBtn}>
@@ -87,7 +91,8 @@ export default function StaffAssistant({ onBrowseDocs, onScrollToSection, welcom
 
       <div style={{ padding: embedded ? "0" : "1rem 1.25rem", maxHeight: embedded ? 380 : 360, overflowY: "auto" }}>
         {messages.map((m, i) => (
-          <div key={i} style={{ marginBottom: 12, display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start" }}>
+          <div key={i} style={{ marginBottom: 12, display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", gap: 8, alignItems: "flex-end" }}>
+            {m.role === "assistant" && <MiloAvatar size={28} />}
             <div style={{
               maxWidth: "88%",
               padding: "10px 14px",
@@ -123,7 +128,12 @@ export default function StaffAssistant({ onBrowseDocs, onScrollToSection, welcom
           </div>
         ))}
         {loading && (
-          <div style={{ fontSize: 13, color: C.muted2, padding: "4px 0" }}>Thinking…</div>
+          <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+            <MiloAvatar size={28} />
+            <div style={{ fontSize: 13, color: C.muted2, padding: "10px 14px", borderRadius: "14px 14px 14px 4px", background: C.surface, border: `1px solid ${C.border}` }}>
+              Thinking…
+            </div>
+          </div>
         )}
         <div ref={bottomRef} />
       </div>

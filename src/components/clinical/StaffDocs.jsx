@@ -8,6 +8,7 @@ import StaffAssistant from "./StaffAssistant";
 import { supabase } from "../../lib/supabase";
 import { getClinicianRole, isAdminEmail } from "../../lib/ehrDb";
 import { buildStaffWelcomeMessage, STAFF_ASSISTANT_NAME } from "../../lib/staffAssistant";
+import MiloAvatar from "./MiloAvatar";
 
 const C = {
   bg: "#0d1228",
@@ -144,7 +145,10 @@ export default function StaffDocs({ onBack, onOpenTool }) {
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button type="button" onClick={() => setView("helper")} style={headerBtnActive(view === "helper")}>
-              💬 {STAFF_ASSISTANT_NAME}
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <MiloAvatar size={18} />
+                {STAFF_ASSISTANT_NAME}
+              </span>
             </button>
             <button type="button" onClick={() => setView("docs")} style={headerBtnActive(view === "docs")}>
               📖 Browse docs
