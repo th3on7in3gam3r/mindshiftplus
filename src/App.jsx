@@ -3,6 +3,7 @@ import { useAuth } from "./lib/AuthContext";
 import AuthModal from "./components/AuthModal";
 import Portal from "./components/portal/Portal";
 import PublicBooking from "./components/scheduling/PublicBooking";
+import AdminSchedule from "./components/scheduling/AdminSchedule";
 import DisclaimerModal, { hasAcceptedDisclaimer } from "./components/DisclaimerModal";
 import CrisisModal from "./components/CrisisModal";
 import EHR from "./components/ehr/EHR";
@@ -244,6 +245,37 @@ function usePatientHome(authUser, isClinician) {
   return { preference, effectiveMode, setMode, context, loading };
 }
 
+function SidebarBrand({ compact = false }) {
+  if (compact) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+        <img src="/logo.png" alt="" style={{ width: 26, height: 26, borderRadius: 7, objectFit: "contain", background: "#fff", padding: 2, flexShrink: 0 }} />
+        <span style={{ fontFamily: "var(--serif)", fontSize: 16, fontWeight: 600, color: "var(--pearl)", letterSpacing: "-0.02em", whiteSpace: "nowrap" }}>
+          MindShift<span style={{ color: "var(--lavender)" }}>+</span>
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div style={{ minWidth: 0, flex: 1 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <img src="/logo.png" alt="" style={{ width: 32, height: 32, borderRadius: 8, objectFit: "contain", background: "#fff", padding: 2, flexShrink: 0 }} />
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontFamily: "var(--serif)", fontSize: 18, fontWeight: 600, lineHeight: 1.1, letterSpacing: "-0.02em", color: "var(--pearl)" }}>
+            MindShift<span style={{ color: "var(--lavender)" }}>+</span>
+          </div>
+          <div style={{ fontSize: 10, color: "var(--muted)", letterSpacing: "0.06em", textTransform: "uppercase", marginTop: 3 }}>
+            Wellness Clinic
+          </div>
+        </div>
+      </div>
+      <p style={{ margin: "10px 0 0", paddingLeft: 42, fontSize: 10, lineHeight: 1.45, color: "var(--muted2)", fontStyle: "italic" }}>
+        Where minds shift &amp; healing begins
+      </p>
+    </div>
+  );
+}
+
 // Clinical tools — launched from Clinical Suite hub (not listed individually in sidebar)
 const clinicalTools = [
   {
@@ -255,6 +287,16 @@ const clinicalTools = [
     accent: "#7c6ff7",
     glow: "rgba(124,111,247,0.35)",
     gradient: "linear-gradient(145deg, rgba(124,111,247,0.22) 0%, rgba(78,205,196,0.1) 100%)",
+  },
+  {
+    id: "ehr-schedule",
+    title: "MindShift Admin",
+    shortTitle: "Admin",
+    description: "Patient lookup, visit notes, prescriptions, and documents. Calendar scheduling is in EHR → Schedule.",
+    icon: "📋",
+    accent: "#4a6cf7",
+    glow: "rgba(74,108,247,0.35)",
+    gradient: "linear-gradient(145deg, rgba(74,108,247,0.22) 0%, rgba(14,165,160,0.1) 100%)",
   },
   {
     id: "ai-scribe",
@@ -270,7 +312,7 @@ const clinicalTools = [
     id: "staff-docs",
     title: "Staff Docs & Help",
     shortTitle: "Docs",
-    description: "How-to guides for EHR, Schedule, Scribe, billing, and telehealth.",
+    description: "How-to guides plus Milo — AI staff guide for EHR, Admin, Scribe, and billing.",
     icon: "📖",
     accent: "#f5c842",
     glow: "rgba(245,200,66,0.35)",
@@ -366,7 +408,7 @@ function ClinicalSuite({ setPage, userName }) {
 }
 
 function Sidebar({ page, setPage, user, onSignOut, open, onClose, isClinician, homeMode, patientContext, onOpenPortal }) {
-  const clinicalActive = ["clinical", "ehr", "ai-scribe", "staff-docs"].includes(page);
+  const clinicalActive = ["clinical", "ehr-schedule", "ehr", "ai-scribe", "staff-docs"].includes(page);
   const mainNav = homeMode === "clinic" ? clinicNavItems : primaryNavItems;
 
   const handleNav = (n) => {
@@ -386,16 +428,9 @@ function Sidebar({ page, setPage, user, onSignOut, open, onClose, isClinician, h
         // Mobile: controlled by open state. Desktop: CSS overrides to translateX(0)
         transform: open ? "translateX(0)" : "translateX(-100%)",
       }}>
-        <div style={{padding:"0 1.2rem 1.5rem",borderBottom:"1px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <img src="/logo.png" alt="logo" style={{width:34,height:34,borderRadius:9,objectFit:"contain",background:"#fff",padding:2,flexShrink:0}}/>
-            <div>
-              <div style={{fontSize:15,fontWeight:700,background:"var(--grad1)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>MindShift Wellness Clinic</div>
-              <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>Where Minds Shift and Healing Begins.</div>
-            </div>
-          </div>
-          {/* Close button only visible on mobile */}
-          <button onClick={onClose} className="mobile-only" style={{background:"transparent",border:"none",color:"var(--muted)",fontSize:18,cursor:"pointer",padding:4}}>✕</button>
+        <div style={{ padding: "0 1.2rem 1.25rem", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+          <SidebarBrand />
+          <button onClick={onClose} className="mobile-only" style={{ background: "transparent", border: "none", color: "var(--muted)", fontSize: 18, cursor: "pointer", padding: 4, flexShrink: 0, marginTop: 2 }}>✕</button>
         </div>
         <nav style={{flex:1,padding:"1rem 0.8rem",display:"flex",flexDirection:"column",gap:4,overflowY:"auto"}}>
           {mainNav.map(n=>(
@@ -485,7 +520,7 @@ function Sidebar({ page, setPage, user, onSignOut, open, onClose, isClinician, h
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: "block", lineHeight: 1.25 }}>Clinical Suite</span>
                   <span style={{ display: "block", fontSize: 10, color: "var(--muted2)", fontWeight: 400, marginTop: 2 }}>
-                    EHR · Scribe · Docs
+                    EHR · Admin · Scribe · Docs
                   </span>
                 </span>
               </button>
@@ -754,7 +789,7 @@ function Dashboard({
               }}>⚕</div>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 14 }}>Clinical Suite</div>
-                <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 2 }}>EHR · Scribe · Staff Docs</div>
+                <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 2 }}>EHR · Admin · Scribe · Staff Docs</div>
               </div>
             </div>
             <span style={{ color: "var(--lavender)", fontSize: 18, flexShrink: 0 }}>→</span>
@@ -3201,7 +3236,9 @@ export default function App(){
   if(loading) return(
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"var(--navy)"}}>
       <div style={{textAlign:"center"}}>
-        <div style={{fontSize:20,fontWeight:700,background:"linear-gradient(135deg,#7c6ff7,#4ecdc4)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",marginBottom:12}}>MindShift Wellness Clinic</div>
+        <div style={{ fontFamily: "var(--serif)", fontSize: 22, fontWeight: 600, color: "var(--pearl)", marginBottom: 12 }}>
+          MindShift<span style={{ color: "var(--lavender)" }}>+</span>
+        </div>
         <div style={{color:"rgba(240,240,255,0.3)",fontSize:13}}>Loading…</div>
       </div>
     </div>
@@ -3229,12 +3266,12 @@ export default function App(){
     );
   }
 
-  // Legacy route — MindShift Admin scheduling merged into EHR → Schedule
+  // MindShift Admin — lookup, notes, Rx, documents (scheduling calendar is in EHR → Schedule)
   if(user && page==="ehr-schedule"){
     return(
       <>
         <GlobalStyles/>
-        <EHR onBack={()=>setPage("clinical")} onOpenDocs={()=>setPage("staff-docs")} initialView="schedule" />
+        <AdminSchedule onBack={()=>setPage("clinical")} onOpenDocs={()=>setPage("staff-docs")}/>
       </>
     );
   }
@@ -3304,10 +3341,7 @@ export default function App(){
               borderBottom:"1px solid var(--border)",
             }}>
               <button onClick={()=>setSidebarOpen(true)} style={{background:"transparent",border:"none",color:"var(--white)",fontSize:20,cursor:"pointer",padding:4}}>☰</button>
-              <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <img src="/logo.png" alt="logo" style={{width:26,height:26,borderRadius:7,objectFit:"contain",background:"#fff",padding:2}}/>
-                <div style={{fontSize:14,fontWeight:700,background:"var(--grad1)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>MindShift Wellness Clinic</div>
-              </div>
+              <SidebarBrand compact />
               <Avatar name={appUser?.name||"U"} size={30}/>
             </div>
           )}

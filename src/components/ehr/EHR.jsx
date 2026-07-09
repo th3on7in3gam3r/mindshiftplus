@@ -18,6 +18,7 @@ import EHRInvoices from "./EHRInvoices";
 import EHRInsuranceClaims from "./EHRInsuranceClaims";
 import EHRBillingSettings from "./EHRBillingSettings";
 import EHRCrisisAlerts from "./EHRCrisisAlerts";
+import EHRStaffHelper from "./EHRStaffHelper";
 import { Spinner, EhrStyles } from "./EHRUI";
 
 export default function EHR({ onBack, onOpenDocs, initialView }) {
@@ -230,6 +231,7 @@ export default function EHR({ onBack, onOpenDocs, initialView }) {
 
         {/* Clinician + utilities */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+          <EHRStaffHelper clinician={clinician} onOpenDocs={onOpenDocs} />
           {onOpenDocs && (
             <button onClick={onOpenDocs} title="Staff Docs" style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(245,200,66,0.12)", border: "1px solid rgba(245,200,66,0.3)", borderRadius: 20, padding: "5px 10px", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, color: "#ca8a04" }}>
               📖

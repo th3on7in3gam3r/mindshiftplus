@@ -10,6 +10,8 @@ export const STAFF_DOC_META = {
 };
 
 export const STAFF_DOC_QUICK_LINKS = [
+  { label: "Meet Milo (staff AI)", anchor: "what-changed" },
+  { label: "What changed & why", anchor: "what-changed" },
   { label: "Day 1 setup checklist", anchor: "day-1-onboarding" },
   { label: "Open Clinical Suite", anchor: "getting-started" },
   { label: "Confirm an appointment", anchor: "ehr-schedule" },
@@ -21,6 +23,76 @@ export const STAFF_DOC_QUICK_LINKS = [
 ];
 
 export const STAFF_DOC_SECTIONS = [
+  {
+    id: "what-changed",
+    icon: "📣",
+    title: "What Changed & Why (July 2026)",
+    items: [
+      {
+        q: "Why did scheduling move out of MindShift Admin?",
+        a: `**Short answer:** One calendar, less confusion.
+
+Kenneth and Rachel had **two** places to manage appointments — **MindShift Admin** and **EHR → Schedule**. That meant duplicate screens, extra clicks, and risk of checking the wrong place.
+
+**What we did:**
+• **EHR → Schedule** is now the **official** calendar for the clinic (week view, list, pending requests, confirm/cancel, availability, blocked times, archive).
+• **MindShift Admin** stays in Clinical Suite for tools that are **not** in the EHR yet: **Patient Lookup**, **Visit Notes**, **Prescriptions**, **Appointment Review**, and **Patient Documents**.
+
+**Where to go for what:**
+| Task | Go here |
+|------|---------|
+| Book, confirm, or cancel appointments | **EHR → Schedule** |
+| Set weekly hours or block time off | **EHR → Schedule → Availability / Blocked** |
+| Look up a patient's Portal ID | **MindShift Admin → Patient Lookup** |
+| Quick visit notes or Rx outside a chart | **MindShift Admin** tabs |
+| Full chart, SOAP notes, billing | **EHR → open patient chart** |
+
+No workflow was removed — scheduling was **consolidated** so there is a single source of truth.`,
+      },
+      {
+        q: "What changed for patients on MindShift+?",
+        a: `The **patient app** (home screen after login) was polished to match the clinic brand and to separate two experiences:
+
+**Wellness mode** — Mia, journal, breathe, programs (for everyone between visits).
+
+**My care mode** — For patients linked to the clinic (chart, appointment, intake, or message). Shows unread messages, next appointment, and quick links to the patient portal.
+
+Patients with a clinic record can switch between **My care** and **Wellness** at the top of Home. Clinicians (Kenneth, Rachel) always see the wellness home plus **Clinical Suite** — that is intentional.
+
+The public marketing page (\`mindshiftplus.html\`) still shows the wellness story; the logged-in app is where clinic-specific features appear.`,
+      },
+      {
+        q: "Who is Milo?",
+        a: `**Milo** is the staff AI guide for MindShift tools — the clinician counterpart to **Mia** (who supports patients).
+
+**Where to find Milo:**
+• **Clinical Suite → Staff Docs → Milo** (default tab)
+• **MindShift EHR** — click the **💬 icon** in the top-right toolbar (next to Staff Docs)
+
+Milo greets you by name — e.g. *"Good morning, Dr. Kenneth"* or *"Good afternoon, Rachel"* — based on who is signed in.
+
+Milo answers **how-to questions** from Staff Docs — e.g. where to confirm appointments, MRN vs Portal Patient ID, Scribe → EHR push, superbills, telehealth.
+
+**Use Milo when:** You are stuck on a workflow and want an answer before texting the site administrator.
+
+**Do not use Milo for:** Patient mental health coaching (that is **Mia**), clinical diagnosis, or per-patient chart questions (use **EHR → open chart → Clinical AI**).
+
+**Still contact the administrator for:** Login failures, data not saving, migration/SQL errors, or anything broken in production.`,
+      },
+      {
+        q: "Do I need to contact the site administrator about this?",
+        a: `**No** — for normal clinic work. Use **Staff Docs** (this page) and the tools above.
+
+Contact the site administrator only for:
+• Login or access problems
+• Errors when saving charts, claims, or appointments
+• Database migrations not yet run in Supabase
+• Bugs that block patient care
+
+Everything in this section is documented so you can self-serve without texting the admin.`,
+      },
+    ],
+  },
   {
     id: "day-1-onboarding",
     icon: "✅",
@@ -78,8 +150,10 @@ If any step fails, note the exact error message before contacting the site admin
         a: `Sign in to MindShift+ with your clinic email and password, then open **Clinical Suite** from the left sidebar (⚕ icon).
 
 From there you can launch:
-• **MindShift EHR** — patients, schedule, charts, notes, medications, billing
+• **MindShift EHR** — patients, **Schedule** (calendar, availability, blocked times), charts, notes, medications, billing
+• **MindShift Admin** — patient lookup, visit notes, prescriptions, documents (scheduling calendar is in EHR)
 • **MindShift Scribe** — AI session recording & notes
+• **Staff Docs** — this help guide
 
 Use **← Exit** in any tool to return to the Clinical Suite hub.`,
       },
@@ -91,11 +165,13 @@ If you see "Access denied," confirm you are signed in with your **@mindshiftwell
       },
       {
         q: "What is each tool for?",
-        a: `**MindShift EHR** — Patient charts, **Schedule** (appointments, availability, blocked times), intakes, SOAP notes, medications, insurance billing, portal messages.
+        a: `**MindShift EHR** — Patient charts, **Schedule** (appointments, availability, blocked times, archive), intakes, SOAP notes, medications, insurance billing, portal messages.
+
+**MindShift Admin** — Patient Lookup (Portal Patient ID), Visit Notes, Prescriptions, Appointment Review, Patient Documents. Use EHR → Schedule for the calendar — not Admin.
 
 **MindShift Scribe** — Record a session, generate a progress note with AI, push it into the EHR chart.
 
-**Rule of thumb:** EHR = charts + schedule + billing · Scribe = documentation from a session.`,
+**Rule of thumb:** EHR = charts + schedule + billing · Admin = lookup & quick admin tabs · Scribe = documentation from a session.`,
       },
     ],
   },

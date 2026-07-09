@@ -1,9 +1,13 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   STAFF_DOC_META,
   STAFF_DOC_QUICK_LINKS,
   STAFF_DOC_SECTIONS,
 } from "../../lib/staffDocsContent";
+import StaffAssistant from "./StaffAssistant";
+import { supabase } from "../../lib/supabase";
+import { getClinicianRole, isAdminEmail } from "../../lib/ehrDb";
+import { buildStaffWelcomeMessage, STAFF_ASSISTANT_NAME } from "../../lib/staffAssistant";
 
 const C = {
   bg: "#0d1228",
@@ -72,6 +76,25 @@ function DocItem({ item, defaultOpen = false }) {
 export default function StaffDocs({ onBack, onOpenTool }) {
   const [query, setQuery] = useState("");
   const [activeSection, setActiveSection] = useState("all");
+  const [view, setView] = useState("helper");
+  const [welcomeMessage, setWelcomeMessage] = useState(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      const user = session?.user;
+      if (!user) return;
+      if (isAdminEmail(user.email)) {
+        setWelcomeMessage(buildStaffWelcomeMessage({
+          full_name: user.user_metadata?.full_name || user.email.split("@")[0],
+          title: "Administrator",
+          is_admin: true,
+        }));
+        return;
+      }
+      const { data } = await getClinicianRole(user.id);
+      if (data) setWelcomeMessage(buildStaffWelcomeMessage({ ...data, email: user.email }));
+    });
+  }, []);
 
   const normalizedQuery = query.trim().toLowerCase();
 
@@ -120,6 +143,12 @@ export default function StaffDocs({ onBack, onOpenTool }) {
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button type="button" onClick={() => setView("helper")} style={headerBtnActive(view === "helper")}>
+              💬 {STAFF_ASSISTANT_NAME}
+            </button>
+            <button type="button" onClick={() => setView("docs")} style={headerBtnActive(view === "docs")}>
+              📖 Browse docs
+            </button>
             {onBack && (
               <button type="button" onClick={onBack} style={headerBtn}>
                 ← Clinical Suite
@@ -130,6 +159,14 @@ export default function StaffDocs({ onBack, onOpenTool }) {
       </div>
 
       <div style={{ maxWidth: 920, margin: "0 auto", padding: "1.5rem 4% 3rem" }}>
+        {view === "helper" ? (
+          <StaffAssistant
+            welcomeMessage={welcomeMessage || undefined}
+            onBrowseDocs={() => setView("docs")}
+            onScrollToSection={(id) => { setView("docs"); scrollToSection(id); }}
+          />
+        ) : (
+        <>
         {/* Hero */}
         <div style={{
           background: "linear-gradient(135deg, rgba(124,111,247,0.18), rgba(78,205,196,0.1))",
@@ -259,9 +296,21 @@ export default function StaffDocs({ onBack, onOpenTool }) {
             </a>
           </p>
         </div>
+        </>
+        )}
       </div>
     </div>
   );
+}
+
+function headerBtnActive(active) {
+  return {
+    ...headerBtn,
+    background: active ? "rgba(124,111,247,0.2)" : headerBtn.background,
+    border: active ? "1px solid rgba(124,111,247,0.4)" : headerBtn.border,
+    color: active ? "#a89cf5" : headerBtn.color,
+    fontWeight: active ? 600 : 400,
+  };
 }
 
 const headerBtn = {
