@@ -12,7 +12,7 @@ export const STAFF_DOC_META = {
 export const STAFF_DOC_QUICK_LINKS = [
   { label: "Open Clinical Suite", anchor: "getting-started" },
   { label: "Confirm an appointment", anchor: "admin-appointments" },
-  { label: "Find a patient ID", anchor: "patient-lookup" },
+  { label: "MRN vs Portal Patient ID", anchor: "patient-lookup" },
   { label: "Record & push a note", anchor: "scribe-workflow" },
   { label: "Bill insurance (superbill)", anchor: "insurance-billing" },
   { label: "Import notes from Heidi", anchor: "heidi-export-import" },
@@ -125,12 +125,50 @@ Confirming sends the patient an email (if email is on file). Telehealth confirma
     title: "Patient Lookup & IDs",
     items: [
       {
-        q: "How do I find a patient's Supabase / portal ID?",
+        q: "MRN vs Portal Patient ID — what's the difference?",
+        a: `MindShift uses **two different IDs**. Don't mix them up.
+
+**MRN (Medical Record Number)** — e.g. \`MSW-MR4WTG24\`
+• Created **automatically** when you add a patient chart in the EHR
+• Shows on the chart header
+• Used for notes, medications, insurance billing, and superbills
+• **Every patient has an MRN** — including patients Kenneth types in manually
+
+**Portal Patient ID** — a long UUID (e.g. \`a1b2c3d4-…\`)
+• Comes from a patient who **signed up for the Patient Portal** (their login account)
+• Links the EHR chart to their portal app
+• Needed only for: portal messages, portal appointments view, online invoices
+• **Not required** for clinical work or insurance billing
+
+| | Manual chart (Kenneth types patient in) | Patient uses portal app |
+|---|---|---|
+| MRN | ✅ Yes (auto) | ✅ Yes |
+| Portal Patient ID | ❌ Usually no | ✅ Yes |
+| Notes & billing | ✅ Works | ✅ Works |
+| Patient portal | ❌ No access | ✅ Yes |`,
+      },
+      {
+        q: "Kenneth manually added a patient — do they get a Patient ID?",
+        a: `**Yes — they get an MRN** (e.g. MSW-…). That is their chart number in MindShift.
+
+They do **not** automatically get a **Portal Patient ID** unless they create a patient portal login.
+
+**That is normal.** Kenneth can:
+• Write and sign notes
+• Bill insurance and print superbills
+• Document the full visit
+
+**Only add a Portal Patient ID** (Edit Chart → Portal Patient ID) when the patient has signed up for the portal and you want to link their account.
+
+You can find Portal Patient IDs in **MindShift Admin → Patient Lookup** if they booked online or registered.`,
+      },
+      {
+        q: "How do I find a patient's Portal Patient ID (UUID)?",
         a: `**MindShift Admin → 👤 Patient Lookup**
 
 Search by first name, last name, full name, MRN (e.g. MSW-…), email, or phone. Results pull from EHR charts, appointments, profiles, and intakes.
 
-Click **Copy** next to the Supabase Patient ID when you need the UUID for visit notes, prescriptions, or other admin forms.`,
+Click **Copy** next to the Supabase Patient ID when you need the UUID to link a chart to the portal.`,
       },
       {
         q: "I searched a name and got nothing — what now?",
@@ -142,7 +180,7 @@ Click **Copy** next to the Supabase Patient ID when you need the UUID for visit 
       },
       {
         q: "Where is the MRN?",
-        a: `Each EHR chart has a unique MRN (e.g. MSW-…). It appears on the patient chart header in MindShift EHR and in Patient Lookup search results.`,
+        a: `Each EHR chart has a unique MRN (e.g. MSW-…). It appears on the patient chart header in MindShift EHR and in Patient Lookup search results. You do not need to create or remember it — MindShift assigns it when the chart is saved.`,
       },
     ],
   },
@@ -158,7 +196,7 @@ Click **Copy** next to the Supabase Patient ID when you need the UUID for visit 
 • **Patients** — search/filter charts; click a row to open the chart
 • **Intakes** — review new patient intake forms; create charts from approved intakes
 • **🚨 Crisis** — alerts when a patient triggers crisis language in the app
-• **Schedule / Reports / Gift Cards / Invoices** — clinic operations
+• **Schedule / Finance (Insurance, Invoices, Reports)** — clinic operations
 • **Tasks** — follow-up items
 • **Patient Messages** — secure portal messaging (badge = unread)
 
