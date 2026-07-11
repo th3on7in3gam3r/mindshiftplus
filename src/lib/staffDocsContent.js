@@ -20,6 +20,7 @@ export const STAFF_DOC_QUICK_LINKS = [
   { label: "Bill insurance (superbill)", anchor: "insurance-billing" },
   { label: "Import notes from Heidi", anchor: "heidi-export-import" },
   { label: "Clinic schedule / off days", anchor: "scheduling-hours" },
+  { label: "Telehealth video sessions", anchor: "telehealth" },
 ];
 
 export const STAFF_DOC_SECTIONS = [
@@ -42,10 +43,12 @@ Kenneth and Rachel had **two** places to manage appointments — **MindShift Adm
 | Task | Go here |
 |------|---------|
 | Book, confirm, or cancel appointments | **EHR → Schedule** |
+| Confirm **telehealth** and email video link to patient | **Admin Dashboard → Appointments** |
 | Set weekly hours or block time off | **EHR → Schedule → Availability / Blocked** |
 | Look up a patient's Portal ID | **MindShift Admin → Patient Lookup** |
 | Quick visit notes or Rx outside a chart | **MindShift Admin** tabs |
 | Full chart, SOAP notes, billing | **EHR → open patient chart** |
+| Instant telehealth (no booking) | **MindShift Scribe → Start Video Session Now** |
 
 No workflow was removed — scheduling was **consolidated** so there is a single source of truth.`,
       },
@@ -67,7 +70,7 @@ The public marketing page (\`mindshiftplus.html\`) still shows the wellness stor
 
 **Where to find Milo:**
 • **Clinical Suite → Staff Docs → Milo** (default tab)
-• **MindShift EHR** — click the **💬 icon** in the top-right toolbar (next to Staff Docs)
+• **MindShift EHR** — click **Milo** in the top-right toolbar (next to Staff Docs)
 
 Milo greets you by name — e.g. *"Good morning, Dr. Kenneth"* or *"Good afternoon, Rachel"* — based on who is signed in.
 
@@ -222,7 +225,9 @@ Click an appointment on the week calendar or switch to **List** view.
 • **Confirmed** — **Mark Complete** when the visit is done, or cancel if needed
 • **Completed / Cancelled** — **🗄️ Archive** to tidy the list (view under **Archived** list filter)
 
-Confirming sends the patient an email when email is on file. Telehealth confirmations also generate a video link.`,
+Confirming sends the patient a standard confirmation email when email is on file.
+
+**Telehealth video:** confirming here updates status but does **not** create the Whereby video link. For telehealth visits, see **Telehealth (Video Sessions)** below — confirm in **Admin Dashboard → Appointments** or use **Scribe → Start Video Session Now**.`,
       },
       {
         q: "How do I use the schedule calendar?",
@@ -557,23 +562,90 @@ Match what you documented for the visit.`,
     title: "Telehealth (Video Sessions)",
     items: [
       {
-        q: "How does telehealth work for scheduled appointments?",
-        a: `When a **telehealth** appointment is **confirmed** (**EHR → Schedule** → Confirm), the system creates a **Whereby** video room and emails the patient a join link.
+        q: "What is the telehealth video system?",
+        a: `MindShift telehealth uses **Whereby** video rooms. When a session is set up, the system creates a unique join link, saves it on the appointment, and shares it with the patient by email and/or portal message.
 
-In **MindShift Scribe**, if modality = Telehealth, a **Telehealth Video** panel shows the matching appointment and a **Join Video Session** button when a link exists.`,
+Video opens in a **new browser tab** — there is no in-app video embed. The room stays active for **24 hours** after creation.`,
+      },
+      {
+        q: "How does telehealth work for scheduled appointments?",
+        a: `**Step 1 — Appointment exists**
+Patient requests **Telehealth (Video)** in their portal, or staff creates one in **EHR → Schedule** with type **Telehealth (Video)**.
+
+**Step 2 — Confirm and create the video link**
+Confirm the telehealth appointment in **Clinical Suite → Patient Lookup & Tools → Appointments** tab (Admin Dashboard). On confirm, the system:
+1. Creates a Whereby room via the backend
+2. Saves \`telehealth_url\` on the appointment
+3. Emails the patient the join link (if email is on file)
+
+**Step 3 — Join at visit time**
+Use **Join Video Session** from Admin Appointments, **EHR → Schedule**, the patient chart, or **MindShift Scribe**.
+
+**Important:** **EHR → Schedule → Confirm** updates appointment status but does **not** create the video link. Use Admin Appointments confirm or Scribe for telehealth link creation.`,
+      },
+      {
+        q: "Why are there two schedule screens for telehealth?",
+        a: `| Screen | What it does for telehealth |
+|--------|----------------------------|
+| **EHR → Schedule** | Official calendar — book, confirm status, complete, cancel, join **if link already exists** |
+| **Admin Dashboard → Appointments** | **Creates the Whereby video link** when you confirm a telehealth appointment + emails patient |
+
+**Rule of thumb:**
+• Day-to-day scheduling → **EHR → Schedule**
+• Telehealth confirm that must email a video link → **Admin Dashboard → Appointments**
+• Need a link right now → **Scribe → Start Video Session Now**`,
       },
       {
         q: "How do I start an instant telehealth session (no prior booking)?",
-        a: `In **MindShift Scribe** during an active session (telehealth modality):
+        a: `Use when the patient needs to connect immediately.
 
-Click **⚡ Start Video Session Now**. This creates an ad-hoc Whereby room, a confirmed telehealth appointment, and sends the patient a **portal message** (and email if on file) with the join link.
+1. Open **MindShift Scribe**
+2. Select the patient
+3. Set **modality** to **Telehealth**
+4. In the **Telehealth Video** panel, click **⚡ Start Video Session Now**
 
-Use this when the patient needs to connect immediately and did not book ahead.`,
+This creates a Whereby room, a confirmed telehealth appointment, sends the patient a **portal message** (and email if on file), and opens video for you in a new tab.
+
+You can also **copy the join link** from Scribe to send manually.`,
       },
       {
-        q: "Where can I join video from besides Scribe?",
-        a: `• **EHR → Schedule** — confirmed telehealth appointments show **📹 Join Video Session** in the detail panel
-• **MindShift EHR → patient chart → Appointments** — join button on confirmed telehealth visits`,
+        q: "Where can clinicians join video besides Scribe?",
+        a: `• **Admin Dashboard → Appointments** — **📹 Join Video Session** on confirmed telehealth visits
+• **EHR → Schedule** — select appointment → **📹 Join Video Session** (when \`telehealth_url\` exists)
+• **EHR → patient chart → Appointments** — join button on confirmed telehealth visits
+• **MindShift Scribe → Telehealth Video** panel — **Join Video Session with Patient**`,
+      },
+      {
+        q: "How do I use Scribe during a telehealth visit?",
+        a: `1. Select patient in **MindShift Scribe**
+2. Set modality to **Telehealth**
+3. **Telehealth Video** panel finds the matching appointment for that day
+4. If a link exists → **Join Video Session with Patient**
+5. If appointment exists but no link → **Start Video Session Now** creates one
+6. Record the session and **Push to MindShift EHR** as usual
+
+For billing, set **Place of Service** to **02** or **10** (telehealth) on the claim.`,
+      },
+      {
+        q: "What do patients see for telehealth?",
+        a: `Patients use **Portal → Appointments**.
+
+| State | What they see |
+|-------|---------------|
+| Confirmed, before window | *"Session opens 10 min before your appointment"* |
+| In window (10 min before → 60 min after) | **Join Video Session** button |
+| Confirmed but no link yet | *"Video link coming soon"* |
+| Instant session from Scribe | Portal message + email with join link |
+
+**Session window:** join button appears **10 minutes before** scheduled time through **60 minutes after**. Clinicians can join anytime if they have the link.`,
+      },
+      {
+        q: "Telehealth visits — place of service for billing?",
+        a: `When editing a claim, set **Place of Service** to:
+• **02** or **10** — Telehealth
+• **11** — Office (in-person)
+
+Match what you documented for the visit.`,
       },
     ],
   },
@@ -644,16 +716,23 @@ The portal is separate from the staff Clinical Suite—patients never see EHR or
 Still blocked? Contact the site administrator with your email address.`,
       },
       {
-        q: "Telehealth link says 'Generating link…' forever",
-        a: `Confirm the appointment in **EHR → Schedule** first. Telehealth links are created on **Confirm** for telehealth-type appointments.
+        q: "Telehealth link missing or says 'Generating link…' / 'Video link coming soon'",
+        a: `**EHR → Schedule → Confirm** alone does not create Whereby links. Try one of these:
 
-For instant sessions, use Scribe's **Start Video Session Now**. If it still fails, the backend function may need redeployment—escalate to admin.`,
+1. Confirm the telehealth appointment in **Admin Dashboard → Appointments** (Clinical Suite → Patient Lookup & Tools)
+2. In **MindShift Scribe** (telehealth modality) → **⚡ Start Video Session Now**
+3. If an appointment exists but has no link, Scribe can create the room on **Start Video Session Now**
+
+If it still fails after those steps, the backend \`telehealth\` function or Whereby API key may need attention — escalate to the site administrator.`,
       },
       {
-        q: "Patient didn't get confirmation email",
-        a: `Check that the appointment has a valid email on file. Emails send on Confirm/Cancel for standard visits and on telehealth confirm with the video link.
+        q: "Patient didn't get telehealth or confirmation email",
+        a: `Check that the appointment has a valid email on file.
 
-Ask the patient to check spam. You can also send the join link via portal message from EHR.`,
+• Standard visits: email sends on Confirm/Cancel from **EHR → Schedule**
+• Telehealth with video link: email sends when confirmed via **Admin Dashboard → Appointments** (includes join link), or on instant sessions from Scribe
+
+Ask the patient to check spam. You can copy the join link from **Scribe → Telehealth Video** or send it via **EHR → portal message**.`,
       },
       {
         q: "When should I contact the site administrator?",

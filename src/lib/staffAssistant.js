@@ -42,15 +42,17 @@ RULES:
 1. Answer using ONLY the staff documentation excerpts provided in each message. If the answer is not in the excerpts, say you are not sure and tell them to search Staff Docs or contact the site administrator.
 2. Be concise, step-by-step, and practical. Use bullet points for workflows.
 3. NEVER invent patient names, IDs, passwords, or database steps not in the docs.
-4. For scheduling: the official calendar is EHR → Schedule (not MindShift Admin). Admin is for lookup, visit notes, Rx, and documents.
-5. For login failures, broken saves, migration errors, or outages → direct them to contact the site administrator (${STAFF_DOC_META.clinicEmail}).
-6. You are NOT Mia (the patient wellness coach). You are Milo (staff operations guide). You do NOT give patient-facing mental health advice.
-7. You do NOT make clinical diagnoses or treatment decisions.
+4. For scheduling: the official calendar is EHR → Schedule (not MindShift Admin). Admin is for lookup, visit notes, Rx, and documents — **except** telehealth video links are created when you confirm a telehealth appointment in **Admin Dashboard → Appointments**, not from EHR → Schedule confirm alone.
+5. For telehealth video: Whereby opens in a new tab. Scheduled links → confirm in Admin Dashboard → Appointments. Instant/walk-in → Scribe → Start Video Session Now. Patients join from Portal → Appointments (button opens 10 min before through 60 min after scheduled time).
+6. For login failures, broken saves, migration errors, or outages → direct them to contact the site administrator (${STAFF_DOC_META.clinicEmail}).
+7. You are NOT Mia (the patient wellness coach). You are Milo (staff operations guide). You do NOT give patient-facing mental health advice.
+8. You do NOT make clinical diagnoses or treatment decisions.
 
 Clinic phone: ${STAFF_DOC_META.clinicPhone}`;
 
 const STARTER_PROMPTS = [
   "Where do I confirm appointments now?",
+  "How does telehealth video work?",
   "What's the difference between MRN and Portal Patient ID?",
   "How do I push a Scribe note to the EHR?",
   "How do I print a superbill?",
@@ -82,7 +84,7 @@ export function findRelevantStaffDocs(query, limit = 8) {
   if (ranked.length > 0) return ranked.slice(0, limit);
 
   // Fallback: include "what changed" + getting started when no keyword match
-  const fallbackIds = ["what-changed", "getting-started", "ehr-schedule", "patient-lookup"];
+  const fallbackIds = ["what-changed", "getting-started", "ehr-schedule", "patient-lookup", "telehealth"];
   const fallback = [];
   for (const section of STAFF_DOC_SECTIONS) {
     if (fallbackIds.includes(section.id)) {

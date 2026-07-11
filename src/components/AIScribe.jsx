@@ -451,9 +451,11 @@ export default function AIScribe({ onBack, onOpenDocs }) {
 
 function AIScribeContent({ state, setState, data, setData, sessionId, setSessionId, onSessionSaved, onStatsUpdate }) {
   if (state === 'setup') {
-    return <SessionSetup data={data} setData={setData} onStart={async () => {
+    return <SessionSetup data={data} setData={setData} onStart={async (startData) => {
+      const payload = startData || data;
+      if (startData) setData(startData);
       // Create session in database
-      const { data: newSession, error } = await createScribeSession(data);
+      const { data: newSession, error } = await createScribeSession(payload);
       if (!error && newSession) {
         setSessionId(newSession.id);
         setState('during');
@@ -682,6 +684,82 @@ function PatientPicker({
   );
 }
 
+function CollapsibleSection({ title, subtitle, defaultOpen = false, headerExtra, children, style }) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <GlassCard style={{ gridColumn: "1 / -1", ...style }}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        style={{
+          width: "100%",
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 12,
+          background: "transparent",
+          border: "none",
+          padding: 0,
+          cursor: "pointer",
+          textAlign: "left",
+          fontFamily: "var(--font)",
+          color: "inherit",
+        }}
+      >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h3 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>{title}</h3>
+          {subtitle && (
+            <p style={{ fontSize: 12, color: "var(--muted)", margin: "4px 0 0" }}>{subtitle}</p>
+          )}
+        </div>
+        <span style={{ fontSize: 12, color: "var(--lavender)", fontWeight: 600, flexShrink: 0, marginTop: 2 }}>
+          {open ? "Hide ▲" : "Show ▼"}
+        </span>
+      </button>
+      {headerExtra}
+      {open && <div style={{ marginTop: "1rem" }}>{children}</div>}
+    </GlassCard>
+  );
+}
+
+async function prepareTelehealthSession({
+  patientUuid,
+  patientName,
+  providerName,
+  serviceDate,
+  telehealthUrl,
+}) {
+  if (telehealthUrl) {
+    return { telehealth_url: telehealthUrl, patientNotified: false };
+  }
+  if (!patientUuid) {
+    return { telehealth_url: null, error: "Select a patient first." };
+  }
+
+  const { data: appointments } = await getPatientAppointments(patientUuid);
+  const appt = pickTelehealthAppointment(appointments, serviceDate);
+
+  if (appt?.id && !appt.telehealth_url) {
+    const { data, error } = await ensureAppointmentTelehealthRoom(appt.id, appt.scheduled_at);
+    if (error) return { telehealth_url: null, error };
+    if (!data?.telehealth_url) return { telehealth_url: null, error: "Could not create video room." };
+    return { telehealth_url: data.telehealth_url, patientNotified: false };
+  }
+
+  const { data, error } = await startInstantTelehealthSession({
+    patientUuid,
+    patientName,
+    providerName,
+  });
+  if (error) return { telehealth_url: null, error };
+  return {
+    telehealth_url: data?.telehealth_url ?? null,
+    patientNotified: !!data?.patientNotified,
+    error: data?.telehealth_url ? null : "Could not create video room.",
+  };
+}
+
 function TelehealthJoinPanel({
   patientUuid,
   patientName,
@@ -871,7 +949,9 @@ function TelehealthJoinPanel({
 }
 
 function SessionSetup({ data, setData, onStart }) {
-  const [showTemplates, setShowTemplates] = useState(true);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState(() =>
     GALLERY_TEMPLATES.find((t) => t.id === data.templateId) ?? null
   );
@@ -932,6 +1012,39 @@ function SessionSetup({ data, setData, onStart }) {
     setData(d => ({ ...d, templateId: undefined }));
   };
 
+  const isTelehealth = data.modality === "Telehealth";
+
+  const handleStartSession = async () => {
+    setStartError("");
+    setStarting(true);
+    try {
+      if (isTelehealth) {
+        const result = await prepareTelehealthSession({
+          patientUuid: data.patientUuid,
+          patientName: data.patientName,
+          providerName: data.providerName,
+          serviceDate: data.dateOfService,
+          telehealthUrl: data.telehealthUrl,
+        });
+        if (result.error && !result.telehealth_url) {
+          throw new Error(result.error);
+        }
+        if (result.telehealth_url) {
+          const updated = { ...data, telehealthUrl: result.telehealth_url };
+          setData(updated);
+          window.open(result.telehealth_url, "_blank");
+          await onStart(updated);
+          return;
+        }
+      }
+      await onStart();
+    } catch (err) {
+      setStartError(err.message || "Could not start session.");
+    } finally {
+      setStarting(false);
+    }
+  };
+
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "1.5rem" }}>
 
@@ -975,14 +1088,22 @@ function SessionSetup({ data, setData, onStart }) {
             <SelectField label="Session Type" value={data.sessionType} onChange={e => setData({ ...data, sessionType: e.target.value })} options={sessionTypes} />
             <SelectField label="Modality" value={data.modality} onChange={e => setData({ ...data, modality: e.target.value })} options={modalities} />
             {data.modality === "Telehealth" && (
-              <TelehealthJoinPanel
-                patientUuid={data.patientUuid}
-                patientName={data.patientName}
-                providerName={data.providerName}
-                serviceDate={data.dateOfService}
-                telehealthUrl={data.telehealthUrl}
-                onTelehealthUrl={(url) => setData({ ...data, telehealthUrl: url })}
-              />
+              <>
+                <TelehealthJoinPanel
+                  patientUuid={data.patientUuid}
+                  patientName={data.patientName}
+                  providerName={data.providerName}
+                  serviceDate={data.dateOfService}
+                  telehealthUrl={data.telehealthUrl}
+                  onTelehealthUrl={(url) => setData({ ...data, telehealthUrl: url })}
+                />
+                <div style={{
+                  background: "rgba(14,165,160,0.08)", border: "1px solid rgba(14,165,160,0.25)",
+                  borderRadius: 10, padding: "0.65rem 0.85rem", fontSize: 12, color: "var(--muted)", lineHeight: 1.55,
+                }}>
+                  <strong style={{ color: "#5eead4" }}>Video vs. audio:</strong> Telehealth video opens in a separate <strong style={{ color: "var(--white)" }}>Whereby</strong> tab. Scribe records <strong style={{ color: "var(--white)" }}>audio only</strong> from your microphone to build the progress note — it does not record the video call itself.
+                </div>
+              </>
             )}
             <InputField label="Duration (minutes)" type="number" value={data.duration} onChange={e => setData({ ...data, duration: e.target.value })} placeholder="45" />
           </div>
@@ -1010,28 +1131,18 @@ function SessionSetup({ data, setData, onStart }) {
       </GlassCard>
 
       {/* Note Template Gallery */}
-      <GlassCard style={{ gridColumn: "1 / -1" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-          <div>
-            <h3 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>Note Template <span style={{ color: "var(--muted)", fontWeight: 400, fontSize: 13 }}>(optional)</span></h3>
-            <p style={{ fontSize: 12, color: "var(--muted)", margin: "4px 0 0" }}>Click any template to view the full note format</p>
-          </div>
-          {selectedTemplate && (
-            <button onClick={clearTemplate} style={{ background: "transparent", border: "none", color: "var(--rose)", fontSize: 12, cursor: "pointer" }}>
-              ✕ Clear
-            </button>
-          )}
-        </div>
-
-        {/* Selected template chip */}
-        {selectedTemplate && (
+      <CollapsibleSection
+        title={<>Note Template <span style={{ color: "var(--muted)", fontWeight: 400, fontSize: 13 }}>(optional)</span></>}
+        subtitle={selectedTemplate ? `Selected: ${selectedTemplate.name}` : "Click to browse templates or preview note formats"}
+        defaultOpen={false}
+        headerExtra={selectedTemplate ? (
           <div style={{
-            display: "flex", alignItems: "center", gap: 10, padding: "0.75rem 1rem",
+            display: "flex", alignItems: "center", gap: 10, padding: "0.75rem 1rem", marginTop: "0.75rem",
             background: "rgba(124,111,247,0.15)", border: "1px solid rgba(124,111,247,0.3)",
-            borderRadius: 12, marginBottom: "1rem"
+            borderRadius: 12,
           }}>
             <span style={{ fontSize: 20 }}>{selectedTemplate.icon}</span>
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: "var(--lavender)" }}>{selectedTemplate.name}</div>
               <div style={{ fontSize: 11, color: "var(--muted)" }}>{selectedTemplate.description}</div>
             </div>
@@ -1042,10 +1153,12 @@ function SessionSetup({ data, setData, onStart }) {
             }}>
               👁 View
             </button>
-            <div style={{ fontSize: 11, color: "var(--teal)", fontWeight: 600 }}>✓ Selected</div>
+            <button type="button" onClick={clearTemplate} style={{ background: "transparent", border: "none", color: "var(--rose)", fontSize: 12, cursor: "pointer" }}>
+              ✕ Clear
+            </button>
           </div>
-        )}
-
+        ) : null}
+      >
         {/* Browse / collapse toggle */}
         <button onClick={() => setShowTemplates(!showTemplates)} style={{
           width: "100%", padding: "0.75rem", borderRadius: 10,
@@ -1128,8 +1241,7 @@ function SessionSetup({ data, setData, onStart }) {
             </div>
           </div>
         )}
-
-      </GlassCard>
+      </CollapsibleSection>
 
       <TemplatePreviewModal
         template={previewTemplate}
@@ -1138,8 +1250,11 @@ function SessionSetup({ data, setData, onStart }) {
       />
 
       {/* Clinical Context */}
-      <GlassCard style={{ gridColumn: "1 / -1" }}>
-        <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: "1rem" }}>Clinical Context <span style={{ color: "var(--muted)", fontWeight: 400, fontSize: 13 }}>(optional)</span></h3>
+      <CollapsibleSection
+        title={<>Clinical Context <span style={{ color: "var(--muted)", fontWeight: 400, fontSize: 13 }}>(optional)</span></>}
+        subtitle={data.patientContext?.trim() ? "Context added — expand to edit" : "Prior diagnoses, medications, or treatment history"}
+        defaultOpen={false}
+      >
         <textarea
           value={data.patientContext}
           onChange={e => setData({ ...data, patientContext: e.target.value })}
@@ -1151,21 +1266,33 @@ function SessionSetup({ data, setData, onStart }) {
             fontSize: 14, fontFamily: "var(--font)", resize: "vertical"
           }}
         />
-      </GlassCard>
+      </CollapsibleSection>
 
       {/* Start Button */}
-      <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "center" }}>
+      <div style={{ gridColumn: "1 / -1", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+        {startError && (
+          <p style={{ fontSize: 13, color: "var(--rose)", margin: 0, textAlign: "center", maxWidth: 520 }}>{startError}</p>
+        )}
         <Btn
-          onClick={onStart}
-          disabled={!data.patientChartId || !data.providerName}
+          onClick={handleStartSession}
+          disabled={!data.patientChartId || !data.providerName || starting}
           style={{
             padding: "1rem 3rem", fontSize: 16,
-            opacity: (!data.patientChartId || !data.providerName) ? 0.5 : 1,
-            cursor: (!data.patientChartId || !data.providerName) ? 'not-allowed' : 'pointer'
+            opacity: (!data.patientChartId || !data.providerName || starting) ? 0.5 : 1,
+            cursor: (!data.patientChartId || !data.providerName || starting) ? 'not-allowed' : 'pointer'
           }}
         >
-          🎙️ Start Recording Session →
+          {starting
+            ? (isTelehealth ? "Starting video session…" : "Starting session…")
+            : isTelehealth
+              ? "📹 Start Video Session →"
+              : "🎙️ Start Recording Session →"}
         </Btn>
+        {isTelehealth && (
+          <p style={{ fontSize: 12, color: "var(--muted)", margin: 0, textAlign: "center", maxWidth: 480, lineHeight: 1.5 }}>
+            Opens Whereby video in a new tab, then continues to audio capture for your note.
+          </p>
+        )}
       </div>
     </div>
   );
@@ -1376,18 +1503,29 @@ function DuringVisit({ data, setData, sessionId, onComplete }) {
     URL.revokeObjectURL(url);
   };
 
+  const isTelehealth = data.modality === "Telehealth";
+
   return (
     <div style={{ maxWidth: 800, margin: "0 auto", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
 
       {data.modality === "Telehealth" && (
-        <TelehealthJoinPanel
-          patientUuid={data.patientUuid}
-          patientName={data.patientName}
-          providerName={data.providerName}
-          serviceDate={data.dateOfService}
-          telehealthUrl={data.telehealthUrl}
-          onTelehealthUrl={(url) => setData({ ...data, telehealthUrl: url })}
-        />
+        <>
+          <TelehealthJoinPanel
+            patientUuid={data.patientUuid}
+            patientName={data.patientName}
+            providerName={data.providerName}
+            serviceDate={data.dateOfService}
+            telehealthUrl={data.telehealthUrl}
+            onTelehealthUrl={(url) => setData({ ...data, telehealthUrl: url })}
+          />
+          <div style={{
+            background: "rgba(14,165,160,0.08)", border: "1px solid rgba(14,165,160,0.25)",
+            borderRadius: 12, padding: "0.85rem 1rem", fontSize: 13, color: "var(--muted)", lineHeight: 1.55,
+          }}>
+            <strong style={{ color: "#5eead4" }}>Step 1:</strong> Join video above (Whereby tab).{" "}
+            <strong style={{ color: "#5eead4" }}>Step 2:</strong> Start audio capture below — Scribe listens to your microphone to transcribe the visit and generate the note. It does not record the video feed.
+          </div>
+        </>
       )}
 
       {/* Mic error banner */}
@@ -1456,8 +1594,18 @@ function DuringVisit({ data, setData, sessionId, onComplete }) {
         </div>
 
         <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: "0.5rem" }}>
-          {isRecording ? (isPaused ? "Recording Paused" : "Recording in Progress") : "Ready to Record"}
+          {isRecording
+            ? (isPaused ? "Recording Paused" : "Recording in Progress")
+            : isTelehealth
+              ? "Ready to Capture Audio"
+              : "Ready to Record"}
         </h2>
+
+        {!isRecording && isTelehealth && (
+          <p style={{ fontSize: 13, color: "var(--muted)", margin: "0 0 1rem", lineHeight: 1.5 }}>
+            Audio capture builds your progress note. Keep your Whereby video tab open separately.
+          </p>
+        )}
 
         {/* Live waveform indicator */}
         {isRecording && !isPaused && (
@@ -1483,7 +1631,7 @@ function DuringVisit({ data, setData, sessionId, onComplete }) {
         <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
           {!isRecording ? (
             <Btn onClick={handleStartRecording} style={{ padding: "1rem 2.5rem", fontSize: 15 }}>
-              🎙️ Start Recording
+              {isTelehealth ? "🎙️ Start Audio Capture" : "🎙️ Start Recording"}
             </Btn>
           ) : (
             <>
