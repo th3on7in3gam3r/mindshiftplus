@@ -62,11 +62,12 @@ RULES:
 7. For Patient Messages: staff **reply in EHR** (Patient Messages inbox or chart Messages tab). Portal Patient ID required for portal-linked messaging.
 8. For Intakes: **not** patient signup — portal paperwork queue. Pending → Reviewed → Create EHR Chart.
 9. For Tasks: internal staff checklist only — not patient-facing.
-10. EHR **Patients** dashboard has quick cards: **Patient Lookup** (Admin), **MindShift Scribe**, **Clinical Suite** — use these instead of browser back.
-11. Patients can add **self-reported medications** in Portal → Medications; staff see them in Admin → Prescriptions.
-12. For login failures, broken saves, migration errors, or outages → direct them to contact the site administrator (${STAFF_DOC_META.clinicEmail}).
-13. You are NOT Mia (the patient wellness coach). You are Milo (staff operations guide). You do NOT give patient-facing mental health advice.
-14. You do NOT make clinical diagnoses or treatment decisions.
+10. For **Staff Team Chat** (EHR → Team): use **channels** (#general, #scheduling, #billing, #clinical) for team posts; **Direct** for DMs; **@mentions** for alerts; **attachments** up to 10 MB; **read receipts** on messages you send. Email alerts on DMs and @mentions only — not every channel post. Not for patients — use Patient Messages.
+11. EHR **Patients** dashboard has quick cards: **Patient Lookup** (Admin), **MindShift Scribe**, **Clinical Suite** — use these instead of browser back.
+12. Patients can add **self-reported medications** in Portal → Medications; staff see them in Admin → Prescriptions.
+13. For login failures, broken saves, migration errors, or outages → direct them to contact the site administrator (${STAFF_DOC_META.clinicEmail}).
+14. You are NOT Mia (the patient wellness coach). You are Milo (staff operations guide). You do NOT give patient-facing mental health advice.
+15. You do NOT make clinical diagnoses or treatment decisions.
 
 Clinic phone: ${STAFF_DOC_META.clinicPhone}`;
 
@@ -86,6 +87,10 @@ const STARTER_PROMPTS = [
   "How do I push a Scribe note to the EHR?",
   "Insurance Claims vs Patient Invoices?",
   "Video link expired — what do I do?",
+  "How does Staff Team Chat work?",
+  "How do I post to #billing or #scheduling?",
+  "How do @mentions work in Team Chat?",
+  "Can I attach files in Team Chat?",
 ];
 
 function scoreDocItem(query, item, sectionTitle) {
@@ -113,7 +118,7 @@ export function findRelevantStaffDocs(query, limit = 8) {
   if (ranked.length > 0) return ranked.slice(0, limit);
 
   // Fallback: include "what changed" + getting started when no keyword match
-  const fallbackIds = ["july-2026-updates", "what-changed", "getting-started", "insurance-billing", "ehr-schedule", "patient-lookup", "portal-messages", "telehealth", "telehealth-quick-reference"];
+  const fallbackIds = ["july-2026-updates", "what-changed", "getting-started", "staff-team-chat", "insurance-billing", "ehr-schedule", "patient-lookup", "portal-messages", "telehealth", "telehealth-quick-reference"];
   const fallback = [];
   for (const section of STAFF_DOC_SECTIONS) {
     if (fallbackIds.includes(section.id)) {

@@ -1,5 +1,20 @@
 /** Staff team chat helpers (EHR internal messaging). */
 
+export const STAFF_CHANNELS = [
+  { id: "general", label: "#general", description: "All staff — clinic-wide updates" },
+  { id: "scheduling", label: "#scheduling", description: "Appointments, coverage, calendar" },
+  { id: "billing", label: "#billing", description: "Superbills, payers, claims, invoices" },
+  { id: "clinical", label: "#clinical", description: "Charts, notes, clinical questions" },
+];
+
+export function channelLabel(channelId) {
+  return STAFF_CHANNELS.find((c) => c.id === channelId)?.label ?? "#general";
+}
+
+export function channelDescription(channelId) {
+  return STAFF_CHANNELS.find((c) => c.id === channelId)?.description ?? "";
+}
+
 export function threadKey(message) {
   return message.thread_id || message.id;
 }
@@ -64,7 +79,8 @@ export function threadMatchesSearch(thread, query) {
     thread.subject,
     thread.patientContext,
     thread.otherName,
-    ...thread.messages.flatMap((m) => [m.subject, m.body, m.from_name, m.patient_context]),
+    thread.channel ? channelLabel(thread.channel) : "",
+    ...thread.messages.flatMap((m) => [m.subject, m.body, m.from_name, m.patient_context, m.attachment_name]),
   ]
     .filter(Boolean)
     .join(" ")
@@ -92,12 +108,14 @@ export function groupStaffThreads(messages, currentUserId, staffById = {}) {
       const isDirect = !!(root.to_user || sorted.some((m) => m.to_user));
       const otherUserId = root.from_user === currentUserId ? root.to_user : root.from_user;
       const otherName = staffById[otherUserId]?.full_name || (root.to_user ? "Direct message" : null);
+      const channel = isDirect ? null : (root.channel || sorted.find((m) => m.channel)?.channel || "general");
       const subject = root.subject || latest.body?.slice(0, 60) || "Message";
 
       return {
         id,
         isDirect,
         isTeam: !isDirect,
+        channel,
         subject,
         messages: sorted,
         latest,
@@ -125,10 +143,28 @@ export function relativeChatTime(iso) {
 }
 
 export function threadTitle(thread, currentUserId, staffById = {}) {
-  if (thread.isTeam) return thread.subject || "Team chat";
+  if (thread.isTeam) {
+    const ch = channelLabel(thread.channel);
+    const subj = thread.subject;
+    if (subj && !["Team message", "Message"].includes(subj)) return `${ch} · ${subj}`;
+    return ch;
+  }
   const otherId = thread.otherUserId;
-  const name = thread.otherName || staffById[otherId]?.full_name || "Direct message";
-  return name;
+  return thread.otherName || staffById[otherId]?.full_name || "Direct message";
+}
+
+/** Human-readable read receipt line for a sent message. */
+export function formatReadReceipt(reads, staffById, currentUserId, { isDirect = false } = {}) {
+  const others = (reads ?? []).filter((r) => r.user_id !== currentUserId);
+  if (!others.length) return null;
+  const names = others.map((r) => {
+    const first = (staffById[r.user_id]?.full_name || "Staff").split(/\s+/)[0];
+    return first;
+  });
+  if (isDirect) return others.length ? "Read" : null;
+  if (names.length === 1) return `Seen by ${names[0]}`;
+  if (names.length === 2) return `Seen by ${names[0]} and ${names[1]}`;
+  return `Seen by ${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 }
 
 /** @mention autocomplete when typing @ in compose/reply. */

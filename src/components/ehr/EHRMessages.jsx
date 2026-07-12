@@ -6,6 +6,8 @@ import {
   getStaffChatMessages,
   sendStaffChatMessage,
   markStaffMessagesRead,
+  getStaffMessageReadReceipts,
+  uploadStaffChatAttachment,
 } from "../../lib/ehrDb";
 import {
   groupStaffThreads,
@@ -15,11 +17,15 @@ import {
   splitMentionParts,
   mentionSuggest,
   insertMention,
+  STAFF_CHANNELS,
+  channelLabel,
+  channelDescription,
+  formatReadReceipt,
 } from "../../lib/staffChatUtils";
 
 const FILTERS = [
   { id: "all", label: "All" },
-  { id: "team", label: "Team" },
+  { id: "team", label: "Channels" },
   { id: "direct", label: "Direct" },
   { id: "unread", label: "Unread" },
   { id: "mentions", label: "Mentions" },
@@ -60,6 +66,104 @@ function FilterPill({ active, onClick, children, count }) {
         </span>
       )}
     </button>
+  );
+}
+
+function StaffTeamChatGuide({ onDismiss }) {
+  const steps = [
+    {
+      side: "dark",
+      label: "EHR Team (you are here)",
+      detail: "Team → New → pick #general, #scheduling, #billing, or #clinical · or DM a colleague",
+      icon: "👥",
+      tag: "Staff · Clinical Suite",
+    },
+    {
+      side: "light",
+      label: "Colleagues see it here",
+      detail: "EHR → Team → same thread · DMs & @mentions also email if offline · patients never see this",
+      icon: "💬",
+      tag: "Staff · Team tab",
+    },
+  ];
+  return (
+    <div style={{
+      marginBottom: "1rem",
+      padding: "14px 16px",
+      borderRadius: 12,
+      background: "linear-gradient(135deg, color-mix(in srgb,var(--ehr-accent) 8%,var(--ehr-card)), color-mix(in srgb,var(--ehr-teal) 6%,var(--ehr-card)))",
+      border: "1px solid color-mix(in srgb,var(--ehr-accent) 22%,transparent)",
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", marginBottom: 12 }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ehr-text)", marginBottom: 4 }}>
+            How staff Team Chat works
+          </div>
+          <div style={{ fontSize: 12, color: "var(--ehr-muted)", lineHeight: 1.55 }}>
+            Internal clinic messaging only — <strong>not</strong> Patient Messages. Post to a channel, DM a colleague, attach files, or type <strong>@Name</strong> to mention someone (they get an email if offline).
+          </div>
+        </div>
+        <button type="button" onClick={onDismiss} style={{ background: "none", border: "none", color: "var(--ehr-muted2)", cursor: "pointer", fontSize: 18, lineHeight: 1 }} aria-label="Dismiss">×</button>
+      </div>
+      <div style={{ display: "flex", alignItems: "stretch", gap: 8, flexWrap: "wrap" }}>
+        {steps.map((s, i) => (
+          <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 8, flex: "1 1 200px" }}>
+            <div style={{
+              flex: 1,
+              padding: "10px 12px",
+              borderRadius: 10,
+              background: s.side === "dark" ? "color-mix(in srgb,var(--ehr-text) 92%,transparent)" : "var(--ehr-card)",
+              border: s.side === "light" ? "1px solid var(--ehr-border)" : "none",
+              color: s.side === "dark" ? "#fff" : "var(--ehr-text)",
+            }}>
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", opacity: 0.75, marginBottom: 4 }}>
+                {s.icon} {s.tag}
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 2 }}>{s.label}</div>
+              <div style={{ fontSize: 11, opacity: 0.85, lineHeight: 1.45 }}>{s.detail}</div>
+            </div>
+            {i === 0 && (
+              <div style={{ fontSize: 18, color: "var(--ehr-muted2)", flexShrink: 0 }} aria-hidden>→</div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MessageAttachment({ url, name, type }) {
+  if (!url) return null;
+  const isImage = type?.startsWith("image/");
+  return (
+    <div style={{ marginTop: 8 }}>
+      {isImage ? (
+        <a href={url} target="_blank" rel="noopener noreferrer">
+          <img
+            src={url}
+            alt={name || "Attachment"}
+            style={{ maxWidth: "100%", maxHeight: 200, borderRadius: 8, display: "block" }}
+          />
+        </a>
+      ) : (
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: 12,
+            color: "var(--ehr-accent)",
+            fontWeight: 600,
+            textDecoration: "none",
+          }}
+        >
+          📎 {name || "Download attachment"}
+        </a>
+      )}
+    </div>
   );
 }
 
@@ -140,17 +244,23 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
   const [team, setTeam] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
+  const [channelFilter, setChannelFilter] = useState("");
   const [search, setSearch] = useState("");
   const [activeThreadId, setActiveThreadId] = useState(null);
   const [showCompose, setShowCompose] = useState(false);
   const [reply, setReply] = useState("");
+  const [replyFile, setReplyFile] = useState(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
+  const [showTeamGuide, setShowTeamGuide] = useState(true);
+  const [readReceipts, setReadReceipts] = useState({});
   const [compose, setCompose] = useState({
     to_user: "",
+    channel: "general",
     subject: "",
     body: "",
     patient_context: "",
+    file: null,
   });
   const bottomRef = useRef(null);
 
@@ -175,9 +285,10 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
     if (filter === "direct") list = list.filter((t) => t.isDirect);
     if (filter === "unread") list = list.filter((t) => t.hasUnread);
     if (filter === "mentions") list = list.filter((t) => t.hasMention);
+    if (channelFilter) list = list.filter((t) => t.isTeam && t.channel === channelFilter);
     if (search.trim()) list = list.filter((t) => threadMatchesSearch(t, search));
     return list;
-  }, [threads, filter, search]);
+  }, [threads, filter, channelFilter, search]);
 
   const activeThread = threads.find((t) => t.id === activeThreadId) ?? null;
   const unreadCount = messages.filter((m) => m.from_user !== clinician.user_id && !m.read_by_me).length;
@@ -229,6 +340,15 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeThread?.messages.length, activeThreadId]);
 
+  useEffect(() => {
+    if (!activeThread?.messages?.length) {
+      setReadReceipts({});
+      return;
+    }
+    const ids = activeThread.messages.map((m) => m.id);
+    getStaffMessageReadReceipts(ids).then(({ data }) => setReadReceipts(data ?? {}));
+  }, [activeThread?.id, activeThread?.messages?.length]);
+
   async function markThreadRead(thread) {
     if (!thread) return;
     const unreadIds = thread.messages
@@ -246,11 +366,14 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
     setActiveThreadId(thread.id);
     setShowCompose(false);
     await markThreadRead(thread);
+    const ids = thread.messages.map((m) => m.id);
+    const { data } = await getStaffMessageReadReceipts(ids);
+    setReadReceipts(data ?? {});
   }
 
   async function handleReply(e) {
     e.preventDefault();
-    if (!reply.trim() || !activeThread) return;
+    if ((!reply.trim() && !replyFile) || !activeThread) return;
     setSending(true);
     setError(null);
     const root = activeThread.messages[0];
@@ -262,14 +385,32 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
         toUser = other?.from_user ?? null;
       }
     }
+    let attachmentUrl = null;
+    let attachmentName = null;
+    let attachmentType = null;
+    if (replyFile) {
+      const upload = await uploadStaffChatAttachment(replyFile, clinician.user_id);
+      if (upload.error) {
+        setSending(false);
+        setError(upload.error);
+        return;
+      }
+      attachmentUrl = upload.url;
+      attachmentName = upload.name;
+      attachmentType = upload.type;
+    }
     const { data, error: err } = await sendStaffChatMessage({
       fromUser: clinician.user_id,
       fromName: clinician.full_name,
       toUser,
+      channel: activeThread.isDirect ? null : (root.channel || activeThread.channel || "general"),
       threadId: activeThread.id,
       subject: root.subject,
-      body: reply.trim(),
+      body: reply.trim() || (attachmentName ? `📎 ${attachmentName}` : ""),
       patientContext: root.patient_context,
+      attachmentUrl,
+      attachmentName,
+      attachmentType,
       team,
     });
     setSending(false);
@@ -280,23 +421,42 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
     if (data) {
       setMessages((prev) => [...prev, { ...data, read_by_me: true }]);
       setReply("");
+      setReplyFile(null);
     }
   }
 
   async function handleCompose(e) {
     e.preventDefault();
-    if (!compose.body.trim()) return;
+    if (!compose.body.trim() && !compose.file) return;
     setSending(true);
     setError(null);
     const toUser = compose.to_user || null;
+    let attachmentUrl = null;
+    let attachmentName = null;
+    let attachmentType = null;
+    if (compose.file) {
+      const upload = await uploadStaffChatAttachment(compose.file, clinician.user_id);
+      if (upload.error) {
+        setSending(false);
+        setError(upload.error);
+        return;
+      }
+      attachmentUrl = upload.url;
+      attachmentName = upload.name;
+      attachmentType = upload.type;
+    }
     const { data, error: err } = await sendStaffChatMessage({
       fromUser: clinician.user_id,
       fromName: clinician.full_name,
       toUser,
+      channel: toUser ? null : (compose.channel || "general"),
       threadId: null,
-      subject: compose.subject.trim() || (toUser ? "Direct message" : "Team message"),
-      body: compose.body.trim(),
+      subject: compose.subject.trim() || (toUser ? "Direct message" : `${channelLabel(compose.channel)} message`),
+      body: compose.body.trim() || (attachmentName ? `📎 ${attachmentName}` : ""),
       patientContext: compose.patient_context.trim() || null,
+      attachmentUrl,
+      attachmentName,
+      attachmentType,
       team,
     });
     setSending(false);
@@ -307,17 +467,22 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
     if (data) {
       setMessages((prev) => [...prev, { ...data, read_by_me: true }]);
       setShowCompose(false);
-      setCompose({ to_user: "", subject: "", body: "", patient_context: "" });
+      setCompose({ to_user: "", channel: "general", subject: "", body: "", patient_context: "", file: null });
       setActiveThreadId(data.thread_id || data.id);
     }
   }
 
   const teamOptions = [
-    { value: "", label: "All Staff (team channel)" },
+    { value: "", label: "— Channel (pick below) —" },
     ...team
       .filter((m) => m.user_id !== clinician.user_id)
       .map((m) => ({ value: m.user_id, label: `${m.full_name}${m.title ? ` · ${m.title}` : ""}` })),
   ];
+
+  const channelOptions = STAFF_CHANNELS.map((c) => ({
+    value: c.id,
+    label: `${c.label} — ${c.description}`,
+  }));
 
   return (
     <div style={{ padding: "2rem 2.5rem", maxWidth: 1100, margin: "0 auto" }}>
@@ -332,13 +497,15 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
             )}
           </span>
         }
-        subtitle="Internal staff messaging — @mention colleagues, search threads, email alerts on DMs"
+        subtitle="Channels, DMs, @mentions, attachments, and read receipts — email alerts when offline"
         action={
           <EhrBtn small onClick={() => { setShowCompose(true); setActiveThreadId(null); }}>
             ✉️ New
           </EhrBtn>
         }
       />
+
+      {showTeamGuide && <StaffTeamChatGuide onDismiss={() => setShowTeamGuide(false)} />}
 
       <div style={{ marginBottom: "0.75rem" }}>
         <EhrInput
@@ -349,15 +516,30 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
         />
       </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: "1rem" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: "0.75rem" }}>
         {FILTERS.map((f) => (
           <FilterPill
             key={f.id}
-            active={filter === f.id}
-            onClick={() => setFilter(f.id)}
+            active={filter === f.id && !channelFilter}
+            onClick={() => { setFilter(f.id); setChannelFilter(""); }}
             count={f.id === "unread" ? unreadCount : f.id === "mentions" ? mentionCount : 0}
           >
             {f.label}
+          </FilterPill>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: "1rem" }}>
+        {STAFF_CHANNELS.map((ch) => (
+          <FilterPill
+            key={ch.id}
+            active={channelFilter === ch.id}
+            onClick={() => {
+              setChannelFilter((prev) => (prev === ch.id ? "" : ch.id));
+              if (channelFilter !== ch.id) setFilter("team");
+            }}
+          >
+            {ch.label}
           </FilterPill>
         ))}
       </div>
@@ -410,7 +592,12 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-                      <span style={{ fontSize: 12 }}>{thread.isTeam ? "👥" : "💬"}</span>
+                      <span style={{ fontSize: 12 }}>{thread.isTeam ? "📢" : "💬"}</span>
+                      {thread.isTeam && thread.channel && (
+                        <span style={{ fontSize: 10, color: "var(--ehr-gold)", fontWeight: 700 }}>
+                          {channelLabel(thread.channel)}
+                        </span>
+                      )}
                       {thread.hasMention && <span style={{ fontSize: 10, color: "var(--ehr-accent)", fontWeight: 700 }}>@</span>}
                       <span style={{
                         fontSize: 13,
@@ -453,7 +640,20 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
                   </div>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  <EhrSelect label="To" value={compose.to_user} onChange={(e) => setCompose((c) => ({ ...c, to_user: e.target.value }))} options={teamOptions} />
+                  <EhrSelect
+                    label="To"
+                    value={compose.to_user}
+                    onChange={(e) => setCompose((c) => ({ ...c, to_user: e.target.value }))}
+                    options={teamOptions}
+                  />
+                  {!compose.to_user && (
+                    <EhrSelect
+                      label="Channel"
+                      value={compose.channel}
+                      onChange={(e) => setCompose((c) => ({ ...c, channel: e.target.value }))}
+                      options={channelOptions}
+                    />
+                  )}
                   <EhrInput label="Subject (optional)" value={compose.subject} onChange={(e) => setCompose((c) => ({ ...c, subject: e.target.value }))} placeholder="e.g. Coverage for Friday" />
                   <EhrInput label="Patient context (optional)" value={compose.patient_context} onChange={(e) => setCompose((c) => ({ ...c, patient_context: e.target.value }))} placeholder="Patient name for reference" />
                   <MentionField
@@ -464,6 +664,21 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
                     placeholder="Write your message… use @ to mention"
                     rows={5}
                   />
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ehr-muted)", display: "block", marginBottom: 6 }}>
+                      Attachment (optional, max 10 MB)
+                    </label>
+                    <input
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.doc,.docx,.xls,.xlsx,.txt,.csv"
+                      onChange={(e) => setCompose((c) => ({ ...c, file: e.target.files?.[0] ?? null }))}
+                    />
+                    {compose.file && (
+                      <p style={{ fontSize: 11, color: "var(--ehr-muted2)", margin: "4px 0 0" }}>
+                        📎 {compose.file.name}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </form>
             </EhrCard>
@@ -474,7 +689,14 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
                   {threadTitle(activeThread, clinician.user_id, staffById)}
                 </h3>
                 <div style={{ fontSize: 12, color: "var(--ehr-muted2)" }}>
-                  {activeThread.isTeam ? "Visible to all staff" : "Direct message"}
+                  {activeThread.isTeam ? (
+                    <>
+                      {channelLabel(activeThread.channel)}
+                      {channelDescription(activeThread.channel) && (
+                        <span> — {channelDescription(activeThread.channel)}</span>
+                      )}
+                    </>
+                  ) : "Direct message"}
                   {activeThread.patientContext && <span> · 👤 {activeThread.patientContext}</span>}
                 </div>
               </div>
@@ -482,6 +704,9 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
               <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10, marginBottom: "1rem", maxHeight: 360 }}>
                 {activeThread.messages.map((m) => {
                   const mine = m.from_user === clinician.user_id;
+                  const receipt = mine
+                    ? formatReadReceipt(readReceipts[m.id], staffById, clinician.user_id, { isDirect: activeThread.isDirect })
+                    : null;
                   return (
                     <div key={m.id} style={{ display: "flex", justifyContent: mine ? "flex-end" : "flex-start" }}>
                       <div style={{
@@ -498,11 +723,19 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
                             {m.from_name || staffById[m.from_user]?.full_name || "Staff"}
                           </div>
                         )}
-                        <div style={{ fontSize: 14, color: "var(--ehr-text)", lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
-                          <MessageBody body={m.body} staffById={staffById} />
-                        </div>
+                        {m.body && (
+                          <div style={{ fontSize: 14, color: "var(--ehr-text)", lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
+                            <MessageBody body={m.body} staffById={staffById} />
+                          </div>
+                        )}
+                        <MessageAttachment url={m.attachment_url} name={m.attachment_name} type={m.attachment_type} />
                         <div style={{ fontSize: 10, color: "var(--ehr-muted2)", marginTop: 6, textAlign: mine ? "right" : "left" }}>
                           {relativeChatTime(m.created_at)}
+                          {receipt && (
+                            <span style={{ marginLeft: 8, color: "var(--ehr-teal)", fontWeight: 600 }}>
+                              · {receipt}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -511,20 +744,33 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
                 <div ref={bottomRef} />
               </div>
 
-              <form onSubmit={handleReply} style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
-                <div style={{ flex: 1 }}>
-                  <MentionField
-                    value={reply}
-                    onChange={setReply}
-                    team={team}
-                    currentUserId={clinician.user_id}
-                    placeholder="Reply in thread…"
-                    rows={2}
-                  />
+              <form onSubmit={handleReply} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+                  <div style={{ flex: 1 }}>
+                    <MentionField
+                      value={reply}
+                      onChange={setReply}
+                      team={team}
+                      currentUserId={clinician.user_id}
+                      placeholder="Reply in thread…"
+                      rows={2}
+                    />
+                  </div>
+                  <EhrBtn type="submit" disabled={sending || (!reply.trim() && !replyFile)} small>
+                    {sending ? "…" : "Send"}
+                  </EhrBtn>
                 </div>
-                <EhrBtn type="submit" disabled={sending || !reply.trim()} small>
-                  {sending ? "…" : "Send"}
-                </EhrBtn>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.doc,.docx,.xls,.xlsx,.txt,.csv"
+                    onChange={(e) => setReplyFile(e.target.files?.[0] ?? null)}
+                    style={{ fontSize: 11 }}
+                  />
+                  {replyFile && (
+                    <span style={{ fontSize: 11, color: "var(--ehr-muted2)" }}>📎 {replyFile.name}</span>
+                  )}
+                </div>
               </form>
             </EhrCard>
           ) : (
@@ -533,6 +779,7 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
               <div style={{ color: "var(--ehr-text)", fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Staff team chat</div>
               <div style={{ color: "var(--ehr-muted)", fontSize: 13, lineHeight: 1.6 }}>
                 Select a conversation or start a new message.<br />
+                Post to <strong>#scheduling</strong>, <strong>#billing</strong>, or DM a colleague.<br />
                 Use <strong>@Name</strong> to mention someone — they&apos;ll get an email if offline.
               </div>
             </EhrCard>

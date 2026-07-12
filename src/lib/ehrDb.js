@@ -743,11 +743,15 @@ export async function sendStaffChatMessage({
   fromUser,
   fromName,
   toUser = null,
+  channel = null,
   threadId = null,
   subject = null,
   body,
   patientContext = null,
   mentionedUserIds = null,
+  attachmentUrl = null,
+  attachmentName = null,
+  attachmentType = null,
   team = [],
 }) {
   const mentionIds = mentionedUserIds ?? parseMentionedUserIds(body, team, fromUser);
@@ -755,11 +759,15 @@ export async function sendStaffChatMessage({
     from_user: fromUser,
     from_name: fromName,
     to_user: toUser || null,
+    channel: toUser ? null : (channel || "general"),
     thread_id: threadId || null,
     subject: subject?.trim() || null,
     body: body.trim(),
     patient_context: patientContext?.trim() || null,
     mentioned_user_ids: mentionIds.length ? mentionIds : [],
+    attachment_url: attachmentUrl || null,
+    attachment_name: attachmentName || null,
+    attachment_type: attachmentType || null,
   };
   const { data, error } = await supabase.from("ehr_messages").insert(payload).select().single();
   if (!error && data) {
@@ -798,6 +806,57 @@ export async function markStaffMessagesRead(messageIds, userId) {
     .from("ehr_message_reads")
     .upsert(rows, { onConflict: "message_id,user_id", ignoreDuplicates: true });
   return { error };
+}
+
+export async function getStaffMessageReadReceipts(messageIds) {
+  const ids = [...new Set((messageIds ?? []).filter(Boolean))];
+  if (!ids.length) return { data: {}, error: null };
+  const { data, error } = await supabase
+    .from("ehr_message_reads")
+    .select("message_id, user_id, read_at")
+    .in("message_id", ids);
+  if (error) return { data: {}, error };
+  const byMessage = {};
+  for (const row of data ?? []) {
+    if (!byMessage[row.message_id]) byMessage[row.message_id] = [];
+    byMessage[row.message_id].push(row);
+  }
+  return { data: byMessage, error: null };
+}
+
+const STAFF_CHAT_ATTACHMENT_TYPES = [
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "text/plain",
+  "text/csv",
+];
+
+export async function uploadStaffChatAttachment(file, userId) {
+  if (!file || !userId) return { error: "Missing file or user." };
+  if (file.size > 10 * 1024 * 1024) return { error: "File must be 10 MB or smaller." };
+  if (STAFF_CHAT_ATTACHMENT_TYPES.length && file.type && !STAFF_CHAT_ATTACHMENT_TYPES.includes(file.type)) {
+    return { error: "File type not allowed. Use PDF, image, Word, Excel, or text." };
+  }
+  const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+  const path = `${userId}/${Date.now()}-${safeName}`;
+  const { error: uploadErr } = await supabase.storage
+    .from("staff-chat-attachments")
+    .upload(path, file, { upsert: false });
+  if (uploadErr) return { error: uploadErr.message ?? "Upload failed." };
+  const { data: urlData } = supabase.storage.from("staff-chat-attachments").getPublicUrl(path);
+  return {
+    url: urlData.publicUrl,
+    name: file.name,
+    type: file.type || null,
+    error: null,
+  };
 }
 
 /** @deprecated use getStaffChatMessages */

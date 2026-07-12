@@ -5,6 +5,8 @@ import {
   parseMentionedUserIds,
   threadMatchesSearch,
   insertMention,
+  channelLabel,
+  formatReadReceipt,
 } from "../lib/staffChatUtils";
 
 describe("staffChatUtils", () => {
@@ -71,5 +73,21 @@ describe("staffChatUtils", () => {
 
   it("inserts @mention first name", () => {
     expect(insertMention("Hey @Ra", team[0])).toBe("Hey @Rachel ");
+  });
+
+  it("groups channel threads with channel id", () => {
+    const messages = [
+      { id: "1", thread_id: null, from_user: me, to_user: null, channel: "billing", body: "Claim question", created_at: "2026-01-01T10:00:00Z", read_by_me: true },
+    ];
+    const threads = groupStaffThreads(messages, me, staffById);
+    expect(threads[0].channel).toBe("billing");
+    expect(threads[0].isTeam).toBe(true);
+    expect(channelLabel("billing")).toBe("#billing");
+  });
+
+  it("formats read receipts for DMs and channels", () => {
+    const reads = [{ user_id: "user-b", read_at: "2026-01-01T10:00:00Z" }];
+    expect(formatReadReceipt(reads, staffById, me, { isDirect: true })).toBe("Read");
+    expect(formatReadReceipt(reads, staffById, me, { isDirect: false })).toBe("Seen by Rachel");
   });
 });

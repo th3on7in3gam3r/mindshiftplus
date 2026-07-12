@@ -20,6 +20,7 @@ export const STAFF_DOC_QUICK_LINKS = [
   { label: "MRN vs Portal Patient ID", anchor: "patient-lookup" },
   { label: "Patient Messages (reply)", anchor: "portal-messages" },
   { label: "Patient Intakes", anchor: "ehr" },
+  { label: "Staff Team Chat", anchor: "staff-team-chat" },
   { label: "Tasks & Reminders", anchor: "ehr" },
   { label: "Record & push a note", anchor: "scribe-workflow" },
   { label: "Bill insurance (superbill)", anchor: "insurance-billing" },
@@ -125,7 +126,7 @@ Everything in this section is in Staff Docs — browse the topics below or ask M
 • **Manual charts** work without Portal Patient ID for notes & billing; Portal ID needed for portal messaging
 
 **Staff workflow**
-• **Team Chat** — EHR → **Team** tab: staff-only threads, direct messages, realtime refresh, **@mentions**, **search**, and **email alerts** on DMs/mentions. Whitelisted staff are **auto-added to the team roster** on first EHR login (no manual SQL).
+• **Team Chat (Tier C)** — EHR → **Team** tab: **channels** (#general, #scheduling, #billing, #clinical), direct messages, **file attachments**, **read receipts**, **@mentions**, **search**, and **email alerts** on DMs/mentions. Whitelisted staff are **auto-added to the team roster** on first EHR login (no manual SQL).
 • **Tasks & Reminders** — internal clinic checklist (not patient-facing)
 • **Staff vs Patient login** on portal — clinicians use **Staff** tab or Clinical Suite
 • **EHR dashboard quick links** — Patient Lookup, MindShift Scribe, and Clinical Suite cards (no need to exit EHR)
@@ -606,23 +607,16 @@ Create a task with a **due date**, **priority**, and optional **patient link** (
       },
       {
         q: "How does staff Team Chat work?",
-        a: `**EHR → Team** (top nav) is **internal staff chat** — not for patients.
+        a: `**EHR → Team** (top nav) is **internal staff chat** — not for patients. See the full **Staff Team Chat** section in Staff Docs for channels, attachments, and read receipts.
 
-**Team-wide:** **New → To: All Staff** — everyone on the clinic roster sees it (Kenneth, Rachel, admin).
+**Quick start:**
+• **Channel post:** **New** → leave **To** on channel → pick **#scheduling**, **#billing**, **#clinical**, or **#general**
+• **Direct message:** **New** → pick a colleague in **To**
+• **Reply** in thread at the bottom; messages update in realtime
 
-**Direct message:** **New → pick a colleague** — private between two staff members.
+**Filters:** All · Channels · Direct · Unread · Mentions · plus channel pills (#general, etc.)
 
-**In a thread:** open the conversation → type in **Reply in thread** at the bottom. New messages appear **without refresh** (realtime).
-
-**Optional patient context** when composing — e.g. "Re: John Smith — can you cover my 2pm?" — does not message the patient.
-
-**Unread badge** on the **Team** tab. Filters: All · Team · Direct · Unread · **Mentions**.
-
-**@mentions:** Type \`@Rachel\` or \`@Kenneth\` in a message — mentioned staff get an **email alert** (if offline). Use the **Mentions** filter to see threads where you were tagged.
-
-**Search:** Use the search box to find messages by text, subject, or patient context.
-
-**Email alerts:** Sent for **direct messages** and **@mentions** only — not every team-wide post.
+**@mentions:** Type \`@Rachel\` or \`@Kenneth\` — mentioned staff get an **email alert** if offline.
 
 **Not the same as Patient Messages** — use **Messages** tab for portal patients.`,
       },
@@ -660,6 +654,139 @@ Patients Kenneth adds manually (**Patients → New Patient**) skip Intakes entir
 Use the **reply box** at the bottom of a thread to respond — no need to open the patient portal. **+ New Message** starts a new conversation.
 
 Messages sync with the patient portal. See **July 2026 — New Features** in Staff Docs for full inbox guide (search, unread filter, Portal Patient ID warnings).`,
+      },
+    ],
+  },
+  {
+    id: "staff-team-chat",
+    icon: "💬",
+    title: "Staff Team Chat — How-To (Tier A–C)",
+    items: [
+      {
+        q: "What is Staff Team Chat and where do I open it?",
+        a: `**Staff Team Chat** is **internal clinic messaging** for Kenneth, Rachel, Jerless, and authorized staff — **not** for patients.
+
+**Open:** MindShift EHR → top nav → **Team** tab (unread badge when you have new messages).
+
+**What it is for:** coverage requests, billing questions, scheduling handoffs, quick clinical coordination — async like email, with realtime updates when you're in the EHR.
+
+**What it is NOT:** Patient portal messages — use **EHR → Patient Messages** for that.`,
+      },
+      {
+        q: "How do I post to a channel (#general, #scheduling, #billing, #clinical)?",
+        a: `**Channels** keep conversations organized by topic. Everyone on the clinic roster can see channel posts.
+
+**Steps:**
+1. EHR → **Team** → **✉️ New**
+2. Leave **To** on **— Channel (pick below) —**
+3. Choose a **Channel:**
+   • **#general** — clinic-wide updates
+   • **#scheduling** — appointments, coverage, calendar
+   • **#billing** — superbills, payers, claims, invoices
+   • **#clinical** — charts, notes, clinical questions
+4. Optional: **Subject**, **Patient context** (reference only — does not message the patient)
+5. Write your message → **Send**
+
+**Filter by channel:** Click the channel pill (#scheduling, etc.) above the thread list, or use **Channels** filter.
+
+**Tip:** Old "All Staff" messages appear under **#general**.`,
+      },
+      {
+        q: "How do I send a direct message (DM) to one colleague?",
+        a: `1. EHR → **Team** → **✉️ New**
+2. In **To**, pick a colleague (e.g. Rachel Nakkazi · PMHNP-BC)
+3. Write your message → **Send**
+
+Only you and that person see the thread. Use **Direct** filter to see all DMs.
+
+**Email alert:** The recipient gets an email if they're offline (see email alerts FAQ).`,
+      },
+      {
+        q: "How do @mentions work in Team Chat?",
+        a: `Type **@** followed by a colleague's first name or full name — e.g. \`@Rachel\` or \`@Kenneth\`.
+
+**Autocomplete:** While typing \`@\`, a picker suggests staff from the roster.
+
+**Email:** Mentioned colleagues get an **email alert** (if their email is on file) — even in a channel post.
+
+**Filter:** Use the **Mentions** filter to see threads where you were tagged.
+
+**Does not notify patients** — staff only.`,
+      },
+      {
+        q: "How do I attach a file to a Team Chat message?",
+        a: `**Tier C — file attachments** (PDF, images, Word, Excel, text — max **10 MB**).
+
+**New message:**
+1. **Team** → **New** → compose your message
+2. Under **Attachment**, choose a file
+3. **Send**
+
+**Reply in thread:** Use the file input below the reply box.
+
+**Viewing:** Images preview inline; other files show as **📎 filename** — click to open/download.
+
+**Storage:** Files live in secure clinic storage (\`staff-chat-attachments\` bucket). Requires migration \`staff_team_chat_tier_c.sql\`.`,
+      },
+      {
+        q: "What are read receipts in Team Chat?",
+        a: `**Tier C — read receipts** show who has opened a thread.
+
+**Direct messages:** After the other person opens the conversation, your sent messages show **Read**.
+
+**Channel posts:** Your sent messages show **Seen by Rachel** (or multiple names) once colleagues open the thread.
+
+**How it works:** Opening a thread automatically marks messages as read for you. Read status is per person — not a group "everyone read" toggle.
+
+**Privacy:** You only see read status on messages **you sent**, not on others' messages.`,
+      },
+      {
+        q: "How do I search Team Chat and use filters?",
+        a: `**Search box** (top of Team tab): finds text in message body, subject, patient context, attachment names, and channel names.
+
+**Filter pills:**
+| Filter | Shows |
+|--------|--------|
+| **All** | Every thread |
+| **Channels** | #general, #scheduling, #billing, #clinical posts |
+| **Direct** | Private DMs |
+| **Unread** | Threads with unread messages |
+| **Mentions** | Threads where you were @mentioned |
+
+**Channel pills:** Click **#billing**, **#scheduling**, etc. to narrow to that channel only.`,
+      },
+      {
+        q: "When do Team Chat email alerts send?",
+        a: `Email alerts go out for:
+• **Direct messages** — the recipient gets an email
+• **@mentions** — each mentioned staff member gets an email
+
+**No email** for ordinary channel posts without an @mention — keeps inbox noise down.
+
+**Requires:** \`staff_team_chat_tier_b.sql\` migration + \`send-email\` edge function deployed. Staff emails come from \`clinician_roles.email\` (auto-filled on login when possible).
+
+**Offline substitute:** Team Chat is async — email alerts are the notification when you're not in the EHR. Native mobile push is not enabled yet.`,
+      },
+      {
+        q: "Do new staff need manual setup for Team Chat?",
+        a: `**No.** Whitelisted clinic emails are **auto-enrolled** on first **EHR login** — they appear in the DM picker and channel roster automatically.
+
+**Whitelisted emails:** \`kmutegyeki@gmail.com\`, \`kmutegyeki@mindshiftwellnessclinic.org\`, \`rnakkazi@mindshiftwellnessclinic.org\`, \`jerlessm@gmail.com\`, \`info@mindshiftwellnessclinic.org\`
+
+Requires migrations: \`staff_team_chat.sql\`, \`staff_team_chat_tier_b.sql\`, \`staff_team_chat_tier_c.sql\`, \`clinician_roles_auto_enroll.sql\`.`,
+      },
+      {
+        q: "Team Chat vs Patient Messages — quick comparison",
+        a: `| | **Team Chat** | **Patient Messages** |
+|---|---------------|----------------------|
+| **Who** | Staff only | Patients in portal |
+| **Where** | EHR → **Team** | EHR → **Patient Messages** |
+| **Channels** | #general, #scheduling, #billing, #clinical | One thread per patient |
+| **Patient sees it?** | No | Yes (portal inbox) |
+| **Attachments** | Staff files (PDF, etc.) | Portal messaging rules |
+| **Email alerts** | DMs + @mentions | Patient notification flow |
+
+When in doubt: if the **patient** should read it → **Patient Messages**. If **staff** should coordinate → **Team Chat**.`,
       },
     ],
   },
