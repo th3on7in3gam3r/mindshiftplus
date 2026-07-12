@@ -17,11 +17,97 @@ const STATUS_DOT = {
 
 import { AVAIL_DAYS, AVAIL_SUMMARY, OFF_SUMMARY, SLOTS_BY_DOW as SLOT_LABELS, isOffDayOfWeek, isAvailableDayOfWeek } from "../../lib/schedulingConstants";
 import { sessionWindowState } from "../../lib/telehealthUtils";
+import { startSessionTimerOnPatientJoin, fetchAppointmentTimer } from "../../lib/telehealthDb";
+import { SessionCountdownBanner } from "../telehealth/SessionCountdown";
 
 const SLOTS_BY_DOW = Object.fromEntries(
   Object.entries(SLOT_LABELS).map(([dow, slots]) => [dow, slots.length])
 );
 export { sessionWindowState };
+
+function TelehealthJoinSection({ appointment, onUpdated }) {
+  const [appt, setAppt] = useState(appointment);
+  const [joining, setJoining] = useState(false);
+
+  useEffect(() => { setAppt(appointment); }, [appointment]);
+
+  useEffect(() => {
+    if (!appt?.id) return undefined;
+    let cancelled = false;
+    const poll = () => {
+      fetchAppointmentTimer(appt.id).then(({ data }) => {
+        if (!cancelled && data) {
+          setAppt((prev) => ({ ...prev, ...data }));
+          onUpdated?.(data);
+        }
+      });
+    };
+    poll();
+    const id = setInterval(poll, 2000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [appt?.id, appt?.session_timer_started_at]);
+
+  const winState = sessionWindowState(appt.scheduled_at, appt.telehealth_url);
+
+  const handleJoin = async () => {
+    if (!appt.telehealth_url) return;
+    setJoining(true);
+    try {
+      if (appt.id) {
+        await startSessionTimerOnPatientJoin(appt.id);
+        const { data } = await fetchAppointmentTimer(appt.id);
+        if (data) {
+          setAppt((prev) => ({ ...prev, ...data }));
+          onUpdated?.(data);
+        }
+      }
+      window.open(appt.telehealth_url, "_blank");
+    } finally {
+      setJoining(false);
+    }
+  };
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      {(appt.session_duration_minutes || appt.session_timer_started_at) && (
+        <SessionCountdownBanner appointment={appt} variant="light" compact />
+      )}
+      {winState === "in_window" && (
+        <>
+          {appt.session_duration_minutes && !appt.session_timer_started_at && (
+            <p style={{ fontSize: 12, color: T.muted, margin: "0 0 6px", lineHeight: 1.5 }}>
+              {appt.session_duration_minutes}-minute session — countdown starts when you join
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={handleJoin}
+            disabled={joining}
+            style={{
+              background: T.accent,
+              border: "none",
+              borderRadius: 20,
+              padding: "6px 16px",
+              color: "#fff",
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: joining ? "wait" : "pointer",
+              opacity: joining ? 0.85 : 1,
+            }}
+          >
+            {joining ? "Starting session…" : "📹 Join Video Session"}
+          </button>
+        </>
+      )}
+      {winState === "before_window" && (
+        <span style={{ fontSize: 12, color: T.muted }}>Session opens 10 min before your appointment</span>
+      )}
+      {winState === "no_url" && (
+        <span style={{ fontSize: 12, color: T.muted }}>Video link coming soon</span>
+      )}
+    </div>
+  );
+}
 
 // ── Mini Calendar ──────────────────────────────────────────────────────────────
 function AppointmentCalendar({ appointments, onDayClick, selectedDate, fullDays }) {
@@ -220,7 +306,6 @@ function DayDetail({ date, appointments, onCancel, onClose, isFull }) {
 
       {dayAppts.map(a => {
         const isTelehealth = a.appointment_type === "telehealth";
-        const winState = isTelehealth ? sessionWindowState(a.scheduled_at, a.telehealth_url) : null;
         return (
           <div key={a.id} style={{ background:"#fff", borderRadius:12, padding:"0.9rem 1rem", marginBottom:8, border:`1px solid ${T.border}` }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10 }}>
@@ -242,19 +327,7 @@ function DayDetail({ date, appointments, onCancel, onClose, isFull }) {
                 )}
               </div>
             </div>
-            {isTelehealth && (
-              <div style={{ marginTop:8 }}>
-                {winState === "in_window" && (
-                  <button onClick={() => window.open(a.telehealth_url, "_blank")} style={{ background:T.accent, border:"none", borderRadius:20, padding:"6px 16px", color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer" }}>📹 Join Video Session</button>
-                )}
-                {winState === "before_window" && (
-                  <span style={{ fontSize:12, color:T.muted }}>Session opens 10 min before your appointment</span>
-                )}
-                {winState === "no_url" && (
-                  <span style={{ fontSize:12, color:T.muted }}>Video link coming soon</span>
-                )}
-              </div>
-            )}
+            {isTelehealth && <TelehealthJoinSection appointment={a} />}
           </div>
         );
       })}
@@ -531,7 +604,6 @@ export default function PortalAppointments({ userId, P }) {
               action={!confirmedUpcoming ? <Btn onClick={()=>setShowForm(true)}>Request Appointment</Btn> : null}/>
           ) : upcoming.map(a=>{
             const isTelehealth = a.appointment_type === "telehealth";
-            const winState = isTelehealth ? sessionWindowState(a.scheduled_at, a.telehealth_url) : null;
             return (
               <Card key={a.id} style={{ marginBottom:"0.75rem" }} accent={a.status==="requested"||a.status==="pending"?T.gold:T.green}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:12 }}>
@@ -547,17 +619,10 @@ export default function PortalAppointments({ userId, P }) {
                       {a.notes&&<span style={{ fontSize:11, color:T.muted2, fontStyle:"italic", marginTop:2 }}>"{a.notes}"</span>}
                     </div>
                     {isTelehealth && (
-                      <div style={{ marginTop:8 }}>
-                        {winState === "in_window" && (
-                          <button onClick={() => window.open(a.telehealth_url, "_blank")} style={{ background:T.accent, border:"none", borderRadius:20, padding:"6px 16px", color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer" }}>📹 Join Video Session</button>
-                        )}
-                        {winState === "before_window" && (
-                          <span style={{ fontSize:12, color:T.muted }}>Session opens 10 min before your appointment</span>
-                        )}
-                        {winState === "no_url" && (
-                          <span style={{ fontSize:12, color:T.muted }}>Video link coming soon</span>
-                        )}
-                      </div>
+                      <TelehealthJoinSection
+                        appointment={a}
+                        onUpdated={(data) => setAppointments((prev) => prev.map((x) => (x.id === data.id ? { ...x, ...data } : x)))}
+                      />
                     )}
                   </div>
                   <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:8 }}>

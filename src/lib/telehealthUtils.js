@@ -63,3 +63,55 @@ export function formatApptDateTime(iso) {
     minute: "2-digit",
   });
 }
+
+/** Common telehealth session lengths (minutes) — clinician picks in Scribe. */
+export const SESSION_DURATION_OPTIONS = [30, 45, 50, 60, 90];
+
+export const DEFAULT_SESSION_DURATION_MINUTES = 45;
+
+export function formatCountdownMs(ms) {
+  if (ms <= 0) return "0:00";
+  const totalSec = Math.ceil(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+/** Countdown state for clinician + patient UI. */
+export function getSessionTimerState(appt, nowMs = Date.now()) {
+  const durationMin = appt?.session_duration_minutes;
+  if (!durationMin || durationMin <= 0) {
+    return { phase: "no_duration", durationMin: null, remainingMs: null, label: null };
+  }
+  const startedAt = appt?.session_timer_started_at;
+  if (!startedAt) {
+    return {
+      phase: "waiting",
+      durationMin,
+      remainingMs: durationMin * 60 * 1000,
+      label: `${durationMin} min reserved`,
+      hint: "Timer starts when the patient joins the video session.",
+    };
+  }
+  const endMs = new Date(startedAt).getTime() + durationMin * 60 * 1000;
+  const remainingMs = endMs - nowMs;
+  if (remainingMs <= 0) {
+    return {
+      phase: "ended",
+      durationMin,
+      remainingMs: 0,
+      label: "Session time complete",
+      hint: "Wrap up or extend the visit as needed.",
+    };
+  }
+  return {
+    phase: "active",
+    durationMin,
+    remainingMs,
+    label: formatCountdownMs(remainingMs),
+    hint: "Time remaining in this session.",
+  };
+}
+

@@ -21,14 +21,16 @@ import EHRCrisisAlerts from "./EHRCrisisAlerts";
 import EHRStaffHelper from "./EHRStaffHelper";
 import { Spinner, EhrStyles } from "./EHRUI";
 import { consumeEHRIntent } from "../../lib/clinicalNav";
+import { getEhrRouteFromUrl, syncEhrView, installAppRouteListener } from "../../lib/appNav";
 
 export default function EHR({ onBack, onOpenDocs, onOpenTool, initialView }) {
+  const urlRoute = getEhrRouteFromUrl();
   // ── ALL hooks must be declared unconditionally at the top ──────────────────
   const [session, setSession]         = useState(undefined);
   const [clinician, setClinician]     = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [view, setView]               = useState(initialView || "dashboard");
-  const [activeChartId, setActiveChartId] = useState(null);
+  const [view, setViewRaw]            = useState(initialView || urlRoute.view || "dashboard");
+  const [activeChartId, setActiveChartId] = useState(urlRoute.chartId || null);
   const [chartContext, setChartContext] = useState(null);
   const [scheduleFocusDate, setScheduleFocusDate] = useState(null);
   const [pendingIntakes, setPendingIntakes] = useState(0);
@@ -39,6 +41,12 @@ export default function EHR({ onBack, onOpenDocs, onOpenTool, initialView }) {
   const [financeMenuPos, setFinanceMenuPos] = useState({ top: 0, left: 0 });
   const financeBtnRef = useRef(null);
   const financeMenuRef = useRef(null);
+
+  const setView = useCallback((nextView, chartId = null) => {
+    setViewRaw(nextView);
+    if (nextView === "chart" && chartId) setActiveChartId(chartId);
+    syncEhrView(nextView, nextView === "chart" ? (chartId ?? activeChartId) : null);
+  }, [activeChartId]);
 
   const financeViews = ["insurance-claims", "invoices", "reports", "giftcards", "billing-settings"];
   const isFinanceView = financeViews.includes(view);
@@ -94,8 +102,19 @@ export default function EHR({ onBack, onOpenDocs, onOpenTool, initialView }) {
 
   useEffect(() => {
     const { view: ehrView, scheduleDate } = consumeEHRIntent();
-    if (ehrView) setView(ehrView);
+    if (ehrView) {
+      setViewRaw(ehrView);
+      syncEhrView(ehrView, null, { replace: true });
+    }
     if (scheduleDate) setScheduleFocusDate(scheduleDate);
+  }, []);
+
+  useEffect(() => {
+    return installAppRouteListener((route) => {
+      if (route.page !== "ehr") return;
+      setViewRaw(route.ehrView || "dashboard");
+      if (route.ehrChartId) setActiveChartId(route.ehrChartId);
+    });
   }, []);
 
   async function loadClinician(user, mounted = true) {
@@ -315,7 +334,7 @@ export default function EHR({ onBack, onOpenDocs, onOpenTool, initialView }) {
         {view === "dashboard" && (
           <EHRDashboard
             clinician={clinician}
-            onOpenChart={(id) => { setActiveChartId(id); setView("chart"); }}
+            onOpenChart={(id) => { setActiveChartId(id); setView("chart", id); }}
             onNewChart={() => { setActiveChartId(null); setView("new-chart"); }}
             onNavigateView={setView}
             onOpenTool={onOpenTool}
@@ -325,7 +344,7 @@ export default function EHR({ onBack, onOpenDocs, onOpenTool, initialView }) {
         {view === "intakes" && (
           <EHRIntakes
             clinician={clinician}
-            onOpenChart={(id) => { setActiveChartId(id); setView("chart"); setPendingIntakes(n => Math.max(0, n - 1)); }}
+            onOpenChart={(id) => { setActiveChartId(id); setView("chart", id); setPendingIntakes(n => Math.max(0, n - 1)); }}
           />
         )}
         {view === "chart" && activeChartId && (
@@ -342,13 +361,13 @@ export default function EHR({ onBack, onOpenDocs, onOpenTool, initialView }) {
             newPatientId={null}
             clinician={clinician}
             onBack={() => setView("dashboard")}
-            onCreated={(id) => { setActiveChartId(id); setView("chart"); }}
+            onCreated={(id) => { setActiveChartId(id); setView("chart", id); }}
           />
         )}
         {view === "schedule"  && (
           <EHRSchedule
             clinician={clinician}
-            onOpenChart={(id) => { setActiveChartId(id); setView("chart"); }}
+            onOpenChart={(id) => { setActiveChartId(id); setView("chart", id); }}
             initialFocusDate={scheduleFocusDate}
             onFocusDateConsumed={() => setScheduleFocusDate(null)}
           />
@@ -356,13 +375,13 @@ export default function EHR({ onBack, onOpenDocs, onOpenTool, initialView }) {
         {view === "tasks" && (
           <EHRTasks
             clinician={clinician}
-            onOpenChart={(id) => { setActiveChartId(id); setView("chart"); }}
+            onOpenChart={(id) => { setActiveChartId(id); setView("chart", id); }}
           />
         )}
         {view === "messages" && (
           <EHRPatientMessages
             clinician={clinician}
-            onOpenChart={(id) => { setActiveChartId(id); setView("chart"); }}
+            onOpenChart={(id) => { setActiveChartId(id); setView("chart", id); }}
           />
         )}
         {view === "staff-messages" && <EHRMessages clinician={clinician} />}

@@ -131,6 +131,7 @@ Everything in this section is in Staff Docs — browse the topics below or ask M
 
 **Patient portal**
 • **Self-reported medications** — patients add meds from other doctors under **Medications → + Add Medication**
+• **Telehealth session countdown** — Scribe sets session length (30–90 min); timer starts when patient clicks **Join Video Session** in portal
 
 **Where to ask:** **Staff Docs → Milo** or **Milo** button in the EHR toolbar. Milo reads this guide.`,
       },
@@ -940,6 +941,25 @@ For billing, set **Place of Service** to **02** or **10** (telehealth) on the cl
 **Session window:** join button appears **10 minutes before** scheduled time through **60 minutes after**. Clinicians can join anytime if they have the link.`,
       },
       {
+        q: "Telehealth session countdown timer — how does it work?",
+        a: `**MindShift Scribe → Telehealth** includes a **session length** dropdown (30–90 minutes, default 45).
+
+**Clinician:**
+1. Set **Session length** before or after starting video
+2. Click **⚡ Start Video Session Now** (or Join) — duration is saved on the appointment
+3. Live countdown appears in Scribe once the **patient joins**
+4. Optional: **▶ Start timer now** if the patient is already connected another way
+
+**Patient (Portal → Appointments):**
+• Sees reserved session length before joining
+• When they click **📹 Join Video Session**, the **countdown starts** and video opens
+• Timer updates live on the appointments page while they are in the portal
+
+**Note:** Video runs in Whereby (separate tab). The timer is in MindShift/portal — not burned into the video feed.
+
+Requires Supabase migration \`telehealth_session_timer.sql\`.`,
+      },
+      {
         q: "Telehealth visits — place of service for billing?",
         a: `When editing a claim, set **Place of Service** to:
 • **02** or **10** — Telehealth
@@ -964,6 +984,7 @@ Match what you documented for the visit.`,
 | Confirm a **scheduled** telehealth visit **and email the link** | **Admin Dashboard → Appointments** → Confirm |
 | See the calendar / book / complete visits | **EHR → Schedule** |
 | Join when link already exists | **Join Video Session** (Scribe, Schedule, Admin, or patient chart) |
+| Track **session time remaining** | **Scribe → Telehealth** — set length (30–90 min); countdown starts when **patient joins** from portal |
 | Old link says room not found | Click **Start Video Session Now** again — links expire after ~24 hours |
 
 **Two IDs matter in Scribe:**
@@ -979,6 +1000,7 @@ Match what you documented for the visit.`,
 3. Set **modality** to **Telehealth**
 4. Set **date of service** to today
 5. In **Telehealth Video** panel:
+   • Set **Session length** (30–90 min) if you want a live countdown for you and the patient
    • If you see **Join Video Session with Patient** → click it (link still valid)
    • If you see *"previous video link has expired"* or no link → click **⚡ Start Video Session Now**
 6. Video opens in a **new tab** — keep Scribe open for documentation

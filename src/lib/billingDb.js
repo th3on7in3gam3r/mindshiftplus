@@ -102,9 +102,11 @@ export function payerCategoryLabel(category) {
   return PAYER_CATEGORIES.find((c) => c.value === category)?.label ?? category ?? "Other";
 }
 
-/** Normalize payer list from DB or form — falls back to clinic defaults. */
-export function normalizeInsurancePayers(raw) {
-  if (!Array.isArray(raw) || !raw.length) return [...DEFAULT_INSURANCE_PAYERS];
+/** Normalize payer list from DB or form — falls back to clinic defaults when empty (load only). */
+export function normalizeInsurancePayers(raw, { preserveEmpty = false } = {}) {
+  if (!Array.isArray(raw) || !raw.length) {
+    return preserveEmpty ? [] : [...DEFAULT_INSURANCE_PAYERS];
+  }
   return raw
     .map((p) => ({
       name: String(p.name ?? "").trim(),
@@ -425,6 +427,7 @@ export async function saveBillingSettings(payload, userId) {
   const { data: existing } = await supabase
     .from("clinic_billing_settings")
     .select("id")
+    .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
@@ -435,7 +438,7 @@ export async function saveBillingSettings(payload, userId) {
     email: payload.email,
     tax_id: payload.tax_id || null,
     providers: payload.providers ?? DEFAULT_BILLING_SETTINGS.providers,
-    insurance_payers: normalizeInsurancePayers(payload.insurance_payers),
+    insurance_payers: normalizeInsurancePayers(payload.insurance_payers, { preserveEmpty: true }),
     updated_by: userId,
     updated_at: new Date().toISOString(),
   };
@@ -447,7 +450,7 @@ export async function saveBillingSettings(payload, userId) {
       .eq("id", existing.id)
       .select()
       .single();
-    return { data, error };
+    return { data: data ? mergeBillingSettings(data) : null, error };
   }
 
   const { data, error } = await supabase
@@ -455,7 +458,7 @@ export async function saveBillingSettings(payload, userId) {
     .insert(row)
     .select()
     .single();
-  return { data, error };
+  return { data: data ? mergeBillingSettings(data) : null, error };
 }
 
 /**

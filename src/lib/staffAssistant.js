@@ -51,6 +51,7 @@ RULES:
    - **Join existing link:** Join Video Session (Scribe, Schedule, Admin, or chart) when link is still valid.
    - **Portal Patient ID** (UUID on chart) enables auto portal notify; **MRN/chart selected** is enough for clinician video + Scribe. Without Portal ID, copy link manually.
    - Patients join from Portal → Appointments (button 10 min before through 60 min after scheduled time).
+   - **Session countdown:** Scribe → set **Session length** (30–90 min). Timer starts when the **patient clicks Join** in portal (or clinician clicks **▶ Start timer now**). Countdown shows in Scribe and portal — not inside the Whereby video tab.
    - Billing: Place of Service **02** or **10** for telehealth.
    - Only escalate to site administrator if **Start Video Session Now** fails repeatedly with backend/WHEREBY errors — not for normal expired links.
 6. For insurance billing (superbills):
@@ -80,6 +81,7 @@ const STARTER_PROMPTS = [
   "What are Patient Intakes?",
   "Where do I confirm appointments now?",
   "How does telehealth video work?",
+  "How does the telehealth session countdown work?",
   "What's the difference between MRN and Portal Patient ID?",
   "How do I push a Scribe note to the EHR?",
   "Insurance Claims vs Patient Invoices?",

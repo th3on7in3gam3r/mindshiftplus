@@ -1,5 +1,7 @@
 /** Deep-link clinicians from Admin Dashboard → EHR or Patient Portal sections. */
 
+import { syncAppRoute } from "./appNav";
+
 const EHR_VIEW_KEY = "ms_ehr_view";
 const EHR_SCHEDULE_DATE_KEY = "ms_ehr_schedule_date";
 
@@ -9,6 +11,7 @@ export function openEHRSchedule(setPage, dateStr) {
     if (dateStr) sessionStorage.setItem(EHR_SCHEDULE_DATE_KEY, dateStr);
     else sessionStorage.removeItem(EHR_SCHEDULE_DATE_KEY);
   } catch { /* ignore */ }
+  syncAppRoute("ehr", { ehrView: "schedule" });
   setPage("ehr");
 }
 

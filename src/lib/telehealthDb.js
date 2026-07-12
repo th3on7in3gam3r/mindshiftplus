@@ -91,3 +91,64 @@ export async function startInstantTelehealthSession({
     error: null,
   };
 }
+
+/** Set clinician-chosen session length (minutes) on a telehealth appointment. */
+export async function setAppointmentSessionDuration(appointmentId, minutes) {
+  if (!appointmentId || !minutes) return { data: null, error: "Missing appointment or duration." };
+  const { data, error } = await supabase
+    .from("appointments")
+    .update({ session_duration_minutes: minutes })
+    .eq("id", appointmentId)
+    .select()
+    .single();
+  if (error) return { data: null, error: error.message };
+  return { data, error: null };
+}
+
+/** Patient joined — start countdown once (idempotent). */
+export async function startSessionTimerOnPatientJoin(appointmentId) {
+  if (!appointmentId) return { data: null, error: "Missing appointment." };
+  const { data: existing, error: readErr } = await supabase
+    .from("appointments")
+    .select("session_duration_minutes, session_timer_started_at")
+    .eq("id", appointmentId)
+    .single();
+  if (readErr) return { data: null, error: readErr.message };
+  if (!existing?.session_duration_minutes) {
+    return { data: existing, error: null };
+  }
+  if (existing.session_timer_started_at) {
+    return { data: existing, error: null };
+  }
+  const { data, error } = await supabase
+    .from("appointments")
+    .update({ session_timer_started_at: new Date().toISOString() })
+    .eq("id", appointmentId)
+    .select()
+    .single();
+  if (error) return { data: null, error: error.message };
+  return { data, error: null };
+}
+
+/** Clinician manually starts timer (e.g. patient already on the call). */
+export async function startSessionTimerNow(appointmentId) {
+  if (!appointmentId) return { data: null, error: "Missing appointment." };
+  const { data, error } = await supabase
+    .from("appointments")
+    .update({ session_timer_started_at: new Date().toISOString() })
+    .eq("id", appointmentId)
+    .select()
+    .single();
+  if (error) return { data: null, error: error.message };
+  return { data, error: null };
+}
+
+export async function fetchAppointmentTimer(appointmentId) {
+  const { data, error } = await supabase
+    .from("appointments")
+    .select("id, session_duration_minutes, session_timer_started_at, telehealth_url, scheduled_at, appointment_type, status")
+    .eq("id", appointmentId)
+    .maybeSingle();
+  if (error) return { data: null, error: error.message };
+  return { data, error: null };
+}

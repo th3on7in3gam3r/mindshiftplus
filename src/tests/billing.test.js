@@ -447,6 +447,12 @@ describe("normalizeInsurancePayers", () => {
     expect(opts[0].name).toBe("Medicare");
     expect(payerCategoryLabel("medicaid")).toBe("Medicaid");
   });
+
+  it("preserveEmpty keeps an empty save list (no default merge)", () => {
+    expect(normalizeInsurancePayers([], { preserveEmpty: true })).toEqual([]);
+    expect(normalizeInsurancePayers([{ name: "Jerless Insurance Company", category: "commercial" }], { preserveEmpty: true }))
+      .toEqual([{ name: "Jerless Insurance Company", category: "commercial" }]);
+  });
 });
 
 describe("placeOfServiceLabel", () => {

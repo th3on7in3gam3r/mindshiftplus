@@ -2,8 +2,16 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useAuth } from "../lib/AuthContext";
 import { getChartsForPicker, chartDisplayName, matchesChartSearch, getPatientAppointments } from "../lib/ehrDb";
 import { getIntakesWithoutCharts, matchesIntakeSearch } from "../lib/intakeDb";
-import { sessionWindowState, pickTelehealthAppointment, formatApptDateTime, isUsableTelehealthUrl } from "../lib/telehealthUtils";
-import { startInstantTelehealthSession, ensureAppointmentTelehealthRoom, createTelehealthRoomOnly } from "../lib/telehealthDb";
+import { sessionWindowState, pickTelehealthAppointment, formatApptDateTime, isUsableTelehealthUrl, SESSION_DURATION_OPTIONS, DEFAULT_SESSION_DURATION_MINUTES } from "../lib/telehealthUtils";
+import {
+  startInstantTelehealthSession,
+  ensureAppointmentTelehealthRoom,
+  createTelehealthRoomOnly,
+  setAppointmentSessionDuration,
+  startSessionTimerNow,
+  fetchAppointmentTimer,
+} from "../lib/telehealthDb";
+import { SessionCountdownBanner } from "./telehealth/SessionCountdown";
 import {
   createScribeSession,
   saveGeneratedNote,
@@ -734,7 +742,7 @@ async function prepareTelehealthSession({
   const serviceAnchor = serviceDate ? `${serviceDate}T12:00:00` : new Date().toISOString();
 
   if (isUsableTelehealthUrl(telehealthUrl, serviceAnchor)) {
-    return { telehealth_url: telehealthUrl, patientNotified: false };
+    return { telehealth_url: telehealthUrl, patientNotified: false, appointmentId: null };
   }
 
   if (patientUuid) {
@@ -742,7 +750,7 @@ async function prepareTelehealthSession({
     const appt = pickTelehealthAppointment(appointments, serviceDate);
 
     if (appt?.telehealth_url && isUsableTelehealthUrl(appt.telehealth_url, appt.scheduled_at)) {
-      return { telehealth_url: appt.telehealth_url, patientNotified: false };
+      return { telehealth_url: appt.telehealth_url, patientNotified: false, appointmentId: appt.id };
     }
 
     if (appt?.id) {
@@ -758,7 +766,7 @@ async function prepareTelehealthSession({
           error: data?.error || "Could not create video room. Check WHEREBY_API_KEY in Supabase secrets.",
         };
       }
-      return { telehealth_url: data.telehealth_url, patientNotified: false, refreshed: true };
+      return { telehealth_url: data.telehealth_url, patientNotified: false, refreshed: true, appointmentId: appt.id };
     }
 
     const { data, error } = await startInstantTelehealthSession({
@@ -770,6 +778,7 @@ async function prepareTelehealthSession({
     return {
       telehealth_url: data?.telehealth_url ?? null,
       patientNotified: !!data?.patientNotified,
+      appointmentId: data?.appointmentId ?? null,
       error: data?.telehealth_url ? null : "Could not create video room.",
     };
   }
@@ -802,6 +811,8 @@ function TelehealthJoinPanel({
   const [startError, setStartError] = useState("");
   const [patientNotified, setPatientNotified] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [sessionDuration, setSessionDuration] = useState(DEFAULT_SESSION_DURATION_MINUTES);
+  const [timerStarting, setTimerStarting] = useState(false);
 
   useEffect(() => {
     if (!patientUuid) {
@@ -817,6 +828,31 @@ function TelehealthJoinPanel({
     });
     return () => { cancelled = true; };
   }, [patientUuid, serviceDate, telehealthUrl]);
+
+  useEffect(() => {
+    if (!appt?.id) return undefined;
+    let cancelled = false;
+    const poll = () => {
+      fetchAppointmentTimer(appt.id).then(({ data }) => {
+        if (!cancelled && data) setAppt((prev) => ({ ...prev, ...data }));
+      });
+    };
+    poll();
+    const id = setInterval(poll, 3000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [appt?.id, appt?.session_timer_started_at]);
+
+  useEffect(() => {
+    if (appt?.session_duration_minutes) {
+      setSessionDuration(appt.session_duration_minutes);
+    }
+  }, [appt?.session_duration_minutes]);
+
+  async function applySessionDuration(appointmentId) {
+    if (!appointmentId || !sessionDuration) return;
+    const { data } = await setAppointmentSessionDuration(appointmentId, sessionDuration);
+    if (data) setAppt((prev) => ({ ...prev, ...data }));
+  }
 
   const panelStyle = {
     marginTop: 4,
@@ -864,7 +900,12 @@ function TelehealthJoinPanel({
       }
       onTelehealthUrl?.(result.telehealth_url);
       if (result.patientNotified) setPatientNotified(true);
-      if (appt?.id) {
+      const appointmentId = result.appointmentId ?? appt?.id;
+      if (appointmentId) {
+        await applySessionDuration(appointmentId);
+        const { data: refreshed } = await fetchAppointmentTimer(appointmentId);
+        if (refreshed) setAppt((prev) => ({ ...prev, ...refreshed, telehealth_url: result.telehealth_url }));
+      } else if (appt?.id) {
         setAppt({ ...appt, telehealth_url: result.telehealth_url, status: "confirmed" });
       } else if (result.telehealth_url) {
         setAppt({
@@ -892,6 +933,56 @@ function TelehealthJoinPanel({
     } catch (_) {}
   };
 
+  const handleManualStartTimer = async () => {
+    if (!appt?.id) return;
+    setTimerStarting(true);
+    try {
+      await applySessionDuration(appt.id);
+      const { data, error } = await startSessionTimerNow(appt.id);
+      if (error) throw new Error(error);
+      if (data) setAppt((prev) => ({ ...prev, ...data }));
+    } catch (err) {
+      setStartError(err.message || "Could not start timer.");
+    } finally {
+      setTimerStarting(false);
+    }
+  };
+
+  const durationSelect = (
+    <div style={{ marginBottom: 10 }}>
+      <label style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", display: "block", marginBottom: 4 }}>
+        Session length (countdown for patient)
+      </label>
+      <select
+        value={sessionDuration}
+        onChange={async (e) => {
+          const mins = Number(e.target.value);
+          setSessionDuration(mins);
+          if (appt?.id) await setAppointmentSessionDuration(appt.id, mins).then(({ data }) => {
+            if (data) setAppt((prev) => ({ ...prev, ...data }));
+          });
+        }}
+        style={{
+          width: "100%",
+          padding: "8px 10px",
+          borderRadius: 10,
+          border: "1px solid rgba(14,165,160,0.35)",
+          background: "rgba(0,0,0,0.2)",
+          color: "var(--white)",
+          fontSize: 13,
+          fontFamily: "inherit",
+        }}
+      >
+        {SESSION_DURATION_OPTIONS.map((m) => (
+          <option key={m} value={m}>{m} minutes</option>
+        ))}
+      </select>
+      <p style={{ fontSize: 11, color: "var(--muted)", margin: "6px 0 0", lineHeight: 1.45 }}>
+        Countdown starts when the patient clicks <strong style={{ color: "var(--white)" }}>Join Video Session</strong> in their portal.
+      </p>
+    </div>
+  );
+
   if (!patientUuid && !patientChartId) {
     return (
       <div style={panelStyle}>
@@ -910,6 +1001,7 @@ function TelehealthJoinPanel({
         <p style={{ fontSize: 12, color: "var(--gold)", margin: "0 0 8px", lineHeight: 1.5 }}>
           Chart selected, but no <strong style={{ color: "var(--white)" }}>Portal Patient ID</strong> is linked. Video will open for you — add the Portal Patient ID in EHR to notify the patient automatically.
         </p>
+        {durationSelect}
         <button type="button" onClick={handleStartNow} disabled={starting} style={{ ...joinBtnStyle, opacity: starting ? 0.7 : 1 }}>
           {starting ? "Creating video room…" : "⚡ Start Video Session Now"}
         </button>
@@ -942,8 +1034,11 @@ function TelehealthJoinPanel({
         )}
       </div>
 
+      {durationSelect}
+
       {activeUrl ? (
         <>
+          <SessionCountdownBanner appointment={appt} variant="dark" compact />
           <button type="button" onClick={() => window.open(activeUrl, "_blank")} style={{ ...joinBtnStyle, marginBottom: 8 }}>
             Join Video Session with Patient
           </button>
@@ -969,6 +1064,22 @@ function TelehealthJoinPanel({
             <p style={{ fontSize: 11, color: "var(--muted)", margin: "0 0 8px", lineHeight: 1.4 }}>
               Patient portal opens 10 minutes before the scheduled time. You can join now as the clinician.
             </p>
+          )}
+          {appt?.id && appt?.session_duration_minutes && !appt?.session_timer_started_at && (
+            <button
+              type="button"
+              onClick={handleManualStartTimer}
+              disabled={timerStarting}
+              style={{
+                ...joinBtnStyle,
+                background: "rgba(245,200,66,0.15)",
+                border: "1px solid rgba(245,200,66,0.4)",
+                color: "var(--gold)",
+                marginBottom: 8,
+              }}
+            >
+              {timerStarting ? "Starting timer…" : "▶ Start timer now (patient already connected)"}
+            </button>
           )}
         </>
       ) : (

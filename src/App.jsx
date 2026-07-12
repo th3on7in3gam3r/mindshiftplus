@@ -19,6 +19,12 @@ import {
   openPortalPage,
 } from "./lib/patientMode";
 import { openEHRSchedule } from "./lib/clinicalNav";
+import {
+  getInitialAppRoute,
+  syncAppRoute,
+  installAppRouteListener,
+  parseAppRoute,
+} from "./lib/appNav";
 
 // ── Fonts ──────────────────────────────────────────────────────────────────────
 const GlobalStyles = () => (
@@ -3248,7 +3254,11 @@ function About(){
 // ── APP SHELL ──────────────────────────────────────────────────────────────────
 export default function App(){
   const { user, loading, signOut } = useAuth();
-  const [page, setPage] = useState("landing");
+  const [page, setPageState] = useState(() => getInitialAppRoute().page);
+  const setPage = useCallback((nextPage, { ehrView, ehrChartId, replace = false } = {}) => {
+    setPageState(nextPage);
+    syncAppRoute(nextPage, { ehrView, ehrChartId, replace });
+  }, []);
   const [showAuth, setShowAuth] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
@@ -3258,6 +3268,13 @@ export default function App(){
   const isClinician = useIsClinicianOrAdmin(user);
   const patientHome = usePatientHome(user, isClinician);
   const handleOpenPortal = useCallback((subPage) => openPortalPage(setPage, subPage), []);
+
+  // Keep in-app page in sync with browser back/forward
+  useEffect(() => {
+    const route = parseAppRoute();
+    syncAppRoute(route.page, { ehrView: route.ehrView, ehrChartId: route.ehrChartId, replace: true });
+    return installAppRouteListener(({ page: routePage }) => setPageState(routePage));
+  }, []);
 
   // Check disclaimer acceptance when user logs in
   useEffect(()=>{
@@ -3274,10 +3291,15 @@ export default function App(){
     email: user.email,
   } : null;
 
-  // Once signed in go to dashboard; only redirect to landing after loading is confirmed done
+  // Once signed in go to dashboard; respect URL route on refresh (e.g. /clinical/ehr)
   useEffect(()=>{
     if(loading) return; // wait — don't act until session is resolved
     if(user && (page==="landing" || page==="onboarding")){
+      const fromUrl = parseAppRoute();
+      if (fromUrl.page && !["landing", "onboarding"].includes(fromUrl.page)) {
+        setPageState(fromUrl.page);
+        return;
+      }
       // Check if there was an intent stored before login
       try{
         const intent = sessionStorage.getItem('ms_intent');
@@ -3286,10 +3308,10 @@ export default function App(){
       }catch{}
       setPage("dashboard");
       setShowAuth(false);
-    }    if(!user && !["landing","portal","schedule"].includes(page)){
+    }    if(!user && !["landing","portal","schedule","clinical","ehr","ehr-schedule","ai-scribe","staff-docs"].includes(page)){
       setPage("landing");
     }
-  },[user, loading]);
+  },[user, loading, page, setPage]);
 
   // Listen for iframe navigation messages + sessionStorage intent from mindshiftplus.html
   useEffect(()=>{

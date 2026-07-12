@@ -17,19 +17,17 @@ export default function EHRBillingSettings({ clinician }) {
     setLoading(true);
     const { data, error: err } = await getBillingSettings();
     if (err) setError(typeof err === "string" ? err : err.message ?? "Failed to load settings.");
-    else setForm({
-      clinic_name: data.clinic_name ?? DEFAULT_BILLING_SETTINGS.clinic_name,
-      billing_address: data.billing_address ?? DEFAULT_BILLING_SETTINGS.billing_address,
-      phone: data.phone ?? DEFAULT_BILLING_SETTINGS.phone,
-      email: data.email ?? DEFAULT_BILLING_SETTINGS.email,
-      tax_id: data.tax_id ?? "",
-      providers: Array.isArray(data.providers) && data.providers.length
-        ? data.providers
-        : DEFAULT_BILLING_SETTINGS.providers,
-      insurance_payers: Array.isArray(data.insurance_payers) && data.insurance_payers.length
-        ? data.insurance_payers
-        : DEFAULT_BILLING_SETTINGS.insurance_payers,
-    });
+    else if (data) {
+      setForm({
+        clinic_name: data.clinic_name,
+        billing_address: data.billing_address,
+        phone: data.phone,
+        email: data.email,
+        tax_id: data.tax_id ?? "",
+        providers: data.providers,
+        insurance_payers: data.insurance_payers,
+      });
+    }
     setLoading(false);
   }
 
@@ -59,12 +57,36 @@ export default function EHRBillingSettings({ clinician }) {
     setSaved(false);
   };
 
-  const removePayer = (index) => {
-    setForm((f) => ({
-      ...f,
-      insurance_payers: f.insurance_payers.filter((_, i) => i !== index),
-    }));
+  const removePayer = async (index) => {
+    const nextForm = {
+      ...form,
+      insurance_payers: form.insurance_payers.filter((_, i) => i !== index),
+    };
+    setForm(nextForm);
     setSaved(false);
+    setSaving(true);
+    setError(null);
+    const { data, error: err } = await saveBillingSettings(nextForm, clinician.user_id);
+    setSaving(false);
+    if (err) {
+      setError(typeof err === "string" ? err : err.message ?? "Could not remove payer.");
+      await load();
+    } else {
+      setSaved(true);
+      if (data) {
+        setForm({
+          clinic_name: data.clinic_name,
+          billing_address: data.billing_address,
+          phone: data.phone,
+          email: data.email,
+          tax_id: data.tax_id ?? "",
+          providers: data.providers,
+          insurance_payers: data.insurance_payers,
+        });
+      } else {
+        await load();
+      }
+    }
   };
 
   const handleSave = async (e) => {
@@ -74,7 +96,10 @@ export default function EHRBillingSettings({ clinician }) {
     const { error: err } = await saveBillingSettings(form, clinician.user_id);
     setSaving(false);
     if (err) setError(typeof err === "string" ? err : err.message ?? "Save failed.");
-    else setSaved(true);
+    else {
+      setSaved(true);
+      await load();
+    }
   };
 
   if (loading) return <div style={{ padding: "2rem" }}><Spinner /></div>;
@@ -129,9 +154,10 @@ export default function EHRBillingSettings({ clinician }) {
           <p style={{ fontSize: 12, color: "var(--ehr-muted)", margin: "0 0 1rem", lineHeight: 1.6 }}>
             Payers your clinic bills — Medicare, Medicaid, commercial plans (BCBS, Aetna, etc.).
             Staff pick from this list on patient charts and insurance claims; you can still type a custom name if needed.
+            {" "}Remove saves immediately.
           </p>
           {form.insurance_payers.map((p, i) => (
-            <div key={i} style={{
+            <div key={`${p.name}-${p.category}-${i}`} style={{
               display: "grid",
               gridTemplateColumns: "1fr 160px auto",
               gap: 10,
@@ -151,8 +177,8 @@ export default function EHRBillingSettings({ clinician }) {
                 onChange={(e) => setPayer(i, "category", e.target.value)}
                 options={PAYER_CATEGORIES.map((c) => ({ value: c.value, label: c.label }))}
               />
-              <EhrBtn type="button" variant="secondary" small onClick={() => removePayer(i)} style={{ marginBottom: 2 }}>
-                Remove
+              <EhrBtn type="button" variant="secondary" small onClick={() => removePayer(i)} disabled={saving} style={{ marginBottom: 2 }}>
+                {saving ? "…" : "Remove"}
               </EhrBtn>
             </div>
           ))}
