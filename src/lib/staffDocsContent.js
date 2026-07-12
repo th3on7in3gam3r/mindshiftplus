@@ -21,6 +21,7 @@ export const STAFF_DOC_QUICK_LINKS = [
   { label: "Import notes from Heidi", anchor: "heidi-export-import" },
   { label: "Clinic schedule / off days", anchor: "scheduling-hours" },
   { label: "Telehealth video sessions", anchor: "telehealth" },
+  { label: "Telehealth quick reference", anchor: "telehealth-quick-reference" },
 ];
 
 export const STAFF_DOC_SECTIONS = [
@@ -74,7 +75,7 @@ The public marketing page (\`mindshiftplus.html\`) still shows the wellness stor
 
 Milo greets you by name — e.g. *"Good morning, Dr. Kenneth"* or *"Good afternoon, Rachel"* — based on who is signed in.
 
-Milo answers **how-to questions** from Staff Docs — e.g. where to confirm appointments, MRN vs Portal Patient ID, Scribe → EHR push, superbills, telehealth.
+Milo answers **how-to questions** from Staff Docs — e.g. where to confirm appointments, MRN vs Portal Patient ID, Scribe → EHR push, superbills, telehealth (including expired links, EHR vs Admin confirm, and video vs Scribe recording).
 
 **Use Milo when:** You want step-by-step help with a clinic workflow — appointments, charts, billing, Scribe, or portal tools.
 
@@ -650,6 +651,156 @@ Match what you documented for the visit.`,
     ],
   },
   {
+    id: "telehealth-quick-reference",
+    icon: "⚡",
+    title: "Telehealth Quick Reference (Clinician Cheat Sheet)",
+    items: [
+      {
+        q: "Telehealth in 30 seconds — what do I need to know?",
+        a: `**Video** = Whereby (new browser tab). **Scribe recording** = microphone only for the AI note — not the video call.
+
+| I need to… | Do this |
+|------------|---------|
+| Start video **right now** | **Scribe** → select patient → **Telehealth** → **⚡ Start Video Session Now** |
+| Confirm a **scheduled** telehealth visit **and email the link** | **Admin Dashboard → Appointments** → Confirm |
+| See the calendar / book / complete visits | **EHR → Schedule** |
+| Join when link already exists | **Join Video Session** (Scribe, Schedule, Admin, or patient chart) |
+| Old link says room not found | Click **Start Video Session Now** again — links expire after ~24 hours |
+
+**Two IDs matter in Scribe:**
+• **MRN / chart selected** — enough for video + documentation
+• **Portal Patient ID** — needed to auto-notify the patient in their portal (optional but recommended)`,
+      },
+      {
+        q: "Step-by-step: start a telehealth visit today (most common)",
+        a: `Use this when the patient is ready **now** — with or without a prior booking.
+
+1. **Clinical Suite → MindShift Scribe**
+2. **Select patient** from the MindShift EHR dropdown (create chart first if missing)
+3. Set **modality** to **Telehealth**
+4. Set **date of service** to today
+5. In **Telehealth Video** panel:
+   • If you see **Join Video Session with Patient** → click it (link still valid)
+   • If you see *"previous video link has expired"* or no link → click **⚡ Start Video Session Now**
+6. Video opens in a **new tab** — keep Scribe open for documentation
+7. Click **Start Recording Session** in Scribe when ready (this records **audio** for the note, not the video)
+8. After the visit → review note → **Push to MindShift EHR**
+9. For billing → claim **Place of Service** = **02** or **10** (telehealth)`,
+      },
+      {
+        q: "Step-by-step: scheduled telehealth (patient booked ahead)",
+        a: `**Before visit day**
+1. Patient requests **Telehealth (Video)** in portal, or staff books in **EHR → Schedule**
+2. Confirm in **Admin Dashboard → Appointments** (not EHR Schedule confirm alone) — this creates the Whereby link and emails the patient
+
+**On visit day**
+1. Open **Scribe** → select patient → **Telehealth**
+2. Scribe finds today's telehealth appointment automatically
+3. **Join Video Session with Patient** — or **Start Video Session Now** if link expired/missing
+4. Record in Scribe → push note to EHR
+
+**If only EHR Schedule was used to confirm:** status updates but **no video link** — use Admin confirm or Scribe **Start Video Session Now**.`,
+      },
+      {
+        q: "Why are there two confirm buttons? (EHR Schedule vs Admin Appointments)",
+        a: `This is the #1 telehealth question — both screens are correct, they do **different jobs**.
+
+| | **EHR → Schedule → Confirm** | **Admin Dashboard → Appointments → Confirm** |
+|---|---|---|
+| Updates appointment status | ✅ Yes | ✅ Yes |
+| Sends standard confirmation email | ✅ Yes | ✅ Yes |
+| **Creates Whereby video link** | ❌ No | ✅ Yes |
+| **Emails patient the join link** | ❌ No | ✅ Yes |
+
+**Memory trick:** EHR Schedule = **calendar**. Admin Appointments = **video link + patient email**.
+
+**Instant visits:** skip both — use **Scribe → Start Video Session Now**.`,
+      },
+      {
+        q: "Video link expired or Whereby says 'can't find that room'",
+        a: `**Normal.** Whereby rooms last about **24 hours** after creation.
+
+**What staff do (no admin needed):**
+1. Open **MindShift Scribe** → patient → **Telehealth**
+2. You may see: *"The previous video link has expired…"*
+3. Click **⚡ Start Video Session Now**
+4. A fresh room opens in a new tab
+
+**Also works from:** Admin Appointments re-confirm, or Scribe refresh on an old appointment.
+
+**You do NOT need to:** update Whereby settings, redeploy anything, or call the site administrator for a normal expired link.`,
+      },
+      {
+        q: "Scribe says 'Select a patient first' but I already picked a patient",
+        a: `The patient **chart** is selected, but **Portal Patient ID** may be missing — two different things.
+
+| What you selected | What it enables |
+|-------------------|-----------------|
+| Patient from EHR dropdown (MRN/chart) | ✅ Video room for you, ✅ Scribe note, ✅ Push to EHR |
+| Portal Patient ID on chart (\`Edit Chart\`) | ✅ Above **plus** auto portal message to patient |
+
+**Fix for full auto-notify:**
+1. **EHR → open chart → Edit Chart**
+2. Add **Portal Patient ID** from **Admin → Patient Lookup** (UUID for their portal login)
+3. Return to Scribe → **Start Video Session Now** — patient gets portal message + email
+
+**Without Portal Patient ID:** video still works for the clinician; **copy the join link** from Scribe and send via portal message or email manually.`,
+      },
+      {
+        q: "Video vs Scribe recording — what's the difference?",
+        a: `Staff sometimes confuse these — they are **separate systems**.
+
+| | **Telehealth Video (Whereby)** | **Scribe Recording** |
+|---|---|---|
+| Purpose | See/hear the **patient live** | Capture **audio** to generate the progress note |
+| Opens | New browser tab | Stays in Scribe |
+| Patient joins | Portal link or link you send | Patient does **not** join Scribe |
+| Required for visit | For telehealth modality | For AI note generation |
+
+**Typical flow:** Join video (Whereby tab) → switch back to Scribe → **Start Recording Session** (mic) → conduct visit → complete → push note.`,
+      },
+      {
+        q: "What can clinic staff fix vs when to call the site administrator?",
+        a: `**Clinic staff can handle (Kenneth, Rachel):**
+• Expired video link → **Start Video Session Now**
+• Missing link after EHR-only confirm → Admin confirm or Scribe instant start
+• Patient didn't get email → copy link from Scribe, send portal message
+• Wrong modality → switch Scribe to Telehealth
+• Link Portal Patient ID on chart for auto-notify
+
+**Call the site administrator only when:**
+• **Start Video Session Now** fails repeatedly with an error (not just expired link)
+• Error mentions **WHEREBY_API_KEY** or backend/telehealth function
+• Login broken, data not saving, or patient chart missing entirely
+
+**Staff do NOT need to:** redeploy Supabase functions, rotate Whereby keys, or update code — that is administrator work when something is broken at the platform level.`,
+      },
+      {
+        q: "Telehealth FAQ — quick answers for common questions",
+        a: `**Q: How long do video links last?**
+A: ~24 hours. Create a fresh one anytime with **Start Video Session Now**.
+
+**Q: Can I use Scribe on my own chart for testing?**
+A: Yes — select your chart, Telehealth modality, **Start Video Session Now**. Add Portal Patient ID if you want to test patient-side portal notify.
+
+**Q: Does confirming in EHR Schedule break telehealth?**
+A: No — it just doesn't create the video link. Use Admin confirm or Scribe for the link.
+
+**Q: Patient sees "Video link coming soon"?**
+A: Link not created yet → confirm in **Admin Appointments** or use Scribe instant start.
+
+**Q: Where does the patient join?**
+A: **Portal → Appointments** — button appears 10 min before through 60 min after scheduled time. Instant sessions also get portal message + email.
+
+**Q: In-person visit — do I use telehealth buttons?**
+A: No — set modality **In-Person** in Scribe → **Start Recording Session** only.
+
+**Q: Billing code for telehealth?**
+A: Claim **Place of Service** = **02** or **10**.`,
+      },
+    ],
+  },
+  {
     id: "portal-messages",
     icon: "💬",
     title: "Portal Messages & Archive",
@@ -724,6 +875,29 @@ Still blocked? Contact the site administrator with your email address.`,
 3. If an appointment exists but has no link, Scribe can create the room on **Start Video Session Now**
 
 If it still fails after those steps, the backend \`telehealth\` function or Whereby API key may need attention — escalate to the site administrator.`,
+      },
+      {
+        q: "Whereby says 'Sorry, we can't find that room' or Scribe shows link expired",
+        a: `The video room **expired** (~24 hours after it was created). This is expected — not a bug.
+
+**Fix (takes ~5 seconds):**
+1. **MindShift Scribe** → select patient → **Telehealth**
+2. Click **⚡ Start Video Session Now**
+3. New tab opens with a fresh room
+
+Send the new link to the patient if they already had the old one (copy from Scribe or portal message).
+
+See **Telehealth Quick Reference** in Staff Docs for the full clinician cheat sheet.`,
+      },
+      {
+        q: "Could not create video room — error in Scribe",
+        a: `Try in order:
+
+1. Click **Start Video Session Now** again (transient network blip)
+2. Confirm patient is selected from the **EHR dropdown**
+3. If error mentions **WHEREBY_API_KEY** or keeps failing → contact the **site administrator** (backend/Whereby config — not a clinic workflow issue)
+
+**Not an admin issue:** expired link message — just click **Start Video Session Now** again.`,
       },
       {
         q: "Patient didn't get telehealth or confirmation email",

@@ -43,7 +43,16 @@ RULES:
 2. Be concise, step-by-step, and practical. Use bullet points for workflows.
 3. NEVER invent patient names, IDs, passwords, or database steps not in the docs.
 4. For scheduling: the official calendar is EHR → Schedule (not MindShift Admin). Admin is for lookup, visit notes, Rx, and documents — **except** telehealth video links are created when you confirm a telehealth appointment in **Admin Dashboard → Appointments**, not from EHR → Schedule confirm alone.
-5. For telehealth video: Whereby opens in a new tab. Scheduled links → confirm in Admin Dashboard → Appointments. Instant/walk-in → Scribe → Start Video Session Now. Patients join from Portal → Appointments (button opens 10 min before through 60 min after scheduled time).
+5. For telehealth video (Whereby):
+   - Video opens in a **new browser tab**. Scribe **recording** is **audio only** (microphone for the note) — separate from the video call.
+   - **Instant / walk-in:** Scribe → select patient → Telehealth → **⚡ Start Video Session Now**.
+   - **Scheduled with email link:** Admin Dashboard → Appointments → Confirm (creates link + emails patient). EHR → Schedule confirm alone does NOT create the video link.
+   - **Expired link / "can't find that room":** Normal after ~24 hours. Scribe → **Start Video Session Now** again — staff fix this themselves; no admin needed.
+   - **Join existing link:** Join Video Session (Scribe, Schedule, Admin, or chart) when link is still valid.
+   - **Portal Patient ID** (UUID on chart) enables auto portal notify; **MRN/chart selected** is enough for clinician video + Scribe. Without Portal ID, copy link manually.
+   - Patients join from Portal → Appointments (button 10 min before through 60 min after scheduled time).
+   - Billing: Place of Service **02** or **10** for telehealth.
+   - Only escalate to site administrator if **Start Video Session Now** fails repeatedly with backend/WHEREBY errors — not for normal expired links.
 6. For login failures, broken saves, migration errors, or outages → direct them to contact the site administrator (${STAFF_DOC_META.clinicEmail}).
 7. You are NOT Mia (the patient wellness coach). You are Milo (staff operations guide). You do NOT give patient-facing mental health advice.
 8. You do NOT make clinical diagnoses or treatment decisions.
@@ -53,6 +62,9 @@ Clinic phone: ${STAFF_DOC_META.clinicPhone}`;
 const STARTER_PROMPTS = [
   "Where do I confirm appointments now?",
   "How does telehealth video work?",
+  "Telehealth quick reference — start a visit now",
+  "EHR Schedule vs Admin — which creates the video link?",
+  "Video link expired — what do I do?",
   "What's the difference between MRN and Portal Patient ID?",
   "How do I push a Scribe note to the EHR?",
   "How do I print a superbill?",
@@ -84,7 +96,7 @@ export function findRelevantStaffDocs(query, limit = 8) {
   if (ranked.length > 0) return ranked.slice(0, limit);
 
   // Fallback: include "what changed" + getting started when no keyword match
-  const fallbackIds = ["what-changed", "getting-started", "ehr-schedule", "patient-lookup", "telehealth"];
+  const fallbackIds = ["what-changed", "getting-started", "ehr-schedule", "patient-lookup", "telehealth", "telehealth-quick-reference"];
   const fallback = [];
   for (const section of STAFF_DOC_SECTIONS) {
     if (fallbackIds.includes(section.id)) {
