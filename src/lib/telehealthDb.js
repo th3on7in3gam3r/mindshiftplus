@@ -10,7 +10,10 @@ export async function createTelehealthRoomOnly(scheduledAt) {
   if (error) return { data: null, error: error.message };
   if (data?.error) return { data: null, error: data.error };
   if (!data?.telehealth_url) {
-    return { data: null, error: "Could not create video room. Check Whereby configuration." };
+    return {
+      data: null,
+      error: data?.error || "Could not create video room. Check WHEREBY_API_KEY in Supabase secrets.",
+    };
   }
   return { data, error: null };
 }
@@ -21,6 +24,12 @@ export async function ensureAppointmentTelehealthRoom(appointmentId, scheduledAt
   });
   if (error) return { data: null, error: error.message };
   if (data?.error) return { data: null, error: data.error };
+  if (!data?.telehealth_url) {
+    return {
+      data: null,
+      error: data?.error || "Whereby did not return a room URL. Check WHEREBY_API_KEY in Supabase secrets.",
+    };
+  }
   return { data, error: null };
 }
 

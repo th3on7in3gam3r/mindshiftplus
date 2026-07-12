@@ -746,9 +746,18 @@ async function prepareTelehealthSession({
     }
 
     if (appt?.id) {
-      const { data, error } = await ensureAppointmentTelehealthRoom(appt.id, appt.scheduled_at || serviceAnchor);
+      const roomScheduledAt =
+        appt.scheduled_at && isUsableTelehealthUrl(appt.telehealth_url, appt.scheduled_at)
+          ? appt.scheduled_at
+          : new Date().toISOString();
+      const { data, error } = await ensureAppointmentTelehealthRoom(appt.id, roomScheduledAt);
       if (error) return { telehealth_url: null, error };
-      if (!data?.telehealth_url) return { telehealth_url: null, error: "Could not create video room." };
+      if (!data?.telehealth_url) {
+        return {
+          telehealth_url: null,
+          error: data?.error || "Could not create video room. Check WHEREBY_API_KEY in Supabase secrets.",
+        };
+      }
       return { telehealth_url: data.telehealth_url, patientNotified: false, refreshed: true };
     }
 
@@ -850,7 +859,9 @@ function TelehealthJoinPanel({
         telehealthUrl: null,
       });
       if (result.error && !result.telehealth_url) throw new Error(result.error);
-      if (!result.telehealth_url) throw new Error("Could not create video room.");
+      if (!result.telehealth_url) {
+        throw new Error("Could not create video room. Check WHEREBY_API_KEY in Supabase → Project Settings → Edge Functions → Secrets.");
+      }
       onTelehealthUrl?.(result.telehealth_url);
       if (result.patientNotified) setPatientNotified(true);
       if (appt?.id) {

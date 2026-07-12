@@ -14,7 +14,9 @@ export function computeEndDate(scheduledAt: string): string {
 }
 
 async function createWherebyRoom(apiKey: string, scheduledAt: string): Promise<string | null> {
-  const endDate = computeEndDate(scheduledAt);
+  // Whereby rejects endDate in the past — use now when refreshing old/expired appointments.
+  const startMs = Math.max(new Date(scheduledAt).getTime(), Date.now());
+  const endDate = new Date(startMs + 24 * 60 * 60 * 1000).toISOString();
   const wherebyRes = await fetch("https://api.whereby.dev/v1/meetings", {
     method: "POST",
     headers: {
@@ -32,7 +34,7 @@ async function createWherebyRoom(apiKey: string, scheduledAt: string): Promise<s
   if (!wherebyRes.ok) {
     const errText = await wherebyRes.text();
     console.error("Whereby API error:", wherebyRes.status, errText);
-    return null;
+    throw new Error(`Whereby API ${wherebyRes.status}: ${errText.slice(0, 200)}`);
   }
 
   const wherebyData = await wherebyRes.json();
@@ -71,6 +73,10 @@ Deno.serve(async (req) => {
 
     const telehealth_url = await createWherebyRoom(WHEREBY_API_KEY, startAt);
 
+    if (!telehealth_url) {
+      return jsonWithCors(req, { error: "Failed to create Whereby room" }, 502);
+    }
+
     // ── Instant session (MindShift Scribe — no prior appointment) ───────────
     if (mode === "instant") {
       if (!patientId) {
@@ -81,10 +87,6 @@ Deno.serve(async (req) => {
       if (!resolvedEmail) {
         const { data: userData } = await supabase.auth.admin.getUserById(patientId);
         resolvedEmail = userData?.user?.email ?? null;
-      }
-
-      if (!telehealth_url) {
-        return jsonWithCors(req, { error: "Failed to create Whereby room" }, 502);
       }
 
       const { data: appt, error: insertErr } = await supabase
@@ -123,17 +125,10 @@ Deno.serve(async (req) => {
       return jsonWithCors(req, { telehealth_url, status: "confirmed" });
     }
 
-    if (telehealth_url) {
-      await supabase
-        .from("appointments")
-        .update({ telehealth_url, status: "confirmed" })
-        .eq("id", appointmentId);
-    } else {
-      await supabase
-        .from("appointments")
-        .update({ status: "confirmed" })
-        .eq("id", appointmentId);
-    }
+    await supabase
+      .from("appointments")
+      .update({ telehealth_url, status: "confirmed" })
+      .eq("id", appointmentId);
 
     return jsonWithCors(req, { telehealth_url, status: "confirmed" });
   } catch (e) {
