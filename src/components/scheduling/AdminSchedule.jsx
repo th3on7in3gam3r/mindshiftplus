@@ -102,6 +102,15 @@ const STATUS_COLORS = {
   archived:  { bg:"#f3f4f6", color:"#6b7280", label:"Archived" },
 };
 
+const VISIT_TYPES = [
+  "Initial Evaluation",
+  "Follow-Up",
+  "Medication Management",
+  "Telehealth",
+  "Crisis / Urgent",
+  "Other",
+];
+
 function Card({ children, style={} }) {
   return <div style={{ background:P.bg2, border:`1px solid ${P.border}`, borderRadius:16, padding:"1.4rem", boxShadow:"0 1px 3px rgba(0,0,0,0.06)", ...style }}>{children}</div>;
 }
@@ -111,17 +120,47 @@ function StatusBadge({ status }) {
   return <span style={{ background:s.bg, color:s.color, fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:99 }}>{s.label}</span>;
 }
 
-function Tab({ label, active, onClick, count }) {
+function Tab({ label, active, onClick, count, icon }) {
   return (
     <button onClick={onClick} style={{
-      padding:"8px 16px", borderRadius:8, border:"none", fontSize:13, fontWeight:active?600:400,
+      padding:"8px 14px", borderRadius:9, border:"none", fontSize:13, fontWeight:active?600:400,
       background:active?P.accent:"transparent", color:active?"#fff":P.muted, cursor:"pointer",
-      display:"flex", alignItems:"center", gap:6,
+      display:"flex", alignItems:"center", gap:6, whiteSpace:"nowrap", flexShrink:0,
     }}>
+      {icon && <span style={{ fontSize:14 }}>{icon}</span>}
       {label}
       {count!=null&&<span style={{ background:active?"rgba(255,255,255,0.25)":"#e5e7eb", color:active?"#fff":P.muted, fontSize:10, fontWeight:700, padding:"1px 6px", borderRadius:99 }}>{count}</span>}
     </button>
   );
+}
+
+const ADMIN_TAB_GROUPS = [
+  {
+    id: "schedule",
+    label: "Schedule",
+    icon: "📅",
+    tabs: [
+      { id: "appointments", label: "Appointments", icon: "📋" },
+      { id: "availability", label: "Availability", icon: "🕐" },
+      { id: "blocked", label: "Blocked Times", icon: "🚫" },
+    ],
+  },
+  {
+    id: "patients",
+    label: "Patients & Records",
+    icon: "👤",
+    tabs: [
+      { id: "patients", label: "Patient Lookup", icon: "🔍" },
+      { id: "notes", label: "Visit Notes", icon: "📝" },
+      { id: "rx", label: "Prescriptions", icon: "💊" },
+      { id: "review", label: "Pre-Visit Review", icon: "📋" },
+      { id: "docs", label: "Patient Documents", icon: "📄" },
+    ],
+  },
+];
+
+function findTabGroup(tabId) {
+  return ADMIN_TAB_GROUPS.find(g => g.tabs.some(t => t.id === tabId)) || ADMIN_TAB_GROUPS[0];
 }
 
 // ── Schedule Calendar (matches public booking) ─────────────────────────────────
@@ -173,15 +212,14 @@ function AdminScheduleCalendar({ appointments, selectedDate, onSelectDate }) {
               key={d}
               type="button"
               onClick={() => onSelectDate(sel ? "" : ds)}
-              disabled={off}
-              title={off ? "Clinic closed" : dayAppts.length ? `${dayAppts.length} appointment(s)` : "Open — click to filter list"}
+              title={off ? `${dayAppts.length ? dayAppts.length + " appointment(s) · " : ""}Clinic closed — click to view` : dayAppts.length ? `${dayAppts.length} appointment(s) — click to manage` : "Click to view this date"}
               style={{
                 aspectRatio: "1", borderRadius: 10, border: "none", fontSize: 13,
                 fontWeight: sel ? 700 : 400,
                 background: sel ? P.accent : off ? "#f3f4f6" : "transparent",
                 color: sel ? "#fff" : off ? P.muted2 : P.text,
-                cursor: off ? "default" : "pointer",
-                opacity: off ? 0.45 : 1,
+                cursor: "pointer",
+                opacity: off ? 0.65 : 1,
                 display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2,
                 transition: "all .15s",
               }}
@@ -199,7 +237,10 @@ function AdminScheduleCalendar({ appointments, selectedDate, onSelectDate }) {
           );
         })}
       </div>
-      <div style={{ marginTop: 12, fontSize: 11, color: P.muted, display: "flex", flexWrap: "wrap", gap: "8px 16px" }}>
+      <div style={{ marginTop: 12, fontSize: 11, color: P.muted, lineHeight: 1.5 }}>
+        <strong>How to use:</strong> Click a date to view and manage that day&apos;s appointments below — confirm, cancel, complete, or archive from each card.
+      </div>
+      <div style={{ marginTop: 8, fontSize: 11, color: P.muted, display: "flex", flexWrap: "wrap", gap: "8px 16px" }}>
         <span>{AVAIL_SUMMARY}</span>
         <span style={{ color: P.muted2 }}>· {OFF_SUMMARY}</span>
       </div>
@@ -212,8 +253,54 @@ function AdminScheduleCalendar({ appointments, selectedDate, onSelectDate }) {
   );
 }
 
+// ── Appointment card (shared in list + day view) ───────────────────────────────
+function AppointmentCard({ a, fmt, onStatus, P }) {
+  return (
+    <Card style={{ marginBottom:"0.75rem", opacity: a.status==="archived" ? 0.75 : 1 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:12 }}>
+        <div style={{ flex:1, minWidth:200 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+            <div style={{ fontWeight:700, fontSize:14, color:P.text }}>{a.name || "Portal Patient"}</div>
+            <StatusBadge status={a.status}/>
+            {a.appointment_type === "telehealth" && <span title="Telehealth" style={{ fontSize:14 }}>📹</span>}
+          </div>
+          <div style={{ color:P.muted, fontSize:12 }}>📅 {fmt(a.scheduled_at)} · {a.location||"—"}</div>
+          {a.email&&<div style={{ color:P.muted, fontSize:12, marginTop:2 }}>✉️ {a.email}</div>}
+          {a.phone&&<div style={{ color:P.muted, fontSize:12, marginTop:2 }}>📞 {a.phone}</div>}
+          {a.reason&&<div style={{ color:P.muted2, fontSize:11, marginTop:4, fontStyle:"italic" }}>Reason: {a.reason}</div>}
+          {a.notes&&<div style={{ color:P.muted2, fontSize:11, marginTop:2, fontStyle:"italic" }}>Notes: {a.notes}</div>}
+        </div>
+        <div className="admin-appt-actions" style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
+          {["pending","requested","upcoming"].includes(a.status) && <>
+            <button onClick={()=>onStatus(a.id,"confirmed")} style={{ background:"#dcfce7", border:"none", borderRadius:20, padding:"6px 14px", color:"#166534", fontSize:12, fontWeight:600, cursor:"pointer" }}>✓ Confirm</button>
+            <button onClick={()=>onStatus(a.id,"cancelled")} style={{ background:"#fee2e2", border:"none", borderRadius:20, padding:"6px 14px", color:"#991b1b", fontSize:12, fontWeight:600, cursor:"pointer" }}>✕ Cancel</button>
+          </>}
+          {a.status==="confirmed" && <>
+            <button onClick={()=>onStatus(a.id,"completed")} style={{ background:"#dbeafe", border:"none", borderRadius:20, padding:"6px 14px", color:"#1e40af", fontSize:12, fontWeight:600, cursor:"pointer" }}>✓ Complete</button>
+            <button onClick={()=>onStatus(a.id,"cancelled")} style={{ background:"#fee2e2", border:"none", borderRadius:20, padding:"6px 14px", color:"#991b1b", fontSize:12, fontWeight:600, cursor:"pointer" }}>✕ Cancel</button>
+          </>}
+          {["completed","cancelled"].includes(a.status) && (
+            <button onClick={()=>onStatus(a.id,"archived")} style={{ background:"#f3f4f6", border:"1px solid #e5e7eb", borderRadius:20, padding:"6px 14px", color:"#6b7280", fontSize:12, fontWeight:600, cursor:"pointer" }}>🗄️ Archive</button>
+          )}
+          {a.status==="archived" && (
+            <button onClick={()=>onStatus(a.id,"completed")} style={{ background:"#dbeafe", border:"none", borderRadius:20, padding:"6px 14px", color:"#1e40af", fontSize:12, fontWeight:600, cursor:"pointer" }}>↩ Restore</button>
+          )}
+        </div>
+      </div>
+      {a.appointment_type === "telehealth" && ["confirmed","pending","requested","upcoming"].includes(a.status) && (
+        <div style={{ marginTop:"0.75rem", paddingTop:"0.75rem", borderTop:`1px solid ${P.border}` }}>
+          {a.telehealth_url
+            ? <button onClick={() => window.open(a.telehealth_url, "_blank")} style={{ background:"linear-gradient(135deg,#4a6cf7,#0ea5a0)", border:"none", borderRadius:20, padding:"7px 16px", color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer" }}>📹 Join Video Session</button>
+            : <button onClick={()=>onStatus(a.id,"confirmed")} style={{ background:"#eef2ff", border:`1px solid ${P.accent}`, borderRadius:20, padding:"7px 16px", color:P.accent, fontSize:12, fontWeight:600, cursor:"pointer" }}>📹 Create Video Link</button>
+          }
+        </div>
+      )}
+    </Card>
+  );
+}
+
 // ── Appointments Tab ───────────────────────────────────────────────────────────
-function AppointmentsTab({ userId }) {
+function AppointmentsTab({ userId, onOpenEHRSchedule }) {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
@@ -236,56 +323,75 @@ function AppointmentsTab({ userId }) {
 
   const handleStatus = async (id, status) => {
     const appt = appointments.find(a=>a.id===id);
-    if (status === "confirmed" && appt?.appointment_type === "telehealth") {
-      // Telehealth confirmation: call Edge Function to create Whereby room
-      let telehealthUrl = null;
-      try {
-        const { data: response } = await supabase.functions.invoke('telehealth', {
-          body: { appointmentId: appt.id, scheduledAt: appt.scheduled_at },
+    const emailData = appt ? {
+      name: appt.name || "Patient",
+      email: appt.email,
+      date: appt.scheduled_at ? new Date(appt.scheduled_at).toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"}) : "TBD",
+      time: appt.scheduled_at ? new Date(appt.scheduled_at).toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"}) : "TBD",
+      clinician: appt.provider_name || "Kenneth Mutegyeki, PMHNP-BC",
+      location: appt.location || "Milford, MA",
+    } : null;
+
+    try {
+      if (status === "confirmed" && appt?.appointment_type === "telehealth") {
+        const scheduledAt = appt.scheduled_at || new Date().toISOString();
+        const { data: response, error: fnErr } = await supabase.functions.invoke("telehealth", {
+          body: { appointmentId: appt.id, scheduledAt },
         });
-        telehealthUrl = response?.telehealth_url ?? null;
-      } catch {}
-      if (appt) {
-        const emailData = {
-          name: appt.name || "Patient",
-          email: appt.email,
-          date: appt.scheduled_at ? new Date(appt.scheduled_at).toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"}) : "TBD",
-          time: appt.scheduled_at ? new Date(appt.scheduled_at).toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"}) : "TBD",
-          clinician: appt.provider_name || "Kenneth Mutegyeki, PMHNP-BC",
-        };
-        emailTelehealthReminder({ ...emailData, telehealth_url: telehealthUrl });
+        if (fnErr) throw fnErr;
+        if (response?.error) throw new Error(response.error);
+        if (emailData?.email) {
+          emailTelehealthReminder({ ...emailData, telehealth_url: response?.telehealth_url ?? null });
+        }
+      } else {
+        await updateAppointmentStatus(id, status);
+        if (emailData?.email) {
+          if (status === "confirmed") emailAppointmentConfirmed(emailData);
+          if (status === "cancelled") emailAppointmentCancelled(emailData);
+        }
       }
-    } else {
-      // Non-telehealth or non-confirmation: standard flow
-      try { await updateAppointmentStatus(id, status); } catch {}
-      if (appt) {
-        const emailData = {
-          name: appt.name || "Patient",
-          email: appt.email,
-          date: appt.scheduled_at ? new Date(appt.scheduled_at).toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"}) : "TBD",
-          time: appt.scheduled_at ? new Date(appt.scheduled_at).toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"}) : "TBD",
-          clinician: appt.provider_name || "Kenneth Mutegyeki, PMHNP-BC",
-          location: appt.location || "Milford, MA",
-        };
-        if (status === "confirmed") emailAppointmentConfirmed(emailData);
-        if (status === "cancelled") emailAppointmentCancelled(emailData);
-      }
+      showToast(`✓ Appointment ${status}`);
+      load();
+    } catch (e) {
+      showToast(`Failed: ${e.message || "Try again"}`);
     }
-    showToast(`✓ Appointment ${status}`);
-    load();
   };
 
   const fmt = (iso) => iso ? new Date(iso).toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}) : "—";
 
-  const filtered = (filter === "all"
-    ? appointments.filter(a => a.status !== "archived")
-    : appointments.filter(a => a.status === filter)
-  ).filter(a => !dateFilter || a.scheduled_at?.slice(0, 10) === dateFilter);
+  const filtered = appointments.filter(a => {
+    if (dateFilter && a.scheduled_at?.slice(0, 10) !== dateFilter) return false;
+    if (dateFilter) return true;
+    if (filter === "all") return a.status !== "archived";
+    return a.status === filter;
+  });
   const pending = appointments.filter(a=>["pending","requested"].includes(a.status));
+
+  const actionBtn = (label, onClick, variant = "primary") => {
+    const styles = {
+      primary: { background:`linear-gradient(135deg,${P.accent},${P.teal})`, color:"#fff", border:"none" },
+      secondary: { background:P.bg2, color:P.text, border:`1px solid ${P.border}` },
+    };
+    return (
+      <button type="button" onClick={onClick} style={{
+        ...styles[variant],
+        borderRadius:20, padding:"9px 18px", fontSize:13, fontWeight:600, cursor:"pointer",
+      }}>{label}</button>
+    );
+  };
 
   return (
     <div>
       {toast&&<div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"#1a1f36", borderRadius:30, padding:"10px 20px", fontSize:13, color:"#fff", zIndex:9999, whiteSpace:"nowrap" }}>{toast}</div>}
+
+      <Card style={{ marginBottom:"1.2rem", background:"#eff6ff", border:"1px solid #bfdbfe" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:12 }}>
+          <div style={{ fontSize:12, color:"#1e40af", lineHeight:1.6, flex:1, minWidth:200 }}>
+            <strong>Book & manage the full calendar in EHR.</strong> Use this tab to confirm telehealth (creates video link) and review upcoming visits.
+          </div>
+          {onOpenEHRSchedule && actionBtn("📅 Open EHR Schedule", () => onOpenEHRSchedule())}
+        </div>
+      </Card>
 
       {pending.length>0&&(
         <div style={{ background:"#fff7ed", border:"1px solid #fed7aa", borderRadius:12, padding:"0.9rem 1.2rem", marginBottom:"1.2rem", display:"flex", alignItems:"center", gap:10 }}>
@@ -302,66 +408,43 @@ function AppointmentsTab({ userId }) {
 
       {dateFilter && (
         <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:"1rem", flexWrap:"wrap" }}>
-          <span style={{ fontSize:12, color:P.muted }}>
-            Showing {new Date(dateFilter+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}
+          <span style={{ fontSize:13, fontWeight:600, color:P.text }}>
+            {new Date(dateFilter+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}
+            {" · "}{filtered.length} appointment{filtered.length !== 1 ? "s" : ""}
           </span>
-          <button onClick={()=>setDateFilter("")} style={{ background:"#eef2ff", border:"none", borderRadius:20, padding:"4px 12px", color:P.accent, fontSize:11, fontWeight:600, cursor:"pointer" }}>Clear date filter</button>
+          <button onClick={()=>setDateFilter("")} style={{ background:"#eef2ff", border:"none", borderRadius:20, padding:"4px 12px", color:P.accent, fontSize:11, fontWeight:600, cursor:"pointer" }}>Show all dates</button>
+          {onOpenEHRSchedule && (
+            <button onClick={() => onOpenEHRSchedule(dateFilter)} style={{ background:`linear-gradient(135deg,${P.accent},${P.teal})`, border:"none", borderRadius:20, padding:"4px 14px", color:"#fff", fontSize:11, fontWeight:600, cursor:"pointer" }}>+ Book in EHR</button>
+          )}
         </div>
       )}
 
+      {!dateFilter && (
       <div style={{ display:"flex", gap:6, marginBottom:"1.2rem", flexWrap:"wrap" }}>
         {[["all","All",null],["pending","Pending",pending.length],["confirmed","Confirmed",null],["cancelled","Cancelled",null],["completed","Completed",null],["archived","🗄️ Archived",null]].map(([v,l,c])=>(
           <Tab key={v} label={l} active={filter===v} onClick={()=>setFilter(v)} count={c}/>
         ))}
       </div>
+      )}
 
       {loading ? <div style={{color:P.muted,fontSize:13}}>Loading…</div>
       : filtered.length===0 ? (
         <Card style={{ textAlign:"center", padding:"2.5rem" }}>
           <div style={{ fontSize:36, marginBottom:10 }}>📅</div>
-          <div style={{ color:P.muted, fontSize:13 }}>{filter==="archived" ? "No archived appointments." : dateFilter ? "No appointments on this date." : "No appointments found."}</div>
-        </Card>
-      ) : filtered.map(a=>(
-        <Card key={a.id} style={{ marginBottom:"0.75rem", opacity: a.status==="archived" ? 0.75 : 1 }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:12 }}>
-            <div style={{ flex:1, minWidth:200 }}>
-              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
-                <div style={{ fontWeight:700, fontSize:14, color:P.text }}>{a.name || "Portal Patient"}</div>
-                <StatusBadge status={a.status}/>
-                {a.appointment_type === "telehealth" && <span title="Telehealth" style={{ fontSize:14 }}>📹</span>}
-              </div>
-              <div style={{ color:P.muted, fontSize:12 }}>📅 {fmt(a.scheduled_at)} · {a.location||"—"}</div>
-              {a.email&&<div style={{ color:P.muted, fontSize:12, marginTop:2 }}>✉️ {a.email}</div>}
-              {a.phone&&<div style={{ color:P.muted, fontSize:12, marginTop:2 }}>📞 {a.phone}</div>}
-              {a.reason&&<div style={{ color:P.muted2, fontSize:11, marginTop:4, fontStyle:"italic" }}>Reason: {a.reason}</div>}
-              {a.notes&&<div style={{ color:P.muted2, fontSize:11, marginTop:2, fontStyle:"italic" }}>Notes: {a.notes}</div>}
-            </div>
-            <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
-              {["pending","requested","upcoming"].includes(a.status) && <>
-                <button onClick={()=>handleStatus(a.id,"confirmed")} style={{ background:"#dcfce7", border:"none", borderRadius:20, padding:"6px 14px", color:"#166534", fontSize:12, fontWeight:600, cursor:"pointer" }}>✓ Confirm</button>
-                <button onClick={()=>handleStatus(a.id,"cancelled")} style={{ background:"#fee2e2", border:"none", borderRadius:20, padding:"6px 14px", color:"#991b1b", fontSize:12, fontWeight:600, cursor:"pointer" }}>✕ Cancel</button>
-              </>}
-              {a.status==="confirmed" && <>
-                <button onClick={()=>handleStatus(a.id,"completed")} style={{ background:"#dbeafe", border:"none", borderRadius:20, padding:"6px 14px", color:"#1e40af", fontSize:12, fontWeight:600, cursor:"pointer" }}>✓ Complete</button>
-                <button onClick={()=>handleStatus(a.id,"cancelled")} style={{ background:"#fee2e2", border:"none", borderRadius:20, padding:"6px 14px", color:"#991b1b", fontSize:12, fontWeight:600, cursor:"pointer" }}>✕ Cancel</button>
-              </>}
-              {["completed","cancelled"].includes(a.status) && (
-                <button onClick={()=>handleStatus(a.id,"archived")} style={{ background:"#f3f4f6", border:"1px solid #e5e7eb", borderRadius:20, padding:"6px 14px", color:"#6b7280", fontSize:12, fontWeight:600, cursor:"pointer" }}>🗄️ Archive</button>
-              )}
-              {a.status==="archived" && (
-                <button onClick={()=>handleStatus(a.id,"completed")} style={{ background:"#dbeafe", border:"none", borderRadius:20, padding:"6px 14px", color:"#1e40af", fontSize:12, fontWeight:600, cursor:"pointer" }}>↩ Restore</button>
-              )}
-            </div>
-          </div>
-          {a.appointment_type === "telehealth" && a.status === "confirmed" && (
-            <div style={{ marginTop:"0.75rem", paddingTop:"0.75rem", borderTop:`1px solid ${P.border}` }}>
-              {a.telehealth_url
-                ? <button onClick={() => window.open(a.telehealth_url, "_blank")} style={{ background:"linear-gradient(135deg,#4a6cf7,#0ea5a0)", border:"none", borderRadius:20, padding:"7px 16px", color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer" }}>📹 Join Video Session</button>
-                : <span style={{ fontSize:12, color:P.muted, fontStyle:"italic" }}>Generating link…</span>
-              }
+          <div style={{ color:P.muted, fontSize:13, marginBottom:8 }}>{filter==="archived" ? "No archived appointments." : dateFilter ? "No appointments on this date." : "No appointments found."}</div>
+          {dateFilter && (
+            <div style={{ color:P.muted2, fontSize:12, marginBottom:16 }}>
+              {new Date(dateFilter+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})} has no bookings yet.
             </div>
           )}
+          <div style={{ display:"flex", gap:10, justifyContent:"center", flexWrap:"wrap" }}>
+            {onOpenEHRSchedule && dateFilter && actionBtn(`+ Book on ${new Date(dateFilter+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})} in EHR`, () => onOpenEHRSchedule(dateFilter))}
+            {onOpenEHRSchedule && actionBtn("📅 Open EHR Schedule", () => onOpenEHRSchedule(), "secondary")}
+            {dateFilter && actionBtn("Show all dates", () => setDateFilter(""), "secondary")}
+          </div>
         </Card>
+      ) : filtered.map(a=>(
+        <AppointmentCard key={a.id} a={a} fmt={fmt} onStatus={handleStatus} P={P} />
       ))}
     </div>
   );
@@ -546,7 +629,14 @@ function BlockedTab({ userId }) {
 // ── Admin Visit Notes Tab ──────────────────────────────────────────────────────
 function AdminNotesTab({ adminUser }) {
   const [patientId, setPatientId] = useState("");
-  const [form, setForm] = useState({ note_date: new Date().toISOString().slice(0,10), chief_complaint:"", assessment:"", plan:"", follow_up:"" });
+  const [form, setForm] = useState({
+    note_date: new Date().toISOString().slice(0, 10),
+    visit_type: "Follow-Up",
+    chief_complaint: "",
+    assessment: "",
+    plan: "",
+    follow_up: "",
+  });
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState("");
   const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(""),3000); };
@@ -559,10 +649,21 @@ function AdminNotesTab({ adminUser }) {
     setSaving(true);
     try {
       const { addVisitNote } = await import("../../lib/clinicApi");
-      await addVisitNote({ patient_id: patientId, ...form });
+      await addVisitNote({
+        patient_id: patientId,
+        clinician_name: adminUser?.user_metadata?.full_name || "Kenneth Mutegyeki, PMHNP-BC",
+        ...form,
+      });
       showToast("✓ Visit note saved.");
-      setForm({ note_date: new Date().toISOString().slice(0,10), chief_complaint:"", assessment:"", plan:"", follow_up:"" });
-    } catch { showToast("Failed. Try again."); }
+      setForm({
+        note_date: new Date().toISOString().slice(0, 10),
+        visit_type: "Follow-Up",
+        chief_complaint: "",
+        assessment: "",
+        plan: "",
+        follow_up: "",
+      });
+    } catch (e) { showToast("Failed: " + (e.message || "Try again.")); }
     setSaving(false);
   };
 
@@ -572,7 +673,7 @@ function AdminNotesTab({ adminUser }) {
       <p style={{ fontSize:13, color:P.muted, marginBottom:"1.2rem" }}>Add a visit note for a patient. They can view it (read-only) in their portal.</p>
       <Card>
         <form onSubmit={handleSave} style={{ display:"flex", flexDirection:"column", gap:14 }}>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }} className="admin-form-grid">
             <div>
               <label style={{ fontSize:12, fontWeight:500, color:P.text, display:"block", marginBottom:5 }}>Patient ID (Supabase user ID) *</label>
               <input value={patientId} onChange={e=>setPatientId(e.target.value)} placeholder="uuid..." required style={inputStyle}/>
@@ -581,6 +682,12 @@ function AdminNotesTab({ adminUser }) {
               <label style={{ fontSize:12, fontWeight:500, color:P.text, display:"block", marginBottom:5 }}>Visit Date</label>
               <input type="date" value={form.note_date} onChange={e=>setForm(f=>({...f,note_date:e.target.value}))} style={inputStyle}/>
             </div>
+          </div>
+          <div>
+            <label style={{ fontSize:12, fontWeight:500, color:P.text, display:"block", marginBottom:5 }}>Visit Type</label>
+            <select value={form.visit_type} onChange={e=>setForm(f=>({...f,visit_type:e.target.value}))} style={inputStyle}>
+              {VISIT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
           </div>
           <div>
             <label style={{ fontSize:12, fontWeight:500, color:P.text, display:"block", marginBottom:5 }}>Chief Complaint</label>
@@ -674,96 +781,211 @@ function AdminRxTab({ adminUser }) {
   );
 }
 
-// ── Appointment Review Tab (journal entries — for use during sessions only) ────
-function AppointmentReviewTab() {
-  const [patientId, setPatientId] = useState("");
+// ── Clinician view of a patient's portal care journal ─────────────────────────
+function PortalJournalClinicianPanel({ patientId, patientName, onClose }) {
   const [entries, setEntries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(null);
+
+  useEffect(() => {
+    if (!patientId) return;
+    let cancelled = false;
+    setLoading(true);
+    import("../../lib/clinicApi").then(({ getPatientJournalForReview }) =>
+      getPatientJournalForReview(patientId)
+        .then((data) => {
+          if (!cancelled) setEntries(Array.isArray(data) ? data : []);
+        })
+        .catch(() => { if (!cancelled) setEntries([]); })
+        .finally(() => { if (!cancelled) setLoading(false); })
+    );
+    return () => { cancelled = true; };
+  }, [patientId]);
+
+  const fmt = (iso) => new Date(iso).toLocaleDateString("en-US", {
+    weekday: "short", month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+
+  return (
+    <Card style={{ marginTop: "1rem", marginBottom: "1rem", border: `2px solid ${P.teal}40` }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: "1rem", flexWrap: "wrap" }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: P.text }}>📓 Portal Care Journal</div>
+          <div style={{ fontSize: 12, color: P.muted, marginTop: 4 }}>{patientName || "Patient"} · review during scheduled care only</div>
+        </div>
+        {onClose && (
+          <button type="button" onClick={onClose} style={{ background: P.bg2, border: `1px solid ${P.border}`, borderRadius: 8, padding: "6px 12px", fontSize: 12, cursor: "pointer", color: P.muted }}>
+            Close
+          </button>
+        )}
+      </div>
+      <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 10, padding: "8px 12px", marginBottom: "1rem", fontSize: 11, color: "#92400e", lineHeight: 1.55 }}>
+        Private entries from <strong>Patient Portal → Care Journal</strong>. Not the same as MindShift+ wellness journal (Mia).
+      </div>
+      {loading ? (
+        <div style={{ color: P.muted, fontSize: 13 }}>Loading journal…</div>
+      ) : entries.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "1.5rem", color: P.muted, fontSize: 13 }}>No portal journal entries for this patient.</div>
+      ) : entries.map(e => (
+        <Card key={e.id} style={{ marginBottom: "0.75rem", padding: "1rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", cursor: "pointer" }} onClick={() => setExpanded(expanded === e.id ? null : e.id)}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                <span style={{ fontSize: 18 }}>{e.mood || "🙂"}</span>
+                <div style={{ fontWeight: 600, fontSize: 14, color: P.text }}>{e.title || "Journal Entry"}</div>
+              </div>
+              <div style={{ fontSize: 11, color: P.muted2 }}>{fmt(e.created_at)}</div>
+              {e.tags?.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
+                  {e.tags.map(t => <span key={t} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20, background: "rgba(14,165,160,0.1)", color: P.teal }}>{t}</span>)}
+                </div>
+              )}
+            </div>
+            <span style={{ color: P.accent, fontSize: 14, flexShrink: 0 }}>{expanded === e.id ? "▲" : "▼"}</span>
+          </div>
+          {expanded === e.id && (
+            <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: `1px solid ${P.border}` }}>
+              <p style={{ fontSize: 13, color: P.text, lineHeight: 1.8, whiteSpace: "pre-wrap", margin: 0 }}>{e.body}</p>
+            </div>
+          )}
+        </Card>
+      ))}
+    </Card>
+  );
+}
+
+// ── Pre-Visit Review Tab (appointments + portal journal) ───────────────────────
+function AppointmentReviewTab({ initialPatientId, initialPatientName, onGoToPatientLookup }) {
+  const [patientId, setPatientId] = useState(initialPatientId || "");
+  const [patientName, setPatientName] = useState(initialPatientName || "");
+  const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
-  const [expanded, setExpanded] = useState(null);
+
+  useEffect(() => {
+    if (initialPatientId) {
+      setPatientId(initialPatientId);
+      setPatientName(initialPatientName || "");
+    }
+  }, [initialPatientId, initialPatientName]);
+
+  useEffect(() => {
+    if (!initialPatientId) return;
+    const load = async () => {
+      setLoading(true);
+      setSearched(true);
+      try {
+        const { getAppointmentsByPatient } = await import("../../lib/clinicApi");
+        const apptData = await getAppointmentsByPatient(initialPatientId.trim());
+        setAppointments(Array.isArray(apptData) ? apptData : []);
+      } catch {
+        setAppointments([]);
+      }
+      setLoading(false);
+    };
+    load();
+  }, [initialPatientId]);
 
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!patientId.trim()) return;
-    setLoading(true); setSearched(true);
+    setLoading(true);
+    setSearched(true);
     try {
-      const { getPatientJournalForReview } = await import("../../lib/clinicApi");
-      const data = await getPatientJournalForReview(patientId.trim());
-      setEntries(Array.isArray(data)?data:[]);
-    } catch { setEntries([]); }
+      const { getAppointmentsByPatient } = await import("../../lib/clinicApi");
+      const apptData = await getAppointmentsByPatient(patientId.trim());
+      setAppointments(Array.isArray(apptData) ? apptData : []);
+    } catch {
+      setAppointments([]);
+    }
     setLoading(false);
   };
 
-  const fmt = (iso) => new Date(iso).toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric",year:"numeric",hour:"2-digit",minute:"2-digit"});
+  const apptFmt = (iso) => iso ? new Date(iso).toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}) : "—";
 
   return (
     <div style={{ maxWidth:760 }}>
-      <div style={{ background:"#fff7ed", border:"1px solid #fed7aa", borderRadius:12, padding:"0.9rem 1.2rem", marginBottom:"1.5rem", display:"flex", gap:8 }}>
-        <span style={{ fontSize:16, flexShrink:0 }}>⚠️</span>
-        <p style={{ fontSize:12, color:"#92400e", lineHeight:1.65, margin:0 }}>
-          <strong>For use during scheduled appointments only.</strong> Journal entries are private patient content reviewed solely in the context of clinical care. Do not access outside of a scheduled session.
-        </p>
-      </div>
+      <p style={{ fontSize:13, color:P.muted, marginBottom:"1.2rem", lineHeight:1.6 }}>
+        Review a patient&apos;s <strong>appointment history</strong> before a session.
+        For journal entries, use <strong>Patient Lookup</strong> → search by name → <strong>View Portal Journal</strong>.
+      </p>
+
+      {onGoToPatientLookup && (
+        <Card style={{ marginBottom:"1.2rem", background:"#f0fdfa", border:`1px solid ${P.teal}40` }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:10 }}>
+            <div style={{ fontSize:12, color:"#0f766e", lineHeight:1.6 }}>
+              <strong>Tip:</strong> Search by patient name in Patient Lookup — no UUID typing needed.
+            </div>
+            <button type="button" onClick={onGoToPatientLookup} style={{ background:P.teal, border:"none", borderRadius:8, padding:"8px 14px", color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer" }}>
+              Go to Patient Lookup →
+            </button>
+          </div>
+        </Card>
+      )}
 
       <Card style={{ marginBottom:"1.5rem" }}>
-        <h3 style={{ fontSize:"1rem", fontWeight:700, color:P.text, marginBottom:"1rem" }}>Patient Journal Review</h3>
+        <h3 style={{ fontSize:"1rem", fontWeight:700, color:P.text, marginBottom:"1rem" }}>Load Appointments</h3>
         <form onSubmit={handleSearch} style={{ display:"flex", gap:10 }}>
           <input
             value={patientId} onChange={e=>setPatientId(e.target.value)}
-            placeholder="Enter patient's Supabase user ID…"
+            placeholder="Patient Supabase ID (from Patient Lookup)…"
             style={{ flex:1, padding:"10px 12px", borderRadius:8, border:`1.5px solid ${P.border}`, fontSize:14, color:P.text, background:P.bg2, outline:"none", fontFamily:"inherit" }}
           />
           <button type="submit" style={{ background:`linear-gradient(135deg,${P.accent},${P.teal})`, border:"none", borderRadius:8, padding:"10px 20px", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer" }}>
-            Load Entries
+            Load
           </button>
         </form>
       </Card>
 
       {loading && <div style={{color:P.muted,fontSize:13}}>Loading…</div>}
 
-      {searched && !loading && entries.length===0 && (
-        <Card style={{ textAlign:"center", padding:"2rem" }}>
-          <div style={{ fontSize:32, marginBottom:8 }}>📓</div>
-          <div style={{ color:P.muted, fontSize:13 }}>No journal entries found for this patient.</div>
-        </Card>
-      )}
-
-      {entries.map(e=>(
-        <Card key={e.id} style={{ marginBottom:"0.75rem" }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", cursor:"pointer" }} onClick={()=>setExpanded(expanded===e.id?null:e.id)}>
-            <div>
-              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:3 }}>
-                <span style={{ fontSize:18 }}>{e.mood||"🙂"}</span>
-                <div style={{ fontWeight:600, fontSize:14, color:P.text }}>{e.title||"Journal Entry"}</div>
-              </div>
-              <div style={{ fontSize:11, color:P.muted2 }}>{fmt(e.created_at)}</div>
-              {e.tags?.length>0 && (
-                <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginTop:4 }}>
-                  {e.tags.map(t=><span key={t} style={{ fontSize:10, padding:"2px 8px", borderRadius:20, background:"rgba(14,165,160,0.1)", color:P.teal }}>{t}</span>)}
+      {searched && !loading && (
+        <>
+          <h3 style={{ fontSize:"0.95rem", fontWeight:700, color:P.text, marginBottom:"0.75rem" }}>📅 Appointments</h3>
+          {appointments.length === 0 ? (
+            <Card style={{ textAlign:"center", padding:"1.5rem", marginBottom:"1.5rem" }}>
+              <div style={{ color:P.muted, fontSize:13 }}>No appointments found for this patient ID.</div>
+            </Card>
+          ) : appointments.slice(0, 12).map(a => (
+            <Card key={a.id} style={{ marginBottom:"0.75rem" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:8 }}>
+                <div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+                    <span style={{ fontWeight:600, fontSize:14, color:P.text }}>{apptFmt(a.scheduled_at)}</span>
+                    <StatusBadge status={a.status} />
+                    {a.appointment_type === "telehealth" && <span>📹</span>}
+                  </div>
+                  <div style={{ fontSize:12, color:P.muted }}>{a.location || "—"} · {a.provider_name || "Clinic"}</div>
+                  {a.reason && <div style={{ fontSize:11, color:P.muted2, marginTop:4 }}>Reason: {a.reason}</div>}
                 </div>
-              )}
-            </div>
-            <span style={{ color:P.accent, fontSize:14, flexShrink:0 }}>{expanded===e.id?"▲":"▼"}</span>
-          </div>
-          {expanded===e.id && (
-            <div style={{ marginTop:"1rem", paddingTop:"1rem", borderTop:`1px solid ${P.border}` }}>
-              <p style={{ fontSize:13, color:P.text, lineHeight:1.8, whiteSpace:"pre-wrap" }}>{e.body}</p>
-            </div>
+                {a.telehealth_url && a.status === "confirmed" && (
+                  <button type="button" onClick={() => window.open(a.telehealth_url, "_blank")} style={{ background:"#eef2ff", border:"none", borderRadius:20, padding:"6px 14px", color:P.accent, fontSize:11, fontWeight:600, cursor:"pointer" }}>Join Video</button>
+                )}
+              </div>
+            </Card>
+          ))}
+
+          {patientId.trim() && (
+            <PortalJournalClinicianPanel
+              patientId={patientId.trim()}
+              patientName={patientName || "Patient"}
+            />
           )}
-        </Card>
-      ))}
+        </>
+      )}
     </div>
   );
 }
 
 // ── Patient Lookup Tab ────────────────────────────────────────────────────────
-function PatientLookupTab() {
+function PatientLookupTab({ onOpenPreVisitReview }) {
   const [search, setSearch] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [copied, setCopied] = useState("");
   const [toast, setToast] = useState("");
+  const [journalPatient, setJournalPatient] = useState(null);
 
   const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(""),3000); };
 
@@ -817,9 +1039,9 @@ function PatientLookupTab() {
     <div style={{ maxWidth:760 }}>
       {toast&&<div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"#1a1f36", borderRadius:30, padding:"10px 20px", fontSize:13, color:"#fff", zIndex:9999, whiteSpace:"nowrap" }}>{toast}</div>}
 
-      <p style={{ fontSize:13, color:P.muted, marginBottom:"1.2rem" }}>
-        Search by patient name, MRN (e.g. <code style={{ fontSize:12 }}>MSW-MO4SQTOK</code>), email, or Supabase patient ID.
-        Results come from MindShift EHR charts, appointments, and intakes.
+      <p style={{ fontSize:13, color:P.muted, marginBottom:"1.2rem", lineHeight:1.6 }}>
+        Search by patient name, MRN, email, or Supabase patient ID.
+        Click <strong>View Portal Journal</strong> to read a patient&apos;s care journal — no UUID typing needed.
       </p>
 
       <Card style={{ marginBottom:"1.5rem" }}>
@@ -847,10 +1069,15 @@ function PatientLookupTab() {
       )}
 
       {results.map(p=>(
-        <Card key={p.id} style={{ marginBottom:"0.75rem" }}>
+        <Card key={p.id || p.chartId} style={{ marginBottom:"0.75rem", border: p.noPortalId ? "1px solid #fed7aa" : undefined }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:12 }}>
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontWeight:700, fontSize:14, color:P.text, marginBottom:3 }}>{p.name || "Unknown Patient"}</div>
+              {p.noPortalId && (
+                <div style={{ fontSize:11, color:"#92400e", background:"#fff7ed", padding:"6px 10px", borderRadius:8, marginBottom:8, lineHeight:1.5 }}>
+                  <strong>No Portal Patient ID.</strong> Chart exists in EHR (use MRN in Scribe/EHR). To enable Visit Notes, Rx, and portal tools — open chart → Edit Chart → add Portal Patient ID.
+                </div>
+              )}
               {p.mrn && (
                 <div style={{ fontSize:12, color:P.muted, marginBottom:4 }}>
                   MRN: <code style={{ fontSize:11, background:"#f3f4f6", padding:"2px 6px", borderRadius:4 }}>{p.mrn}</code>
@@ -863,27 +1090,58 @@ function PatientLookupTab() {
                 <div style={{ fontSize:12, color:P.muted, marginBottom:6 }}>📞 {p.phone}</div>
               )}
               <div style={{ fontSize:11, color:P.muted2, marginBottom:4 }}>Source: {p.source}</div>
-              <div style={{ marginBottom:4 }}>
-                <div style={{ fontSize:10, fontWeight:700, color:P.muted2, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:4 }}>
-                  Supabase Patient ID
+              {p.id ? (
+                <div style={{ marginBottom:4 }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:P.muted2, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:4 }}>
+                    Supabase Patient ID
+                  </div>
+                  <code style={{ fontSize:11, background:"#f3f4f6", padding:"4px 8px", borderRadius:6, color:P.text, fontFamily:"monospace", wordBreak:"break-all", display:"block" }}>{p.id}</code>
                 </div>
-                <code style={{ fontSize:11, background:"#f3f4f6", padding:"4px 8px", borderRadius:6, color:P.text, fontFamily:"monospace", wordBreak:"break-all", display:"block" }}>{p.id}</code>
-              </div>
+              ) : null}
             </div>
             <div style={{ display:"flex", flexDirection:"column", gap:8, flexShrink:0 }}>
-              <button
-                type="button"
-                onClick={()=>copyText("Patient ID", p.id)}
-                style={{
-                  background: copied===p.id ? "#dcfce7" : `linear-gradient(135deg,${P.accent},${P.teal})`,
-                  border:"none", borderRadius:20, padding:"8px 16px",
-                  color: copied===p.id ? "#166534" : "#fff",
-                  fontSize:12, fontWeight:600, cursor:"pointer",
-                  transition:"all .2s",
-                }}
-              >
-                {copied===p.id ? "✓ Copied!" : "Copy Patient ID"}
-              </button>
+              {p.id && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setJournalPatient({ id: p.id, name: p.name || "Patient" })}
+                    style={{
+                      background: journalPatient?.id === p.id ? "#ccfbf1" : P.bg2,
+                      border: journalPatient?.id === p.id ? `2px solid ${P.teal}` : `1px solid ${P.border}`,
+                      borderRadius:20, padding:"8px 16px",
+                      color: journalPatient?.id === p.id ? "#0f766e" : P.text,
+                      fontSize:12, fontWeight:600, cursor:"pointer",
+                    }}
+                  >
+                    {journalPatient?.id === p.id ? "📓 Viewing Journal" : "📓 View Portal Journal"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={()=>copyText("Patient ID", p.id)}
+                    style={{
+                      background: copied===p.id ? "#dcfce7" : `linear-gradient(135deg,${P.accent},${P.teal})`,
+                      border:"none", borderRadius:20, padding:"8px 16px",
+                      color: copied===p.id ? "#166534" : "#fff",
+                      fontSize:12, fontWeight:600, cursor:"pointer",
+                      transition:"all .2s",
+                    }}
+                  >
+                    {copied===p.id ? "✓ Copied!" : "Copy Patient ID"}
+                  </button>
+                  {onOpenPreVisitReview && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenPreVisitReview(p.id, p.name)}
+                      style={{
+                        background: P.bg2, border:`1px solid ${P.border}`, borderRadius:20, padding:"8px 16px",
+                        color: P.muted, fontSize:11, fontWeight:600, cursor:"pointer",
+                      }}
+                    >
+                      Pre-Visit Review →
+                    </button>
+                  )}
+                </>
+              )}
               {p.mrn && (
                 <button
                   type="button"
@@ -903,10 +1161,18 @@ function PatientLookupTab() {
         </Card>
       ))}
 
+      {journalPatient?.id && (
+        <PortalJournalClinicianPanel
+          patientId={journalPatient.id}
+          patientName={journalPatient.name}
+          onClose={() => setJournalPatient(null)}
+        />
+      )}
+
       <Card style={{ background:"#eff6ff", border:"1px solid #bfdbfe", marginTop:"1rem" }}>
         <div style={{ fontSize:12, color:"#1e40af", lineHeight:1.7 }}>
-          💡 <strong>How to use:</strong> Copy the <strong>Supabase Patient ID</strong> (UUID), then paste it into Visit Notes, Prescriptions, Appointment Review, or Patient Documents.
-          Most patients with an EHR chart appear when you search by name or MRN.
+          💡 <strong>Portal Care Journal:</strong> Search by name → <strong>View Portal Journal</strong>.
+          Copy Patient ID for Visit Notes, Rx, and Documents. Manually added EHR charts without a portal link show MRN only — link Portal Patient ID in EHR to enable journal access.
         </div>
       </Card>
     </div>
@@ -919,34 +1185,91 @@ function PatientDocumentsTab() {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [docType, setDocType] = useState("other");
+  const [toast, setToast] = useState("");
+  const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(""), 3000); };
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    if (!patientId.trim()) return;
-    setLoading(true); setSearched(true);
+  const loadDocs = async (id) => {
+    const pid = (id || patientId).trim();
+    if (!pid) return;
+    setLoading(true);
+    setSearched(true);
     try {
       const { getAllPatientDocuments } = await import("../../lib/clinicApi");
-      const data = await getAllPatientDocuments(patientId.trim());
-      setDocuments(Array.isArray(data)?data:[]);
-    } catch { setDocuments([]); }
+      const data = await getAllPatientDocuments(pid);
+      setDocuments(Array.isArray(data) ? data : []);
+    } catch {
+      setDocuments([]);
+    }
     setLoading(false);
   };
 
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    await loadDocs();
+  };
+
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !patientId.trim()) {
+      showToast("Enter patient ID and choose a file.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      showToast("File must be 10MB or smaller.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const { uploadClinicianDocument } = await import("../../lib/clinicApi");
+      await uploadClinicianDocument(patientId.trim(), file, docType);
+      showToast("✓ Document uploaded.");
+      await loadDocs();
+    } catch (err) {
+      showToast("Upload failed: " + (err.message || "Check Supabase storage setup."));
+    }
+    setUploading(false);
+    e.target.value = "";
+  };
+
   const fmt = (iso) => new Date(iso).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
-  const TYPE_ICONS  = { intake_form:"📋", consent:"✍️", lab_result:"🧪", insurance:"🛡️", id_document:"🪪", other:"📄" };
-  const TYPE_LABELS = { intake_form:"Intake Form", consent:"Consent Form", lab_result:"Lab Result", insurance:"Insurance Card", id_document:"ID Document", other:"Document" };
+  const TYPE_ICONS  = { intake_form:"📋", consent:"✍️", lab_result:"🧪", insurance:"🛡️", id_document:"🪪", visit_note:"📝", other:"📄" };
+  const TYPE_LABELS = { intake_form:"Intake Form", consent:"Consent Form", lab_result:"Lab Result", insurance:"Insurance Card", id_document:"ID Document", visit_note:"Visit Note", other:"Document" };
+  const inputStyle = { flex:1, padding:"10px 12px", borderRadius:8, border:`1.5px solid ${P.border}`, fontSize:14, color:P.text, background:P.bg2, outline:"none", fontFamily:"inherit" };
 
   return (
     <div style={{ maxWidth:760 }}>
-      <p style={{ fontSize:13, color:P.muted, marginBottom:"1.2rem" }}>View documents uploaded by a patient. Enter their Supabase user ID to load their files.</p>
+      {toast&&<div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"#1a1f36", borderRadius:30, padding:"10px 20px", fontSize:13, color:"#fff", zIndex:9999, whiteSpace:"nowrap" }}>{toast}</div>}
+      <p style={{ fontSize:13, color:P.muted, marginBottom:"1.2rem", lineHeight:1.6 }}>
+        View or upload documents for a patient. Enter their Supabase Patient ID from Patient Lookup.
+        Patients can also upload from their portal — clinicians can share visit notes, forms, and files here.
+      </p>
       <Card style={{ marginBottom:"1.5rem" }}>
-        <form onSubmit={handleSearch} style={{ display:"flex", gap:10 }}>
-          <input value={patientId} onChange={e=>setPatientId(e.target.value)} placeholder="Patient Supabase user ID…"
-            style={{ flex:1, padding:"10px 12px", borderRadius:8, border:`1.5px solid ${P.border}`, fontSize:14, color:P.text, background:P.bg2, outline:"none", fontFamily:"inherit" }}/>
+        <form onSubmit={handleSearch} style={{ display:"flex", gap:10, marginBottom:"1rem" }}>
+          <input value={patientId} onChange={e=>setPatientId(e.target.value)} placeholder="Patient Supabase user ID…" style={inputStyle}/>
           <button type="submit" style={{ background:`linear-gradient(135deg,${P.accent},${P.teal})`, border:"none", borderRadius:8, padding:"10px 20px", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer" }}>
             Load Documents
           </button>
         </form>
+        {patientId.trim() && (
+          <div style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:"center", paddingTop:"0.75rem", borderTop:`1px solid ${P.border}` }}>
+            <select value={docType} onChange={e=>setDocType(e.target.value)} style={{ ...inputStyle, flex:"0 0 auto", minWidth:160 }}>
+              <option value="visit_note">Visit Note</option>
+              <option value="consent">Consent Form</option>
+              <option value="lab_result">Lab Result</option>
+              <option value="insurance">Insurance Card</option>
+              <option value="intake_form">Intake Form</option>
+              <option value="id_document">ID Document</option>
+              <option value="other">Other</option>
+            </select>
+            <label style={{ background: uploading ? P.muted2 : P.accent, color:"#fff", borderRadius:8, padding:"10px 18px", fontSize:13, fontWeight:600, cursor: uploading ? "default" : "pointer" }}>
+              {uploading ? "Uploading…" : "📤 Upload Document"}
+              <input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx" onChange={handleUpload} disabled={uploading} style={{ display:"none" }} />
+            </label>
+            <span style={{ fontSize:11, color:P.muted2 }}>PDF, Word, JPEG, PNG · max 10MB</span>
+          </div>
+        )}
       </Card>
 
       {loading && <div style={{color:P.muted,fontSize:13}}>Loading…</div>}
@@ -986,10 +1309,13 @@ function PatientDocumentsTab() {
 }
 
 // ── Main Admin Schedule ────────────────────────────────────────────────────────
-export default function AdminSchedule({ onBack, onOpenDocs }) {
+export default function AdminSchedule({ onBack, onOpenDocs, onOpenEHRSchedule }) {
   const [adminUser, setAdminUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [tab, setTab] = useState("appointments");
+  const [tabGroup, setTabGroup] = useState("schedule");
+  const [reviewPatientId, setReviewPatientId] = useState("");
+  const [reviewPatientName, setReviewPatientName] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -1023,16 +1349,28 @@ export default function AdminSchedule({ onBack, onOpenDocs }) {
 
   if (!adminUser) return <AdminLogin onSuccess={setAdminUser}/>;
 
-  const tabs = [
-    { id:"appointments", label:"Appointments" },
-    { id:"patients",     label:"👤 Patient Lookup" },
-    { id:"availability",  label:"Availability" },
-    { id:"blocked",       label:"Blocked Times" },
-    { id:"notes",         label:"Visit Notes" },
-    { id:"rx",            label:"Prescriptions" },
-    { id:"review",        label:"📓 Appointment Review" },
-    { id:"docs",          label:"📄 Patient Documents" },
-  ];
+  const activeGroup = findTabGroup(tab);
+  const switchGroup = (groupId) => {
+    const group = ADMIN_TAB_GROUPS.find(g => g.id === groupId) || ADMIN_TAB_GROUPS[0];
+    setTabGroup(group.id);
+    if (!group.tabs.some(t => t.id === tab)) setTab(group.tabs[0].id);
+  };
+  const selectTab = (tabId) => {
+    setTab(tabId);
+    setTabGroup(findTabGroup(tabId).id);
+  };
+
+  const goToPatientLookup = () => {
+    setTabGroup("patients");
+    setTab("patients");
+  };
+
+  const openPreVisitReview = (patientId, patientName) => {
+    setReviewPatientId(patientId);
+    setReviewPatientName(patientName || "");
+    setTabGroup("patients");
+    setTab("review");
+  };
 
   return (
     <div style={{ minHeight:"100vh", background:P.bg, fontFamily:"'Inter',system-ui,sans-serif" }}>
@@ -1074,24 +1412,46 @@ export default function AdminSchedule({ onBack, onOpenDocs }) {
           <p style={{ fontSize:13, color:P.muted, marginTop:4 }}>Manage appointments, availability, and blocked times.</p>
         </div>
 
-        {/* Tabs — scrollable on mobile */}
-        <div className="admin-tabs" style={{ display:"flex", gap:4, marginBottom:"1.5rem", background:P.bg2, padding:4, borderRadius:12, border:`1px solid ${P.border}`, overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
-          {tabs.map(t=>(
-            <button key={t.id} onClick={()=>setTab(t.id)} style={{
-              padding:"8px 14px", borderRadius:9, border:"none", fontSize:13, fontWeight:tab===t.id?600:400,
-              background:tab===t.id?P.accent:"transparent", color:tab===t.id?"#fff":P.muted, cursor:"pointer",
-              whiteSpace:"nowrap", flexShrink:0,
-            }}>{t.label}</button>
-          ))}
+        {/* Group tabs + section tabs */}
+        <div style={{ marginBottom:"1.5rem" }}>
+          <div style={{ display:"flex", gap:6, marginBottom:8, flexWrap:"wrap" }}>
+            {ADMIN_TAB_GROUPS.map(g => (
+              <button
+                key={g.id}
+                type="button"
+                onClick={() => switchGroup(g.id)}
+                style={{
+                  padding:"9px 16px", borderRadius:10, border:"none", fontSize:13, fontWeight:600, cursor:"pointer",
+                  background: tabGroup === g.id ? P.sidebar : P.bg2,
+                  color: tabGroup === g.id ? "#fff" : P.muted,
+                  boxShadow: tabGroup === g.id ? "0 2px 8px rgba(30,42,74,0.2)" : "none",
+                  display:"flex", alignItems:"center", gap:6,
+                }}
+              >
+                <span>{g.icon}</span> {g.label}
+              </button>
+            ))}
+          </div>
+          <div className="admin-tabs" style={{ display:"flex", gap:4, background:P.bg2, padding:4, borderRadius:12, border:`1px solid ${P.border}`, overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
+            {activeGroup.tabs.map(t => (
+              <Tab key={t.id} label={t.label} icon={t.icon} active={tab===t.id} onClick={() => selectTab(t.id)} />
+            ))}
+          </div>
         </div>
 
-        {tab==="appointments" && <AppointmentsTab userId={adminUser?.id}/>}
-        {tab==="patients"     && <PatientLookupTab/>}
+        {tab==="appointments" && <AppointmentsTab userId={adminUser?.id} onOpenEHRSchedule={onOpenEHRSchedule}/>}
+        {tab==="patients"     && <PatientLookupTab onOpenPreVisitReview={openPreVisitReview}/>}
         {tab==="availability"  && <AvailabilityTab userId={adminUser?.id}/>}
         {tab==="blocked"       && <BlockedTab userId={adminUser?.id}/>}
         {tab==="notes"         && <AdminNotesTab adminUser={adminUser}/>}
         {tab==="rx"            && <AdminRxTab adminUser={adminUser}/>}
-        {tab==="review"        && <AppointmentReviewTab/>}
+        {tab==="review"        && (
+          <AppointmentReviewTab
+            initialPatientId={reviewPatientId}
+            initialPatientName={reviewPatientName}
+            onGoToPatientLookup={goToPatientLookup}
+          />
+        )}
         {tab==="docs"          && <PatientDocumentsTab/>}
       </div>
     </div>

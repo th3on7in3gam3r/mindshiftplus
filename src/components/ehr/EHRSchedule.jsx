@@ -140,10 +140,13 @@ const EMPTY_FORM = {
   location: "Milford, MA", notes: "",
 };
 
-export default function EHRSchedule({ clinician, onOpenChart }) {
+export default function EHRSchedule({ clinician, onOpenChart, initialFocusDate, onFocusDateConsumed }) {
   const [appts, setAppts]         = useState([]);
   const [loading, setLoading]     = useState(true);
-  const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
+  const [weekStart, setWeekStart] = useState(() => {
+    if (initialFocusDate) return getWeekStart(new Date(`${initialFocusDate}T12:00:00`));
+    return getWeekStart(new Date());
+  });
   const [schedulePanel, setSchedulePanel] = useState("calendar");
   const [viewMode, setViewMode]   = useState("week");
   const [listFilter, setListFilter] = useState("all");
@@ -160,6 +163,18 @@ export default function EHRSchedule({ clinician, onOpenChart }) {
   const patientSearchRef = useRef(null);
 
   useEffect(() => { load(); }, [weekStart]);
+
+  useEffect(() => {
+    if (!initialFocusDate) return;
+    setWeekStart(getWeekStart(new Date(`${initialFocusDate}T12:00:00`)));
+    setForm((f) => ({
+      ...f,
+      scheduled_at: `${initialFocusDate}T18:00`,
+      provider_name: f.provider_name || defaultProviderName(clinician),
+    }));
+    setShowForm(true);
+    onFocusDateConsumed?.();
+  }, [initialFocusDate, clinician, onFocusDateConsumed]);
 
   useEffect(() => {
     if (!showForm) return;

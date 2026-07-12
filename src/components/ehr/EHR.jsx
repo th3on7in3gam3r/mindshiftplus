@@ -20,6 +20,7 @@ import EHRBillingSettings from "./EHRBillingSettings";
 import EHRCrisisAlerts from "./EHRCrisisAlerts";
 import EHRStaffHelper from "./EHRStaffHelper";
 import { Spinner, EhrStyles } from "./EHRUI";
+import { consumeEHRIntent } from "../../lib/clinicalNav";
 
 export default function EHR({ onBack, onOpenDocs, initialView }) {
   // ── ALL hooks must be declared unconditionally at the top ──────────────────
@@ -29,6 +30,7 @@ export default function EHR({ onBack, onOpenDocs, initialView }) {
   const [view, setView]               = useState(initialView || "dashboard");
   const [activeChartId, setActiveChartId] = useState(null);
   const [chartContext, setChartContext] = useState(null);
+  const [scheduleFocusDate, setScheduleFocusDate] = useState(null);
   const [pendingIntakes, setPendingIntakes] = useState(0);
   const [taskCount, setTaskCount]     = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -76,8 +78,6 @@ export default function EHR({ onBack, onOpenDocs, initialView }) {
     let mounted = true;
 
     supabase.auth.getSession().then(({ data: { session: s } }) => {
-      if (!mounted) return;
-      setSession(s);
       if (s?.user) loadClinician(s.user, mounted);
       else setAuthLoading(false);
     });
@@ -90,6 +90,12 @@ export default function EHR({ onBack, onOpenDocs, initialView }) {
     });
 
     return () => { mounted = false; subscription.unsubscribe(); };
+  }, []);
+
+  useEffect(() => {
+    const { view: ehrView, scheduleDate } = consumeEHRIntent();
+    if (ehrView) setView(ehrView);
+    if (scheduleDate) setScheduleFocusDate(scheduleDate);
   }, []);
 
   async function loadClinician(user, mounted = true) {
@@ -334,6 +340,8 @@ export default function EHR({ onBack, onOpenDocs, initialView }) {
           <EHRSchedule
             clinician={clinician}
             onOpenChart={(id) => { setActiveChartId(id); setView("chart"); }}
+            initialFocusDate={scheduleFocusDate}
+            onFocusDateConsumed={() => setScheduleFocusDate(null)}
           />
         )}
         {view === "tasks"     && <EHRTasks     clinician={clinician} />}

@@ -48,7 +48,7 @@ export default function EHRCrisisAlerts() {
           🚨 Patient Safety Alerts
         </h1>
         <p style={{ color: "#6b7280", fontSize: 14, margin: "0 0 12px", lineHeight: 1.6 }}>
-          Alerts appear when concerning language is detected in a patient&apos;s <strong>Mia chat</strong>, <strong>journal</strong>, or <strong>portal message</strong>.
+          Alerts appear when concerning language is detected in a patient&apos;s <strong>Mia chat</strong>, <strong>MindShift+ journal</strong>, <strong>portal care journal</strong>, or <strong>portal message</strong>.
           The patient is shown 988 / 911 resources. You also receive an email alert.
         </p>
         <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 12, padding: "12px 16px", fontSize: 13, color: "#1e40af", lineHeight: 1.6 }}>

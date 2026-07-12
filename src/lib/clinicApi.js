@@ -26,6 +26,17 @@ export async function cancelAppointment(id) {
   return updateApptStatus(id, "cancelled");
 }
 
+export async function getAppointmentsByPatient(patient_id) {
+  const { data, error } = await supabase
+    .from("appointments")
+    .select("*")
+    .eq("patient_id", patient_id)
+    .order("scheduled_at", { ascending: false })
+    .limit(50);
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
 // ── Availability ───────────────────────────────────────────────────────────────
 export async function getAvailability() {
   const { data, error } = await supabase.from("availability").select("*").eq("is_active", true).order("day_of_week");
@@ -169,26 +180,32 @@ export async function getPatientJournalForReview(patient_id) {
 
 // ── Document Upload ────────────────────────────────────────────────────────────
 export async function uploadPatientDocument(patient_id, file, docType) {
-  // Upload file to Supabase Storage
+  return uploadDocumentForPatient(patient_id, file, docType, { uploadedBy: "patient" });
+}
+
+/** Clinician upload from Admin Dashboard — requires clinician storage/RLS policies. */
+export async function uploadClinicianDocument(patient_id, file, docType) {
+  return uploadDocumentForPatient(patient_id, file, docType, { uploadedBy: "clinician" });
+}
+
+async function uploadDocumentForPatient(patient_id, file, docType, { uploadedBy }) {
   const ext = file.name.split(".").pop();
-  const path = `${patient_id}/${Date.now()}_${file.name.replace(/\s+/g,"-")}`;
-  const { data: storageData, error: storageError } = await supabase.storage
+  const path = `${patient_id}/${Date.now()}_${file.name.replace(/\s+/g, "-")}`;
+  const { error: storageError } = await supabase.storage
     .from("patient-documents")
     .upload(path, file, { upsert: false });
   if (storageError) throw new Error(storageError.message);
 
-  // Get public URL
   const { data: { publicUrl } } = supabase.storage
     .from("patient-documents")
     .getPublicUrl(path);
 
-  // Save record to DB
   const { data, error } = await supabase.from("portal_documents").insert({
     patient_id,
     name: file.name,
     type: docType || "other",
     file_url: publicUrl,
-    status: "uploaded",
+    status: uploadedBy === "clinician" ? "shared_by_clinic" : "uploaded",
   }).select().single();
   if (error) throw new Error(error.message);
   return data;

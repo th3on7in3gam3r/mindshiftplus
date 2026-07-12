@@ -64,7 +64,8 @@ export async function markCrisisReviewed(alertId, notes = "") {
 export function crisisSourceLabel(source) {
   const labels = {
     mia: "💬 Mia Chat",
-    journal: "📔 Journal",
+    journal: "📔 MindShift+ Journal",
+    portal_journal: "📓 Portal Care Journal",
     portal_message: "✉️ Portal Message",
   };
   return labels[source] ?? source;

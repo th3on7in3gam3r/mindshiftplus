@@ -437,7 +437,7 @@ export default function Portal({ onExit }) {
           {page==="intake"        && <PortalIntake userId={user?.id} displayName={displayName} onComplete={() => { setIntakeStatus("pending"); setPage("dashboard"); }} />}
           {page==="appointments"  && <PortalAppointments userId={user?.id} P={P}/>}
           {page==="messages"      && <PortalMessages userId={user?.id} displayName={displayName} userEmail={user?.email} P={P}/>}
-          {page==="journal"       && <PortalJournal userId={user?.id} P={P}/>}
+          {page==="journal"       && <PortalJournal userId={user?.id} P={P} patientName={user?.user_metadata?.full_name}/>}
           {page==="documents"     && <PortalDocuments userId={user?.id} P={P}/>}
           {page==="prescriptions" && <PortalPrescriptions userId={user?.id} P={P}/>}
           {page==="visit-notes"   && <PortalVisitNotes userId={user?.id} P={P}/>}

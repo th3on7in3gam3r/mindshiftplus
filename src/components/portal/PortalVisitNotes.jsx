@@ -33,7 +33,9 @@ export default function PortalVisitNotes({ userId, P }) {
               <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
                 <div style={{ width:36, height:36, borderRadius:10, background:`${T.teal}15`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>📋</div>
                 <div>
-                  <div style={{ fontWeight:700, fontSize:14, color:T.text }}>{fmt(n.note_date)}</div>
+                  <div style={{ fontWeight:700, fontSize:14, color:T.text }}>
+                    {n.visit_type ? `${n.visit_type} · ` : ""}{fmt(n.note_date)}
+                  </div>
                   <div style={{ fontSize:12, color:T.muted }}>👨‍⚕️ {n.clinician_name}</div>
                 </div>
               </div>

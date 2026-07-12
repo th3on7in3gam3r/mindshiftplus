@@ -18,6 +18,7 @@ import {
   resolveHomeMode,
   openPortalPage,
 } from "./lib/patientMode";
+import { openEHRSchedule } from "./lib/clinicalNav";
 
 // ── Fonts ──────────────────────────────────────────────────────────────────────
 const GlobalStyles = () => (
@@ -3357,7 +3358,11 @@ export default function App(){
     return(
       <>
         <GlobalStyles/>
-        <AdminSchedule onBack={()=>setPage("clinical")} onOpenDocs={()=>setPage("staff-docs")}/>
+        <AdminSchedule
+          onBack={()=>setPage("clinical")}
+          onOpenDocs={()=>setPage("staff-docs")}
+          onOpenEHRSchedule={(date) => openEHRSchedule(setPage, date)}
+        />
       </>
     );
   }

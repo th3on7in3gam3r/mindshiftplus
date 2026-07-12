@@ -132,6 +132,7 @@ export async function searchAdminPatients(query) {
 
   const term = `%${q}%`;
   const byPatientId = new Map();
+  const byChartOnly = new Map();
 
   const add = (patientId, row) => {
     if (!patientId || patientId === "Public booking (no account)") return;
@@ -151,14 +152,32 @@ export async function searchAdminPatients(query) {
     });
   };
 
+  const addChartOnly = (chart) => {
+    if (chart.patient_id) return;
+    if (!chart.id) return;
+    if (byChartOnly.has(chart.id)) return;
+    byChartOnly.set(chart.id, {
+      id: null,
+      chartId: chart.id,
+      name: chartDisplayName(chart),
+      mrn: chart.mrn || null,
+      email: "—",
+      phone: chart.phone || null,
+      source: "MindShift EHR",
+      noPortalId: true,
+    });
+  };
+
   const [
     { data: charts, error: chartsErr },
+    { data: byChartName },
     { data: byApptEmail },
     { data: byApptName },
     { data: byProfile },
     { data: byIntake },
   ] = await Promise.all([
     getChartsForPicker(),
+    supabase.from("ehr_charts").select("id, patient_id, mrn, full_name, phone").or(`full_name.ilike.${term},mrn.ilike.${term}`).limit(40),
     supabase.from("appointments").select("patient_id, name, email, phone").ilike("email", term).limit(30),
     supabase.from("appointments").select("patient_id, name, email, phone").ilike("name", term).limit(30),
     supabase.from("patient_profiles").select("id, full_name, phone").ilike("full_name", term).limit(30),
@@ -169,15 +188,35 @@ export async function searchAdminPatients(query) {
 
   for (const chart of charts ?? []) {
     if (!matchesChartSearch(chart, q)) continue;
-    add(chart.patient_id, {
-      id: chart.patient_id,
-      name: chartDisplayName(chart),
-      mrn: chart.mrn || null,
-      email: "—",
-      phone: chart.phone || null,
-      chartId: chart.id,
-      source: "MindShift EHR",
-    });
+    if (chart.patient_id) {
+      add(chart.patient_id, {
+        id: chart.patient_id,
+        name: chartDisplayName(chart),
+        mrn: chart.mrn || null,
+        email: "—",
+        phone: chart.phone || null,
+        chartId: chart.id,
+        source: "MindShift EHR",
+      });
+    } else {
+      addChartOnly(chart);
+    }
+  }
+
+  for (const chart of byChartName ?? []) {
+    if (chart.patient_id) {
+      add(chart.patient_id, {
+        id: chart.patient_id,
+        name: chart.full_name || chart.mrn || "Unknown Patient",
+        mrn: chart.mrn || null,
+        email: "—",
+        phone: chart.phone || null,
+        chartId: chart.id,
+        source: "MindShift EHR",
+      });
+    } else {
+      addChartOnly(chart);
+    }
   }
 
   for (const a of [...(byApptEmail ?? []), ...(byApptName ?? [])]) {
@@ -226,15 +265,19 @@ export async function searchAdminPatients(query) {
       .ilike("mrn", `%${compact}%`)
       .limit(10);
     for (const c of byMrn ?? []) {
-      add(c.patient_id, {
-        id: c.patient_id,
-        name: c.full_name || c.mrn || "Unknown Patient",
-        mrn: c.mrn,
-        email: "—",
-        phone: c.phone || null,
-        chartId: c.id,
-        source: "MindShift EHR",
-      });
+      if (c.patient_id) {
+        add(c.patient_id, {
+          id: c.patient_id,
+          name: c.full_name || c.mrn || "Unknown Patient",
+          mrn: c.mrn,
+          email: "—",
+          phone: c.phone || null,
+          chartId: c.id,
+          source: "MindShift EHR",
+        });
+      } else {
+        addChartOnly(c);
+      }
     }
   }
   if (/^[0-9a-f-]{36}$/i.test(compact)) {
@@ -256,7 +299,7 @@ export async function searchAdminPatients(query) {
     }
   }
 
-  const results = [...byPatientId.values()].sort((a, b) =>
+  const results = [...byPatientId.values(), ...byChartOnly.values()].sort((a, b) =>
     (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
   );
 

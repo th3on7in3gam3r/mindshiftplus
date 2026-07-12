@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { getPatientJournal, savePatientJournalEntry, deletePatientJournalEntry } from "../../lib/clinicApi";
 import { PageHeader, Card, SectionDivider, EmptyState, Btn, Toast, Input, T } from "./PortalUI";
+import CrisisModal from "../CrisisModal";
 
 const MOODS = ["😔","😐","🙂","😊","🌟"];
 const MOOD_LABELS = ["Low","Okay","Good","Great","Amazing"];
 const TAGS = ["Anxiety","Gratitude","Stress","Healing","Prayer","Goals","Breakthrough","Joy","Medication","Sleep"];
 
-export default function PortalJournal({ userId, P }) {
+export default function PortalJournal({ userId, P, patientName }) {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -14,6 +15,7 @@ export default function PortalJournal({ userId, P }) {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState("");
   const [expanded, setExpanded] = useState(null);
+  const [showCrisisModal, setShowCrisisModal] = useState(false);
 
   const load = async () => {
     try { const data = await getPatientJournal(userId); setEntries(Array.isArray(data)?data:[]); }
@@ -29,6 +31,26 @@ export default function PortalJournal({ userId, P }) {
   const handleSave = async (e) => {
     e.preventDefault();
     if (!draft.body.trim()) return;
+
+    const { detectCrisisKeywords, logCrisisEvent, alertClinicians } = await import("../../lib/crisisDetection.js");
+    const crisisCheck = detectCrisisKeywords(draft.body);
+    if (crisisCheck.detected) {
+      setShowCrisisModal(true);
+      await logCrisisEvent(
+        userId,
+        "portal_journal",
+        draft.body,
+        crisisCheck.keywords,
+        crisisCheck.severity
+      );
+      await alertClinicians(
+        userId,
+        patientName || "Portal Patient",
+        "Portal Care Journal",
+        crisisCheck.severity
+      );
+    }
+
     setSaving(true);
     try {
       await savePatientJournalEntry(userId, draft);
@@ -51,6 +73,7 @@ export default function PortalJournal({ userId, P }) {
   return (
     <div style={{ padding:"2rem", maxWidth:860, margin:"0 auto" }}>
       <Toast message={toast}/>
+      {showCrisisModal && <CrisisModal onClose={() => setShowCrisisModal(false)} />}
 
       <PageHeader
         icon="📓" label="My Journal"
@@ -68,8 +91,8 @@ export default function PortalJournal({ userId, P }) {
       }}>
         <span style={{ fontSize:14, flexShrink:0 }}>🔒</span>
         <p style={{ fontSize:12, color:"#92400e", lineHeight:1.65, margin:0 }}>
-          <strong>Your journal is private.</strong> Entries are not monitored in real time.
-          They may be reviewed by your clinician <strong>only during scheduled appointments</strong>.
+          <strong>Your journal is private.</strong> Concerning language may trigger a safety alert to your care team (same as Mia chat and portal messages).
+          Entries are reviewed by your clinician <strong>during scheduled appointments</strong>.
           Do not use this journal to report emergencies — call <strong>911</strong> or text/call <strong>988</strong> if you are in crisis.
         </p>
       </div>
