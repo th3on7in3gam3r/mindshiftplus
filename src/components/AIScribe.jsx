@@ -2,8 +2,8 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useAuth } from "../lib/AuthContext";
 import { getChartsForPicker, chartDisplayName, matchesChartSearch, getPatientAppointments } from "../lib/ehrDb";
 import { getIntakesWithoutCharts, matchesIntakeSearch } from "../lib/intakeDb";
-import { sessionWindowState, pickTelehealthAppointment, formatApptDateTime } from "../lib/telehealthUtils";
-import { startInstantTelehealthSession, ensureAppointmentTelehealthRoom } from "../lib/telehealthDb";
+import { sessionWindowState, pickTelehealthAppointment, formatApptDateTime, isUsableTelehealthUrl } from "../lib/telehealthUtils";
+import { startInstantTelehealthSession, ensureAppointmentTelehealthRoom, createTelehealthRoomOnly } from "../lib/telehealthDb";
 import {
   createScribeSession,
   saveGeneratedNote,
@@ -725,43 +725,62 @@ function CollapsibleSection({ title, subtitle, defaultOpen = false, headerExtra,
 
 async function prepareTelehealthSession({
   patientUuid,
+  patientChartId,
   patientName,
   providerName,
   serviceDate,
   telehealthUrl,
 }) {
-  if (telehealthUrl) {
+  const serviceAnchor = serviceDate ? `${serviceDate}T12:00:00` : new Date().toISOString();
+
+  if (isUsableTelehealthUrl(telehealthUrl, serviceAnchor)) {
     return { telehealth_url: telehealthUrl, patientNotified: false };
   }
-  if (!patientUuid) {
-    return { telehealth_url: null, error: "Select a patient first." };
-  }
 
-  const { data: appointments } = await getPatientAppointments(patientUuid);
-  const appt = pickTelehealthAppointment(appointments, serviceDate);
+  if (patientUuid) {
+    const { data: appointments } = await getPatientAppointments(patientUuid);
+    const appt = pickTelehealthAppointment(appointments, serviceDate);
 
-  if (appt?.id && !appt.telehealth_url) {
-    const { data, error } = await ensureAppointmentTelehealthRoom(appt.id, appt.scheduled_at);
+    if (appt?.telehealth_url && isUsableTelehealthUrl(appt.telehealth_url, appt.scheduled_at)) {
+      return { telehealth_url: appt.telehealth_url, patientNotified: false };
+    }
+
+    if (appt?.id) {
+      const { data, error } = await ensureAppointmentTelehealthRoom(appt.id, appt.scheduled_at || serviceAnchor);
+      if (error) return { telehealth_url: null, error };
+      if (!data?.telehealth_url) return { telehealth_url: null, error: "Could not create video room." };
+      return { telehealth_url: data.telehealth_url, patientNotified: false, refreshed: true };
+    }
+
+    const { data, error } = await startInstantTelehealthSession({
+      patientUuid,
+      patientName,
+      providerName,
+    });
     if (error) return { telehealth_url: null, error };
-    if (!data?.telehealth_url) return { telehealth_url: null, error: "Could not create video room." };
-    return { telehealth_url: data.telehealth_url, patientNotified: false };
+    return {
+      telehealth_url: data?.telehealth_url ?? null,
+      patientNotified: !!data?.patientNotified,
+      error: data?.telehealth_url ? null : "Could not create video room.",
+    };
   }
 
-  const { data, error } = await startInstantTelehealthSession({
-    patientUuid,
-    patientName,
-    providerName,
-  });
-  if (error) return { telehealth_url: null, error };
-  return {
-    telehealth_url: data?.telehealth_url ?? null,
-    patientNotified: !!data?.patientNotified,
-    error: data?.telehealth_url ? null : "Could not create video room.",
-  };
+  if (patientChartId) {
+    const { data, error } = await createTelehealthRoomOnly(serviceAnchor);
+    if (error) return { telehealth_url: null, error };
+    return {
+      telehealth_url: data.telehealth_url,
+      patientNotified: false,
+      notice: "Video room created for you. This chart has no Portal Patient ID — copy the link to share manually, or add Portal Patient ID in EHR to notify the patient automatically.",
+    };
+  }
+
+  return { telehealth_url: null, error: "Select a patient from the EHR list above." };
 }
 
 function TelehealthJoinPanel({
   patientUuid,
+  patientChartId,
   patientName,
   providerName,
   serviceDate,
@@ -810,38 +829,42 @@ function TelehealthJoinPanel({
     width: "100%",
   };
 
-  const activeUrl = telehealthUrl || appt?.telehealth_url || null;
+  const serviceAnchor = serviceDate ? `${serviceDate}T12:00:00` : new Date().toISOString();
+  const activeUrl = (() => {
+    if (isUsableTelehealthUrl(telehealthUrl, serviceAnchor)) return telehealthUrl;
+    if (isUsableTelehealthUrl(appt?.telehealth_url, appt?.scheduled_at)) return appt.telehealth_url;
+    return null;
+  })();
+  const staleUrl = !!(telehealthUrl || appt?.telehealth_url) && !activeUrl;
 
   const handleStartNow = async () => {
     setStartError("");
     setStarting(true);
     try {
-      if (appt?.id && !appt.telehealth_url) {
-        const { data, error } = await ensureAppointmentTelehealthRoom(appt.id, appt.scheduled_at);
-        if (error) throw new Error(error);
-        if (!data?.telehealth_url) throw new Error("Could not create video room.");
-        onTelehealthUrl?.(data.telehealth_url);
-        setAppt({ ...appt, telehealth_url: data.telehealth_url, status: "confirmed" });
-        window.open(data.telehealth_url, "_blank");
-        return;
-      }
-
-      const { data, error } = await startInstantTelehealthSession({
+      const result = await prepareTelehealthSession({
         patientUuid,
+        patientChartId,
         patientName,
         providerName,
+        serviceDate,
+        telehealthUrl: null,
       });
-      if (error) throw new Error(error);
-      onTelehealthUrl?.(data.telehealth_url);
-      setPatientNotified(true);
-      setAppt({
-        id: data.appointmentId,
-        scheduled_at: new Date().toISOString(),
-        telehealth_url: data.telehealth_url,
-        appointment_type: "telehealth",
-        status: "confirmed",
-      });
-      window.open(data.telehealth_url, "_blank");
+      if (result.error && !result.telehealth_url) throw new Error(result.error);
+      if (!result.telehealth_url) throw new Error("Could not create video room.");
+      onTelehealthUrl?.(result.telehealth_url);
+      if (result.patientNotified) setPatientNotified(true);
+      if (appt?.id) {
+        setAppt({ ...appt, telehealth_url: result.telehealth_url, status: "confirmed" });
+      } else if (result.telehealth_url) {
+        setAppt({
+          id: null,
+          scheduled_at: serviceAnchor,
+          telehealth_url: result.telehealth_url,
+          appointment_type: "telehealth",
+          status: "confirmed",
+        });
+      }
+      window.open(result.telehealth_url, "_blank");
     } catch (err) {
       setStartError(err.message || "Failed to start video session.");
     } finally {
@@ -858,13 +881,30 @@ function TelehealthJoinPanel({
     } catch (_) {}
   };
 
-  if (!patientUuid) {
+  if (!patientUuid && !patientChartId) {
     return (
       <div style={panelStyle}>
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>📹 Telehealth Video</div>
         <p style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>
           Select a patient above to connect to their video session.
         </p>
+      </div>
+    );
+  }
+
+  if (!patientUuid && patientChartId) {
+    return (
+      <div style={panelStyle}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>📹 Telehealth Video</div>
+        <p style={{ fontSize: 12, color: "var(--gold)", margin: "0 0 8px", lineHeight: 1.5 }}>
+          Chart selected, but no <strong style={{ color: "var(--white)" }}>Portal Patient ID</strong> is linked. Video will open for you — add the Portal Patient ID in EHR to notify the patient automatically.
+        </p>
+        <button type="button" onClick={handleStartNow} disabled={starting} style={{ ...joinBtnStyle, opacity: starting ? 0.7 : 1 }}>
+          {starting ? "Creating video room…" : "⚡ Start Video Session Now"}
+        </button>
+        {startError && (
+          <p style={{ fontSize: 11, color: "var(--rose)", margin: "8px 0 0", lineHeight: 1.4 }}>{startError}</p>
+        )}
       </div>
     );
   }
@@ -922,10 +962,17 @@ function TelehealthJoinPanel({
         </>
       ) : (
         <>
+          {staleUrl && (
+            <p style={{ fontSize: 12, color: "var(--gold)", margin: "0 0 10px", lineHeight: 1.5 }}>
+              The previous video link has expired (Whereby rooms last ~24 hours). Click below to create a fresh room.
+            </p>
+          )}
           <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 10px", lineHeight: 1.5 }}>
-            {appt
-              ? "This appointment does not have a video link yet."
-              : "No telehealth appointment scheduled — start a session immediately if the patient needs to talk now."}
+            {staleUrl
+              ? "Create a new video room for this visit."
+              : appt
+                ? "This appointment does not have a video link yet."
+                : "No telehealth appointment scheduled — start a session immediately if the patient needs to talk now."}
           </p>
           <button
             type="button"
@@ -952,6 +999,7 @@ function SessionSetup({ data, setData, onStart }) {
   const [showTemplates, setShowTemplates] = useState(false);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState("");
+  const [startNotice, setStartNotice] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState(() =>
     GALLERY_TEMPLATES.find((t) => t.id === data.templateId) ?? null
   );
@@ -1016,11 +1064,13 @@ function SessionSetup({ data, setData, onStart }) {
 
   const handleStartSession = async () => {
     setStartError("");
+    setStartNotice("");
     setStarting(true);
     try {
       if (isTelehealth) {
         const result = await prepareTelehealthSession({
           patientUuid: data.patientUuid,
+          patientChartId: data.patientChartId,
           patientName: data.patientName,
           providerName: data.providerName,
           serviceDate: data.dateOfService,
@@ -1033,6 +1083,7 @@ function SessionSetup({ data, setData, onStart }) {
           const updated = { ...data, telehealthUrl: result.telehealth_url };
           setData(updated);
           window.open(result.telehealth_url, "_blank");
+          if (result.notice) setStartNotice(result.notice);
           await onStart(updated);
           return;
         }
@@ -1091,6 +1142,7 @@ function SessionSetup({ data, setData, onStart }) {
               <>
                 <TelehealthJoinPanel
                   patientUuid={data.patientUuid}
+                  patientChartId={data.patientChartId}
                   patientName={data.patientName}
                   providerName={data.providerName}
                   serviceDate={data.dateOfService}
@@ -1272,6 +1324,9 @@ function SessionSetup({ data, setData, onStart }) {
       <div style={{ gridColumn: "1 / -1", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
         {startError && (
           <p style={{ fontSize: 13, color: "var(--rose)", margin: 0, textAlign: "center", maxWidth: 520 }}>{startError}</p>
+        )}
+        {startNotice && (
+          <p style={{ fontSize: 12, color: "var(--gold)", margin: 0, textAlign: "center", maxWidth: 520, lineHeight: 1.5 }}>{startNotice}</p>
         )}
         <Btn
           onClick={handleStartSession}
@@ -1512,6 +1567,7 @@ function DuringVisit({ data, setData, sessionId, onComplete }) {
         <>
           <TelehealthJoinPanel
             patientUuid={data.patientUuid}
+            patientChartId={data.patientChartId}
             patientName={data.patientName}
             providerName={data.providerName}
             serviceDate={data.dateOfService}

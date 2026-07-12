@@ -21,7 +21,12 @@ async function createWherebyRoom(apiKey: string, scheduledAt: string): Promise<s
       "Content-Type": "application/json",
       "Authorization": `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({ endDate, roomMode: "group", isLocked: false }),
+    body: JSON.stringify({
+      endDate,
+      roomMode: "group",
+      isLocked: false,
+      fields: ["hostRoomUrl"],
+    }),
   });
 
   if (!wherebyRes.ok) {
@@ -31,7 +36,7 @@ async function createWherebyRoom(apiKey: string, scheduledAt: string): Promise<s
   }
 
   const wherebyData = await wherebyRes.json();
-  return wherebyData.roomUrl ?? null;
+  return wherebyData.hostRoomUrl ?? wherebyData.roomUrl ?? null;
 }
 
 Deno.serve(async (req) => {
