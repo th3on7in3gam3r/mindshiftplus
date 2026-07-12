@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "../../lib/supabase";
-import { getClinicianRole, isAdminEmail, getTasks, getPortalPatientUnreadCount } from "../../lib/ehrDb";
+import { getClinicianRole, isAdminEmail, getTasks, getPortalPatientUnreadCount, getStaffChatUnreadCount, ensureClinicianEnrollment } from "../../lib/ehrDb";
 import { getUnreviewedCrisisCount } from "../../lib/crisisDb";
 import { getPendingIntakes } from "../../lib/intakeDb";
 import EHRLogin from "./EHRLogin";
@@ -36,6 +36,7 @@ export default function EHR({ onBack, onOpenDocs, onOpenTool, initialView }) {
   const [pendingIntakes, setPendingIntakes] = useState(0);
   const [taskCount, setTaskCount]     = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [staffUnreadCount, setStaffUnreadCount] = useState(0);
   const [crisisCount, setCrisisCount] = useState(0);
   const [financeOpen, setFinanceOpen] = useState(false);
   const [financeMenuPos, setFinanceMenuPos] = useState({ top: 0, left: 0 });
@@ -120,32 +121,38 @@ export default function EHR({ onBack, onOpenDocs, onOpenTool, initialView }) {
   async function loadClinician(user, mounted = true) {
     if (!mounted) return;
     setAuthLoading(true);
-    if (isAdminEmail(user.email)) {
-      if (!mounted) return;
-      setClinician({
-        user_id:   user.id,
-        full_name: user.user_metadata?.full_name || user.email.split("@")[0],
-        title:     "Administrator",
-        is_admin:  true,
-        email:     user.email,
-      });
+
+    const loadCounts = () => {
       getPendingIntakes().then(({ data }) => { if (mounted) setPendingIntakes(data?.length ?? 0); });
       getTasks({ status: "open" }).then(({ data }) => { if (mounted) setTaskCount(data?.length ?? 0); });
       getPortalPatientUnreadCount().then(({ count }) => { if (mounted) setUnreadCount(count ?? 0); });
+      getStaffChatUnreadCount(user.id).then((count) => { if (mounted) setStaffUnreadCount(count ?? 0); });
       getUnreviewedCrisisCount().then(({ count }) => { if (mounted) setCrisisCount(count ?? 0); });
-      setAuthLoading(false);
-      return;
+    };
+
+    if (isAdminEmail(user.email)) {
+      await ensureClinicianEnrollment(user);
     }
+
     const { data } = await getClinicianRole(user.id);
     if (!mounted) return;
+
     if (data) {
       setClinician({ ...data, email: user.email });
-      getPendingIntakes().then(({ data: d }) => { if (mounted) setPendingIntakes(d?.length ?? 0); });
-      getTasks({ status: "open" }).then(({ data: d }) => { if (mounted) setTaskCount(d?.length ?? 0); });
-      getPortalPatientUnreadCount().then(({ count: c }) => { if (mounted) setUnreadCount(c ?? 0); });
-      getUnreviewedCrisisCount().then(({ count: c }) => { if (mounted) setCrisisCount(c ?? 0); });
+      loadCounts();
+    } else if (isAdminEmail(user.email)) {
+      const profile = user.user_metadata?.full_name
+        ? { full_name: user.user_metadata.full_name, title: "Staff", is_admin: false }
+        : null;
+      setClinician({
+        user_id: user.id,
+        full_name: profile?.full_name || user.email.split("@")[0],
+        title: profile?.title || "Staff",
+        is_admin: false,
+        email: user.email,
+      });
+      loadCounts();
     } else {
-      // Not authorized — clear session locally without calling signOut (avoids 403)
       setClinician(null);
       setSession(null);
     }
@@ -237,6 +244,7 @@ export default function EHR({ onBack, onOpenDocs, onOpenTool, initialView }) {
             {navBtn("intakes", "Intakes", { color: "gold", badge: pendingIntakes })}
             {navBtn("schedule", "Schedule", { color: "teal" })}
             {navBtn("messages", "Messages", { color: "teal", badge: unreadCount })}
+            {navBtn("staff-messages", "Team", { color: "purple", badge: staffUnreadCount })}
             {navBtn("tasks", "Tasks", { color: "rose", badge: taskCount })}
             {navBtn("crisis", "Crisis", { color: "rose", badge: crisisCount, icon: "🚨" })}
           </div>
@@ -384,7 +392,9 @@ export default function EHR({ onBack, onOpenDocs, onOpenTool, initialView }) {
             onOpenChart={(id) => { setActiveChartId(id); setView("chart", id); }}
           />
         )}
-        {view === "staff-messages" && <EHRMessages clinician={clinician} />}
+        {view === "staff-messages" && (
+          <EHRMessages clinician={clinician} onUnreadChange={setStaffUnreadCount} />
+        )}
         {view === "reports"   && <EHRReports   clinician={clinician} />}
         {view === "crisis"    && <EHRCrisisAlerts />}
         {view === "giftcards" && <EHRGiftCards clinician={clinician} />}

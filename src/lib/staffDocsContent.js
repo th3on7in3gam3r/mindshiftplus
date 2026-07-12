@@ -125,6 +125,7 @@ Everything in this section is in Staff Docs — browse the topics below or ask M
 • **Manual charts** work without Portal Patient ID for notes & billing; Portal ID needed for portal messaging
 
 **Staff workflow**
+• **Team Chat** — EHR → **Team** tab: staff-only threads, direct messages, realtime refresh. Whitelisted staff are **auto-added to the team roster** on first EHR login (no manual SQL).
 • **Tasks & Reminders** — internal clinic checklist (not patient-facing)
 • **Staff vs Patient login** on portal — clinicians use **Staff** tab or Clinical Suite
 • **EHR dashboard quick links** — Patient Lookup, MindShift Scribe, and Clinical Suite cards (no need to exit EHR)
@@ -602,6 +603,34 @@ Use it when something must happen after a visit or between appointments:
 Create a task with a **due date**, **priority**, and optional **patient link** (opens their chart). Check it off when done. Overdue items show in red.
 
 **Quick add** buttons cover common workflows. Tasks are shared across authorized EHR users so Rachel or Kenneth can see the same follow-up list.`,
+      },
+      {
+        q: "How does staff Team Chat work?",
+        a: `**EHR → Team** (top nav) is **internal staff chat** — not for patients.
+
+**Team-wide:** **New → To: All Staff** — everyone on the clinic roster sees it (Kenneth, Rachel, admin).
+
+**Direct message:** **New → pick a colleague** — private between two staff members.
+
+**In a thread:** open the conversation → type in **Reply in thread** at the bottom. New messages appear **without refresh** (realtime).
+
+**Optional patient context** when composing — e.g. "Re: John Smith — can you cover my 2pm?" — does not message the patient.
+
+**Unread badge** on the **Team** tab. Filters: All · Team · Direct · Unread.
+
+**Not the same as Patient Messages** — use **Messages** tab for portal patients.`,
+      },
+      {
+        q: "Do new staff need a manual SQL insert for Team Chat?",
+        a: `**No** — whitelisted clinic emails are **auto-enrolled** on first **EHR login**.
+
+When Kenneth, Rachel, or Jerless sign in with their clinic email, MindShift creates their \`clinician_roles\` row automatically so they appear in **Team → Direct message**.
+
+**Whitelisted emails:** \`kmutegyeki@gmail.com\`, \`kmutegyeki@mindshiftwellnessclinic.org\`, \`rnakkazi@mindshiftwellnessclinic.org\`, \`jerlessm@gmail.com\`, \`info@mindshiftwellnessclinic.org\`
+
+If someone already has a row from manual SQL, login **does not overwrite** it.
+
+Requires Supabase migration \`clinician_roles_auto_enroll.sql\`.`,
       },
       {
         q: "What are Patient Intakes for?",

@@ -1,13 +1,35 @@
 import { supabase } from "./supabase";
 
 // ── AUTH HELPERS ───────────────────────────────────────────────────────────────
-const ADMIN_EMAILS = [
+export const CLINICIAN_EMAILS = [
   "info@mindshiftwellnessclinic.org",
   "jerlessm@gmail.com",
   "kmutegyeki@mindshiftwellnessclinic.org",
   "kmutegyeki@gmail.com",
   "rnakkazi@mindshiftwellnessclinic.org",
 ];
+
+const ADMIN_EMAILS = CLINICIAN_EMAILS;
+
+/** Default roster profile when a whitelisted staff member logs into the EHR for the first time. */
+export const STAFF_ENROLLMENT_PROFILES = {
+  "kmutegyeki@gmail.com": { full_name: "Kenneth Mutegyeki", title: "PMHNP-BC", is_admin: true },
+  "kmutegyeki@mindshiftwellnessclinic.org": { full_name: "Kenneth Mutegyeki", title: "PMHNP-BC", is_admin: true },
+  "rnakkazi@mindshiftwellnessclinic.org": { full_name: "Rachel Nakkazi", title: "PMHNP-BC", is_admin: false },
+  "jerlessm@gmail.com": { full_name: "Jerless", title: "Administrator", is_admin: true },
+  "info@mindshiftwellnessclinic.org": { full_name: "MindShift Clinic", title: "Administrator", is_admin: true },
+};
+
+export function staffEnrollmentProfile(user) {
+  const email = user.email?.toLowerCase();
+  const preset = STAFF_ENROLLMENT_PROFILES[email];
+  if (preset) return preset;
+  return {
+    full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "Staff",
+    title: "Staff",
+    is_admin: false,
+  };
+}
 
 export async function getClinicianRole(userId) {
   const { data, error } = await supabase
@@ -16,6 +38,37 @@ export async function getClinicianRole(userId) {
     .eq("user_id", userId)
     .maybeSingle();
   return { data, error };
+}
+
+/** Create clinician_roles row on first EHR login for whitelisted staff (no-op if already enrolled). */
+export async function ensureClinicianEnrollment(user) {
+  const email = user?.email?.toLowerCase();
+  if (!email || !isAdminEmail(email)) {
+    return { data: null, error: null, enrolled: false };
+  }
+
+  const { data: existing } = await getClinicianRole(user.id);
+  if (existing) return { data: existing, error: null, enrolled: false };
+
+  const profile = staffEnrollmentProfile(user);
+  const row = {
+    user_id: user.id,
+    full_name: profile.full_name,
+    title: profile.title,
+    is_admin: profile.is_admin ?? false,
+  };
+
+  const { data, error } = await supabase
+    .from("clinician_roles")
+    .upsert(row, { onConflict: "user_id", ignoreDuplicates: true })
+    .select()
+    .maybeSingle();
+
+  if (error) return { data: null, error, enrolled: false };
+  if (data) return { data, error: null, enrolled: true };
+
+  const { data: afterInsert } = await getClinicianRole(user.id);
+  return { data: afterInsert, error: null, enrolled: !!afterInsert };
 }
 
 export function isAdminEmail(email) {
@@ -632,18 +685,97 @@ export async function deleteTask(id) {
   return { error };
 }
 
-// ── EHR MESSAGES ───────────────────────────────────────────────────────────────
-export async function getEhrMessages() {
-  const { data, error } = await supabase.from("ehr_messages").select("*").order("created_at", { ascending: false });
-  return { data, error };
+// ── EHR MESSAGES (staff team chat) ─────────────────────────────────────────────
+export async function getStaffTeam() {
+  const { data, error } = await supabase
+    .from("clinician_roles")
+    .select("user_id, full_name, title, is_admin")
+    .order("full_name");
+  return { data: data ?? [], error };
 }
-export async function sendEhrMessage(payload) {
+
+export async function getStaffChatMessages(currentUserId) {
+  const { data: messages, error } = await supabase
+    .from("ehr_messages")
+    .select("*")
+    .or(`to_user.is.null,to_user.eq.${currentUserId},from_user.eq.${currentUserId}`)
+    .order("created_at", { ascending: true });
+
+  if (error) return { data: [], error };
+
+  const { data: reads } = await supabase
+    .from("ehr_message_reads")
+    .select("message_id")
+    .eq("user_id", currentUserId);
+
+  const readSet = new Set((reads ?? []).map((r) => r.message_id));
+  const enriched = (messages ?? []).map((m) => ({
+    ...m,
+    read_by_me: m.from_user === currentUserId || readSet.has(m.id),
+  }));
+
+  return { data: enriched, error: null };
+}
+
+export async function getStaffChatUnreadCount(currentUserId) {
+  const { data } = await getStaffChatMessages(currentUserId);
+  return data.filter((m) => m.from_user !== currentUserId && !m.read_by_me).length;
+}
+
+export async function sendStaffChatMessage({
+  fromUser,
+  fromName,
+  toUser = null,
+  threadId = null,
+  subject = null,
+  body,
+  patientContext = null,
+}) {
+  const payload = {
+    from_user: fromUser,
+    from_name: fromName,
+    to_user: toUser || null,
+    thread_id: threadId || null,
+    subject: subject?.trim() || null,
+    body: body.trim(),
+    patient_context: patientContext?.trim() || null,
+  };
   const { data, error } = await supabase.from("ehr_messages").insert(payload).select().single();
   return { data, error };
 }
-export async function markEhrMessageRead(id) {
-  const { error } = await supabase.from("ehr_messages").update({ is_read: true }).eq("id", id);
+
+export async function markStaffMessagesRead(messageIds, userId) {
+  const ids = [...new Set((messageIds ?? []).filter(Boolean))];
+  if (!ids.length) return { error: null };
+  const rows = ids.map((message_id) => ({ message_id, user_id: userId }));
+  const { error } = await supabase
+    .from("ehr_message_reads")
+    .upsert(rows, { onConflict: "message_id,user_id", ignoreDuplicates: true });
   return { error };
+}
+
+/** @deprecated use getStaffChatMessages */
+export async function getEhrMessages() {
+  return getStaffChatMessages((await supabase.auth.getUser()).data.user?.id);
+}
+
+/** @deprecated use sendStaffChatMessage */
+export async function sendEhrMessage(payload) {
+  return sendStaffChatMessage({
+    fromUser: payload.from_user,
+    fromName: payload.from_name,
+    toUser: payload.to_user,
+    threadId: payload.thread_id,
+    subject: payload.subject,
+    body: payload.body,
+    patientContext: payload.patient_context,
+  });
+}
+
+/** @deprecated use markStaffMessagesRead */
+export async function markEhrMessageRead(id) {
+  const userId = (await supabase.auth.getUser()).data.user?.id;
+  return markStaffMessagesRead([id], userId);
 }
 
 // ── GIFT CARDS ─────────────────────────────────────────────────────────────────

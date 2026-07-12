@@ -1,13 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../../lib/supabase";
-
-const CLINICIAN_EMAILS = [
-  "info@mindshiftwellnessclinic.org",
-  "jerlessm@gmail.com",
-  "kmutegyeki@mindshiftwellnessclinic.org",
-  "kmutegyeki@gmail.com",
-  "rnakkazi@mindshiftwellnessclinic.org",
-];
+import { CLINICIAN_EMAILS } from "../../lib/ehrDb";
 
 export default function EHRLogin({ onBack }) {
   const [email, setEmail]       = useState("");

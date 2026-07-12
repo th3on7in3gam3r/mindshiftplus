@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useAuth } from "../lib/AuthContext";
 import { getChartsForPicker, chartDisplayName, matchesChartSearch, getPatientAppointments } from "../lib/ehrDb";
 import { getIntakesWithoutCharts, matchesIntakeSearch } from "../lib/intakeDb";
@@ -804,6 +804,7 @@ function TelehealthJoinPanel({
   serviceDate,
   telehealthUrl,
   onTelehealthUrl,
+  onSessionDurationChange,
 }) {
   const [loading, setLoading] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -845,8 +846,13 @@ function TelehealthJoinPanel({
   useEffect(() => {
     if (appt?.session_duration_minutes) {
       setSessionDuration(appt.session_duration_minutes);
+      onSessionDurationChange?.(appt.session_duration_minutes);
     }
-  }, [appt?.session_duration_minutes]);
+  }, [appt?.session_duration_minutes, onSessionDurationChange]);
+
+  useEffect(() => {
+    onSessionDurationChange?.(sessionDuration);
+  }, [patientUuid, patientChartId]);
 
   async function applySessionDuration(appointmentId) {
     if (!appointmentId || !sessionDuration) return;
@@ -951,13 +957,14 @@ function TelehealthJoinPanel({
   const durationSelect = (
     <div style={{ marginBottom: 10 }}>
       <label style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", display: "block", marginBottom: 4 }}>
-        Session length (countdown for patient)
+        Session length (minutes)
       </label>
       <select
         value={sessionDuration}
         onChange={async (e) => {
           const mins = Number(e.target.value);
           setSessionDuration(mins);
+          onSessionDurationChange?.(mins);
           if (appt?.id) await setAppointmentSessionDuration(appt.id, mins).then(({ data }) => {
             if (data) setAppt((prev) => ({ ...prev, ...data }));
           });
@@ -978,7 +985,7 @@ function TelehealthJoinPanel({
         ))}
       </select>
       <p style={{ fontSize: 11, color: "var(--muted)", margin: "6px 0 0", lineHeight: 1.45 }}>
-        Countdown starts when the patient clicks <strong style={{ color: "var(--white)" }}>Join Video Session</strong> in their portal.
+        Used for the <strong style={{ color: "var(--white)" }}>patient countdown</strong> in the portal and the <strong style={{ color: "var(--white)" }}>visit duration</strong> on your progress note. Countdown starts when the patient clicks <strong style={{ color: "var(--white)" }}>Join Video Session</strong>.
       </p>
     </div>
   );
@@ -1184,6 +1191,10 @@ function SessionSetup({ data, setData, onStart }) {
 
   const isTelehealth = data.modality === "Telehealth";
 
+  const handleSessionDurationChange = useCallback((mins) => {
+    setData((d) => ({ ...d, duration: String(mins) }));
+  }, [setData]);
+
   const handleStartSession = async () => {
     setStartError("");
     setStartNotice("");
@@ -1270,6 +1281,7 @@ function SessionSetup({ data, setData, onStart }) {
                   serviceDate={data.dateOfService}
                   telehealthUrl={data.telehealthUrl}
                   onTelehealthUrl={(url) => setData({ ...data, telehealthUrl: url })}
+                  onSessionDurationChange={handleSessionDurationChange}
                 />
                 <div style={{
                   background: "rgba(14,165,160,0.08)", border: "1px solid rgba(14,165,160,0.25)",
@@ -1279,7 +1291,9 @@ function SessionSetup({ data, setData, onStart }) {
                 </div>
               </>
             )}
-            <InputField label="Duration (minutes)" type="number" value={data.duration} onChange={e => setData({ ...data, duration: e.target.value })} placeholder="45" />
+            {data.modality !== "Telehealth" && (
+              <InputField label="Duration (minutes)" type="number" value={data.duration} onChange={e => setData({ ...data, duration: e.target.value })} placeholder="45" />
+            )}
           </div>
         </GlassCard>
       </div>
