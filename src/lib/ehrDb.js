@@ -1,4 +1,6 @@
 import { supabase } from "./supabase";
+import { emailStaffTeamMessage } from "./emailService";
+import { parseMentionedUserIds } from "./staffChatUtils";
 
 // ── AUTH HELPERS ───────────────────────────────────────────────────────────────
 export const CLINICIAN_EMAILS = [
@@ -48,7 +50,13 @@ export async function ensureClinicianEnrollment(user) {
   }
 
   const { data: existing } = await getClinicianRole(user.id);
-  if (existing) return { data: existing, error: null, enrolled: false };
+  if (existing) {
+    if (!existing.email && email) {
+      await supabase.from("clinician_roles").update({ email }).eq("user_id", user.id);
+      return { data: { ...existing, email }, error: null, enrolled: false };
+    }
+    return { data: existing, error: null, enrolled: false };
+  }
 
   const profile = staffEnrollmentProfile(user);
   const row = {
@@ -56,6 +64,7 @@ export async function ensureClinicianEnrollment(user) {
     full_name: profile.full_name,
     title: profile.title,
     is_admin: profile.is_admin ?? false,
+    email,
   };
 
   const { data, error } = await supabase
@@ -686,10 +695,18 @@ export async function deleteTask(id) {
 }
 
 // ── EHR MESSAGES (staff team chat) ─────────────────────────────────────────────
+export function staffEmailForMember(member) {
+  if (member?.email) return member.email;
+  const name = member?.full_name;
+  if (!name) return null;
+  const match = Object.entries(STAFF_ENROLLMENT_PROFILES).find(([, profile]) => profile.full_name === name);
+  return match?.[0] ?? null;
+}
+
 export async function getStaffTeam() {
   const { data, error } = await supabase
     .from("clinician_roles")
-    .select("user_id, full_name, title, is_admin")
+    .select("user_id, full_name, title, is_admin, email")
     .order("full_name");
   return { data: data ?? [], error };
 }
@@ -730,7 +747,10 @@ export async function sendStaffChatMessage({
   subject = null,
   body,
   patientContext = null,
+  mentionedUserIds = null,
+  team = [],
 }) {
+  const mentionIds = mentionedUserIds ?? parseMentionedUserIds(body, team, fromUser);
   const payload = {
     from_user: fromUser,
     from_name: fromName,
@@ -739,9 +759,35 @@ export async function sendStaffChatMessage({
     subject: subject?.trim() || null,
     body: body.trim(),
     patient_context: patientContext?.trim() || null,
+    mentioned_user_ids: mentionIds.length ? mentionIds : [],
   };
   const { data, error } = await supabase.from("ehr_messages").insert(payload).select().single();
+  if (!error && data) {
+    notifyStaffChatRecipients({ message: data, team, fromUser }).catch(() => {});
+  }
   return { data, error };
+}
+
+/** Email DMs and @mentions only — not team-wide All Staff posts. */
+export async function notifyStaffChatRecipients({ message, team, fromUser }) {
+  const recipientIds = new Set();
+  if (message.to_user) recipientIds.add(message.to_user);
+  for (const id of message.mentioned_user_ids || []) recipientIds.add(id);
+  recipientIds.delete(fromUser);
+
+  const emails = [...recipientIds]
+    .map((id) => staffEmailForMember(team.find((m) => m.user_id === id)))
+    .filter(Boolean);
+
+  if (!emails.length) return;
+
+  await emailStaffTeamMessage({
+    to_emails: emails,
+    from_name: message.from_name || "Staff",
+    subject: message.subject || (message.to_user ? "Direct message" : "Team mention"),
+    body_preview: message.body?.slice(0, 120) || "",
+    is_direct: !!message.to_user,
+  });
 }
 
 export async function markStaffMessagesRead(messageIds, userId) {

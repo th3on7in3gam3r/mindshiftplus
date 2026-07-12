@@ -323,6 +323,24 @@ Deno.serve(async (req) => {
         break;
       }
 
+      // ── Staff team chat DM or @mention (Tier B lite) ───────────────────────
+      case "staff_team_message": {
+        const { to_emails, from_name, subject, body_preview, is_direct } = data;
+        const recipients = (to_emails || []).filter(Boolean);
+        if (!recipients.length) break;
+        const label = is_direct ? "Direct Message" : "Team Mention";
+        await sendEmail(recipients, `💬 ${label} from ${from_name || "Staff"} — MindShift EHR`, base(`
+          <span class="badge badge-blue">${label}</span>
+          <h1>New staff team message</h1>
+          <p class="sub"><strong>${from_name || "A colleague"}</strong> sent you a message in MindShift EHR Team Chat.</p>
+          ${subject ? `<table class="dt"><tr><td>📋 Thread</td><td>${subject}</td></tr></table>` : ""}
+          ${body_preview ? `<div class="info">${body_preview}${body_preview.length >= 120 ? "…" : ""}</div>` : ""}
+          <div class="info">Message content is only available inside the EHR for clinic privacy. Log in to read and reply.</div>
+          <a href="https://www.mindshiftwellnessclinic.org/clinical/ehr/staff-messages" class="btn">Open Team Chat →</a>
+        `, "Staff team chat notification from MindShift EHR."));
+        break;
+      }
+
       default:
         return jsonWithCors(req, { error: `Unknown type: ${type}` }, 400);
     }

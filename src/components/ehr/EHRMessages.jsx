@@ -11,6 +11,10 @@ import {
   groupStaffThreads,
   relativeChatTime,
   threadTitle,
+  threadMatchesSearch,
+  splitMentionParts,
+  mentionSuggest,
+  insertMention,
 } from "../../lib/staffChatUtils";
 
 const FILTERS = [
@@ -18,6 +22,7 @@ const FILTERS = [
   { id: "team", label: "Team" },
   { id: "direct", label: "Direct" },
   { id: "unread", label: "Unread" },
+  { id: "mentions", label: "Mentions" },
 ];
 
 function FilterPill({ active, onClick, children, count }) {
@@ -58,8 +63,76 @@ function FilterPill({ active, onClick, children, count }) {
   );
 }
 
-function initials(name) {
-  return (name || "?").split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("") || "?";
+function MessageBody({ body, staffById }) {
+  const parts = splitMentionParts(body, staffById);
+  return (
+    <span>
+      {parts.map((part, i) => (
+        part.mention ? (
+          <span key={i} style={{ color: "var(--ehr-accent)", fontWeight: 700 }}>{part.text}</span>
+        ) : (
+          <span key={i}>{part.text}</span>
+        )
+      ))}
+    </span>
+  );
+}
+
+function MentionField({ value, onChange, team, currentUserId, placeholder, rows = 2 }) {
+  const { open, suggestions } = mentionSuggest(value, team, currentUserId);
+  return (
+    <div style={{ position: "relative" }}>
+      <EhrInput
+        label=""
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={rows}
+      />
+      {open && (
+        <div style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: "100%",
+          marginBottom: 4,
+          background: "var(--ehr-surface, #fff)",
+          border: "1px solid var(--ehr-border)",
+          borderRadius: 10,
+          boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+          zIndex: 20,
+          maxHeight: 160,
+          overflowY: "auto",
+        }}>
+          {suggestions.map((member) => (
+            <button
+              key={member.user_id}
+              type="button"
+              onClick={() => onChange(insertMention(value, member))}
+              style={{
+                display: "block",
+                width: "100%",
+                textAlign: "left",
+                padding: "8px 12px",
+                border: "none",
+                background: "transparent",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                fontSize: 13,
+                color: "var(--ehr-text)",
+              }}
+            >
+              <strong>{member.full_name}</strong>
+              {member.title && <span style={{ color: "var(--ehr-muted2)", marginLeft: 6 }}>{member.title}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+      <p style={{ fontSize: 10, color: "var(--ehr-muted2)", margin: "4px 0 0" }}>
+        Type <strong>@</strong> to mention a colleague
+      </p>
+    </div>
+  );
 }
 
 export default function EHRMessages({ clinician, onUnreadChange }) {
@@ -67,6 +140,7 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
   const [team, setTeam] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
+  const [search, setSearch] = useState("");
   const [activeThreadId, setActiveThreadId] = useState(null);
   const [showCompose, setShowCompose] = useState(false);
   const [reply, setReply] = useState("");
@@ -90,12 +164,20 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
     [messages, clinician.user_id, staffById]
   );
 
+  const mentionCount = useMemo(
+    () => threads.filter((t) => t.hasMention && t.hasUnread).length,
+    [threads]
+  );
+
   const filteredThreads = useMemo(() => {
-    if (filter === "team") return threads.filter((t) => t.isTeam);
-    if (filter === "direct") return threads.filter((t) => t.isDirect);
-    if (filter === "unread") return threads.filter((t) => t.hasUnread);
-    return threads;
-  }, [threads, filter]);
+    let list = threads;
+    if (filter === "team") list = list.filter((t) => t.isTeam);
+    if (filter === "direct") list = list.filter((t) => t.isDirect);
+    if (filter === "unread") list = list.filter((t) => t.hasUnread);
+    if (filter === "mentions") list = list.filter((t) => t.hasMention);
+    if (search.trim()) list = list.filter((t) => threadMatchesSearch(t, search));
+    return list;
+  }, [threads, filter, search]);
 
   const activeThread = threads.find((t) => t.id === activeThreadId) ?? null;
   const unreadCount = messages.filter((m) => m.from_user !== clinician.user_id && !m.read_by_me).length;
@@ -188,6 +270,7 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
       subject: root.subject,
       body: reply.trim(),
       patientContext: root.patient_context,
+      team,
     });
     setSending(false);
     if (err) {
@@ -214,6 +297,7 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
       subject: compose.subject.trim() || (toUser ? "Direct message" : "Team message"),
       body: compose.body.trim(),
       patientContext: compose.patient_context.trim() || null,
+      team,
     });
     setSending(false);
     if (err) {
@@ -248,7 +332,7 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
             )}
           </span>
         }
-        subtitle="Internal staff messaging — team-wide or direct to a colleague"
+        subtitle="Internal staff messaging — @mention colleagues, search threads, email alerts on DMs"
         action={
           <EhrBtn small onClick={() => { setShowCompose(true); setActiveThreadId(null); }}>
             ✉️ New
@@ -256,13 +340,22 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
         }
       />
 
+      <div style={{ marginBottom: "0.75rem" }}>
+        <EhrInput
+          label=""
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search messages, subjects, patient context…"
+        />
+      </div>
+
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: "1rem" }}>
         {FILTERS.map((f) => (
           <FilterPill
             key={f.id}
             active={filter === f.id}
             onClick={() => setFilter(f.id)}
-            count={f.id === "unread" ? unreadCount : 0}
+            count={f.id === "unread" ? unreadCount : f.id === "mentions" ? mentionCount : 0}
           >
             {f.label}
           </FilterPill>
@@ -288,7 +381,9 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
           {loading ? <Spinner /> : filteredThreads.length === 0 ? (
             <EhrCard style={{ textAlign: "center", padding: "2rem" }}>
               <div style={{ fontSize: 28, marginBottom: 8 }}>💬</div>
-              <div style={{ color: "var(--ehr-muted)", fontSize: 13 }}>No conversations yet.</div>
+              <div style={{ color: "var(--ehr-muted)", fontSize: 13 }}>
+                {search.trim() ? "No threads match your search." : "No conversations yet."}
+              </div>
             </EhrCard>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -316,6 +411,7 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
                       <span style={{ fontSize: 12 }}>{thread.isTeam ? "👥" : "💬"}</span>
+                      {thread.hasMention && <span style={{ fontSize: 10, color: "var(--ehr-accent)", fontWeight: 700 }}>@</span>}
                       <span style={{
                         fontSize: 13,
                         fontWeight: thread.hasUnread ? 700 : 500,
@@ -360,7 +456,14 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
                   <EhrSelect label="To" value={compose.to_user} onChange={(e) => setCompose((c) => ({ ...c, to_user: e.target.value }))} options={teamOptions} />
                   <EhrInput label="Subject (optional)" value={compose.subject} onChange={(e) => setCompose((c) => ({ ...c, subject: e.target.value }))} placeholder="e.g. Coverage for Friday" />
                   <EhrInput label="Patient context (optional)" value={compose.patient_context} onChange={(e) => setCompose((c) => ({ ...c, patient_context: e.target.value }))} placeholder="Patient name for reference" />
-                  <EhrInput label="Message" value={compose.body} onChange={(e) => setCompose((c) => ({ ...c, body: e.target.value }))} rows={5} placeholder="Write your message…" required />
+                  <MentionField
+                    value={compose.body}
+                    onChange={(body) => setCompose((c) => ({ ...c, body }))}
+                    team={team}
+                    currentUserId={clinician.user_id}
+                    placeholder="Write your message… use @ to mention"
+                    rows={5}
+                  />
                 </div>
               </form>
             </EhrCard>
@@ -396,7 +499,7 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
                           </div>
                         )}
                         <div style={{ fontSize: 14, color: "var(--ehr-text)", lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
-                          {m.body}
+                          <MessageBody body={m.body} staffById={staffById} />
                         </div>
                         <div style={{ fontSize: 10, color: "var(--ehr-muted2)", marginTop: 6, textAlign: mine ? "right" : "left" }}>
                           {relativeChatTime(m.created_at)}
@@ -410,10 +513,11 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
 
               <form onSubmit={handleReply} style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
                 <div style={{ flex: 1 }}>
-                  <EhrInput
-                    label=""
+                  <MentionField
                     value={reply}
-                    onChange={(e) => setReply(e.target.value)}
+                    onChange={setReply}
+                    team={team}
+                    currentUserId={clinician.user_id}
                     placeholder="Reply in thread…"
                     rows={2}
                   />
@@ -429,7 +533,7 @@ export default function EHRMessages({ clinician, onUnreadChange }) {
               <div style={{ color: "var(--ehr-text)", fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Staff team chat</div>
               <div style={{ color: "var(--ehr-muted)", fontSize: 13, lineHeight: 1.6 }}>
                 Select a conversation or start a new message.<br />
-                Team messages go to everyone; direct messages are private between two staff members.
+                Use <strong>@Name</strong> to mention someone — they&apos;ll get an email if offline.
               </div>
             </EhrCard>
           )}

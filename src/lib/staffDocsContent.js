@@ -125,7 +125,7 @@ Everything in this section is in Staff Docs — browse the topics below or ask M
 • **Manual charts** work without Portal Patient ID for notes & billing; Portal ID needed for portal messaging
 
 **Staff workflow**
-• **Team Chat** — EHR → **Team** tab: staff-only threads, direct messages, realtime refresh. Whitelisted staff are **auto-added to the team roster** on first EHR login (no manual SQL).
+• **Team Chat** — EHR → **Team** tab: staff-only threads, direct messages, realtime refresh, **@mentions**, **search**, and **email alerts** on DMs/mentions. Whitelisted staff are **auto-added to the team roster** on first EHR login (no manual SQL).
 • **Tasks & Reminders** — internal clinic checklist (not patient-facing)
 • **Staff vs Patient login** on portal — clinicians use **Staff** tab or Clinical Suite
 • **EHR dashboard quick links** — Patient Lookup, MindShift Scribe, and Clinical Suite cards (no need to exit EHR)
@@ -616,7 +616,13 @@ Create a task with a **due date**, **priority**, and optional **patient link** (
 
 **Optional patient context** when composing — e.g. "Re: John Smith — can you cover my 2pm?" — does not message the patient.
 
-**Unread badge** on the **Team** tab. Filters: All · Team · Direct · Unread.
+**Unread badge** on the **Team** tab. Filters: All · Team · Direct · Unread · **Mentions**.
+
+**@mentions:** Type \`@Rachel\` or \`@Kenneth\` in a message — mentioned staff get an **email alert** (if offline). Use the **Mentions** filter to see threads where you were tagged.
+
+**Search:** Use the search box to find messages by text, subject, or patient context.
+
+**Email alerts:** Sent for **direct messages** and **@mentions** only — not every team-wide post.
 
 **Not the same as Patient Messages** — use **Messages** tab for portal patients.`,
       },
