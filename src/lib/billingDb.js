@@ -20,6 +20,33 @@ export const PLACE_OF_SERVICE = [
   { code: "10", label: "10 — Telehealth (patient home)" },
 ];
 
+/** Insurance payer categories for billing / superbills */
+export const PAYER_CATEGORIES = [
+  { value: "medicare", label: "Medicare" },
+  { value: "medicaid", label: "Medicaid" },
+  { value: "commercial", label: "Commercial" },
+  { value: "tricare", label: "TRICARE / Military" },
+  { value: "other", label: "Other" },
+];
+
+export const DEFAULT_INSURANCE_PAYERS = [
+  { name: "Medicare", category: "medicare" },
+  { name: "MassHealth (Medicaid)", category: "medicaid" },
+  { name: "Blue Cross Blue Shield of Massachusetts", category: "commercial" },
+  { name: "Harvard Pilgrim Health Care", category: "commercial" },
+  { name: "Aetna", category: "commercial" },
+  { name: "Cigna & Evernorth", category: "commercial" },
+  { name: "UnitedHealthcare (UHC / UBH)", category: "commercial" },
+  { name: "Tufts Health Plan", category: "commercial" },
+  { name: "Horizon BCBS", category: "commercial" },
+  { name: "Independence Blue Cross", category: "commercial" },
+  { name: "Meritain Health", category: "commercial" },
+  { name: "Quest Behavioral Health", category: "commercial" },
+  { name: "Carelon Behavioral Health", category: "commercial" },
+  { name: "1199SEIU", category: "commercial" },
+  { name: "Self-Pay (No Insurance)", category: "other" },
+];
+
 export const DEFAULT_BILLING_SETTINGS = {
   clinic_name: "MindShift Wellness Clinic",
   billing_address: "31 Granite St. Suite #2, Milford, MA 01757",
@@ -30,6 +57,7 @@ export const DEFAULT_BILLING_SETTINGS = {
     { name: "Kenneth Mutegyeki", title: "PMHNP-BC", npi: "1487410999", taxonomy: "363LP0808X" },
     { name: "Rachel Nakkazi", title: "PMHNP-BC", npi: "", taxonomy: "363LP0808X" },
   ],
+  insurance_payers: DEFAULT_INSURANCE_PAYERS,
 };
 
 export const CLAIM_TYPES = {
@@ -68,6 +96,48 @@ export function filterCptCodes(query) {
   return CPT_CODES.filter(
     (c) => c.code.toLowerCase().includes(q) || c.description.toLowerCase().includes(q)
   );
+}
+
+export function payerCategoryLabel(category) {
+  return PAYER_CATEGORIES.find((c) => c.value === category)?.label ?? category ?? "Other";
+}
+
+/** Normalize payer list from DB or form — falls back to clinic defaults. */
+export function normalizeInsurancePayers(raw) {
+  if (!Array.isArray(raw) || !raw.length) return [...DEFAULT_INSURANCE_PAYERS];
+  return raw
+    .map((p) => ({
+      name: String(p.name ?? "").trim(),
+      category: PAYER_CATEGORIES.some((c) => c.value === p.category) ? p.category : "commercial",
+    }))
+    .filter((p) => p.name);
+}
+
+/** Sorted payer names for datalist / dropdowns (grouped by category in label). */
+export function insurancePayerOptions(payers) {
+  const list = normalizeInsurancePayers(payers);
+  const order = PAYER_CATEGORIES.map((c) => c.value);
+  return [...list].sort((a, b) => {
+    const ai = order.indexOf(a.category);
+    const bi = order.indexOf(b.category);
+    if (ai !== bi) return ai - bi;
+    return a.name.localeCompare(b.name);
+  });
+}
+
+function mergeBillingSettings(data) {
+  if (!data) return { ...DEFAULT_BILLING_SETTINGS };
+  return {
+    clinic_name: data.clinic_name ?? DEFAULT_BILLING_SETTINGS.clinic_name,
+    billing_address: data.billing_address ?? DEFAULT_BILLING_SETTINGS.billing_address,
+    phone: data.phone ?? DEFAULT_BILLING_SETTINGS.phone,
+    email: data.email ?? DEFAULT_BILLING_SETTINGS.email,
+    tax_id: data.tax_id ?? "",
+    providers: Array.isArray(data.providers) && data.providers.length
+      ? data.providers
+      : DEFAULT_BILLING_SETTINGS.providers,
+    insurance_payers: normalizeInsurancePayers(data.insurance_payers),
+  };
 }
 
 /**
@@ -347,7 +417,7 @@ export async function getBillingSettings() {
 
   if (error) return { data: DEFAULT_BILLING_SETTINGS, error };
   if (!data) return { data: { ...DEFAULT_BILLING_SETTINGS }, error: null };
-  return { data, error: null };
+  return { data: mergeBillingSettings(data), error: null };
 }
 
 /** Save clinic billing settings (upsert single row). */
@@ -365,6 +435,7 @@ export async function saveBillingSettings(payload, userId) {
     email: payload.email,
     tax_id: payload.tax_id || null,
     providers: payload.providers ?? DEFAULT_BILLING_SETTINGS.providers,
+    insurance_payers: normalizeInsurancePayers(payload.insurance_payers),
     updated_by: userId,
     updated_at: new Date().toISOString(),
   };

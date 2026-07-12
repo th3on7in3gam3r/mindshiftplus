@@ -10,6 +10,7 @@ import {
 } from "../../lib/billingDb";
 import { getChart } from "../../lib/ehrDb";
 import SuperbillPrintView from "../billing/SuperbillPrintView";
+import SuperbillGuide from "../billing/SuperbillGuide";
 
 const STATUS_COLOR = {
   draft: "muted",
@@ -30,6 +31,7 @@ export default function EHRInsuranceClaims({ clinician, onOpenSettings }) {
   const [printClaim, setPrintClaim] = useState(null);
   const [printChart, setPrintChart] = useState(null);
   const [settings, setSettings] = useState(null);
+  const [showHelp, setShowHelp] = useState(true);
 
   useEffect(() => { load(); }, [statusFilter]);
 
@@ -93,6 +95,8 @@ export default function EHRInsuranceClaims({ clinician, onOpenSettings }) {
           <EhrBtn variant="secondary" small onClick={onOpenSettings}>⚙️ Billing Settings</EhrBtn>
         )}
       </div>
+
+      {showHelp && <SuperbillGuide onDismiss={() => setShowHelp(false)} compact />}
 
       {error && (
         <div style={{ background: "color-mix(in srgb, var(--ehr-rose) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--ehr-rose) 30%, transparent)", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "var(--ehr-rose)", marginBottom: "1rem" }}>

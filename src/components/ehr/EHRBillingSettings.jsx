@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { EhrCard, EhrBtn, EhrInput, SectionHeader, Spinner } from "../ehr/EHRUI";
-import { getBillingSettings, saveBillingSettings, DEFAULT_BILLING_SETTINGS } from "../../lib/billingDb";
+import { EhrCard, EhrBtn, EhrInput, EhrSelect, SectionHeader, Spinner } from "../ehr/EHRUI";
+import { getBillingSettings, saveBillingSettings, DEFAULT_BILLING_SETTINGS, PAYER_CATEGORIES, payerCategoryLabel } from "../../lib/billingDb";
+import SuperbillGuide from "../billing/SuperbillGuide";
 
 export default function EHRBillingSettings({ clinician }) {
   const [form, setForm] = useState({ ...DEFAULT_BILLING_SETTINGS });
@@ -8,6 +9,7 @@ export default function EHRBillingSettings({ clinician }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(null);
+  const [showHelp, setShowHelp] = useState(true);
 
   useEffect(() => { load(); }, []);
 
@@ -24,6 +26,9 @@ export default function EHRBillingSettings({ clinician }) {
       providers: Array.isArray(data.providers) && data.providers.length
         ? data.providers
         : DEFAULT_BILLING_SETTINGS.providers,
+      insurance_payers: Array.isArray(data.insurance_payers) && data.insurance_payers.length
+        ? data.insurance_payers
+        : DEFAULT_BILLING_SETTINGS.insurance_payers,
     });
     setLoading(false);
   }
@@ -34,6 +39,31 @@ export default function EHRBillingSettings({ clinician }) {
       providers[index] = { ...providers[index], [key]: value };
       return { ...f, providers };
     });
+    setSaved(false);
+  };
+
+  const setPayer = (index, key, value) => {
+    setForm((f) => {
+      const insurance_payers = [...f.insurance_payers];
+      insurance_payers[index] = { ...insurance_payers[index], [key]: value };
+      return { ...f, insurance_payers };
+    });
+    setSaved(false);
+  };
+
+  const addPayer = () => {
+    setForm((f) => ({
+      ...f,
+      insurance_payers: [...f.insurance_payers, { name: "", category: "commercial" }],
+    }));
+    setSaved(false);
+  };
+
+  const removePayer = (index) => {
+    setForm((f) => ({
+      ...f,
+      insurance_payers: f.insurance_payers.filter((_, i) => i !== index),
+    }));
     setSaved(false);
   };
 
@@ -52,11 +82,13 @@ export default function EHRBillingSettings({ clinician }) {
   const missingNpi = form.providers.some((p) => !p.npi?.trim());
 
   return (
-    <div style={{ padding: "1.5rem 2rem", maxWidth: 720 }}>
+    <div style={{ padding: "1.5rem 2rem", maxWidth: 860, paddingBottom: "3rem" }}>
       <SectionHeader
         title="Billing Settings"
-        subtitle="Clinic info and provider NPI numbers for insurance superbills"
+        subtitle="Clinic info, insurance payers, and provider NPI numbers for superbills"
       />
+
+      {showHelp && <SuperbillGuide onDismiss={() => setShowHelp(false)} />}
 
       {missingNpi && (
         <EhrCard style={{ marginBottom: "1rem", background: "color-mix(in srgb, var(--ehr-gold) 8%, transparent)", border: "1px solid color-mix(in srgb, var(--ehr-gold) 30%, transparent)" }}>
@@ -90,6 +122,53 @@ export default function EHRBillingSettings({ clinician }) {
             </div>
             <EhrInput label="Tax ID (optional)" value={form.tax_id} onChange={(e) => { setForm({ ...form, tax_id: e.target.value }); setSaved(false); }} placeholder="EIN" />
           </div>
+        </EhrCard>
+
+        <EhrCard style={{ marginBottom: "1.5rem" }}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 0.5rem" }}>Insurance Payers (Billing Types)</h3>
+          <p style={{ fontSize: 12, color: "var(--ehr-muted)", margin: "0 0 1rem", lineHeight: 1.6 }}>
+            Payers your clinic bills — Medicare, Medicaid, commercial plans (BCBS, Aetna, etc.).
+            Staff pick from this list on patient charts and insurance claims; you can still type a custom name if needed.
+          </p>
+          {form.insurance_payers.map((p, i) => (
+            <div key={i} style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 160px auto",
+              gap: 10,
+              alignItems: "end",
+              padding: "0.75rem 0",
+              borderTop: i > 0 ? "1px solid var(--ehr-border)" : "none",
+            }}>
+              <EhrInput
+                label={i === 0 ? "Payer Name" : undefined}
+                value={p.name}
+                onChange={(e) => setPayer(i, "name", e.target.value)}
+                placeholder="e.g. Medicare, Blue Cross Blue Shield"
+              />
+              <EhrSelect
+                label={i === 0 ? "Type" : undefined}
+                value={p.category}
+                onChange={(e) => setPayer(i, "category", e.target.value)}
+                options={PAYER_CATEGORIES.map((c) => ({ value: c.value, label: c.label }))}
+              />
+              <EhrBtn type="button" variant="secondary" small onClick={() => removePayer(i)} style={{ marginBottom: 2 }}>
+                Remove
+              </EhrBtn>
+            </div>
+          ))}
+          <EhrBtn type="button" variant="secondary" small onClick={addPayer} style={{ marginTop: 12 }}>
+            + Add Payer
+          </EhrBtn>
+          {form.insurance_payers.length > 0 && (
+            <div style={{ fontSize: 11, color: "var(--ehr-muted2)", marginTop: 12 }}>
+              {form.insurance_payers.filter((p) => p.name?.trim()).length} payer(s) configured
+              {" · "}
+              {["medicare", "medicaid", "commercial"].map((cat) => {
+                const n = form.insurance_payers.filter((p) => p.category === cat && p.name?.trim()).length;
+                return n ? `${n} ${payerCategoryLabel(cat)}` : null;
+              }).filter(Boolean).join(", ")}
+            </div>
+          )}
         </EhrCard>
 
         <EhrCard style={{ marginBottom: "1.5rem" }}>

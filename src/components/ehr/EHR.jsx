@@ -22,7 +22,7 @@ import EHRStaffHelper from "./EHRStaffHelper";
 import { Spinner, EhrStyles } from "./EHRUI";
 import { consumeEHRIntent } from "../../lib/clinicalNav";
 
-export default function EHR({ onBack, onOpenDocs, initialView }) {
+export default function EHR({ onBack, onOpenDocs, onOpenTool, initialView }) {
   // ── ALL hooks must be declared unconditionally at the top ──────────────────
   const [session, setSession]         = useState(undefined);
   const [clinician, setClinician]     = useState(null);
@@ -48,7 +48,7 @@ export default function EHR({ onBack, onOpenDocs, initialView }) {
     { key: "invoices", label: "Patient Invoices", color: "accent" },
     { key: "reports", label: "Reports", color: "purple" },
     { key: "giftcards", label: "Gift Cards", color: "green" },
-    { key: "billing-settings", label: "Billing Setup", color: "muted" },
+    { key: "billing-settings", label: "Billing Settings", color: "muted" },
   ];
 
   const openFinanceMenu = () => {
@@ -191,17 +191,24 @@ export default function EHR({ onBack, onOpenDocs, initialView }) {
       }}>
         {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, minWidth: 0 }}>
-          <img src="/logo.png" alt="MindShift" style={{ width: 32, height: 32, borderRadius: 8, objectFit: "contain" }}/>
-          <div style={{ lineHeight: 1.15, minWidth: 0 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ehr-text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>MindShift EHR</div>
-            {(view === "chart" && chartContext?.patientName) ? (
-              <div style={{ fontSize: 10, color: "var(--ehr-teal)", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 160 }}>
-                {chartContext.tabLabel ? `${chartContext.patientName} · ${chartContext.tabLabel}` : chartContext.patientName}
-              </div>
-            ) : (
-              <div style={{ fontSize: 10, color: "var(--ehr-muted2)" }}>Clinical Suite</div>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={onBack}
+            title="Back to Clinical Suite"
+            style={{ display: "flex", alignItems: "center", gap: 8, background: "transparent", border: "none", cursor: onBack ? "pointer" : "default", padding: 0, fontFamily: "inherit", textAlign: "left" }}
+          >
+            <img src="/logo.png" alt="MindShift" style={{ width: 32, height: 32, borderRadius: 8, objectFit: "contain" }}/>
+            <div style={{ lineHeight: 1.15, minWidth: 0 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ehr-text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>MindShift EHR</div>
+              {(view === "chart" && chartContext?.patientName) ? (
+                <div style={{ fontSize: 10, color: "var(--ehr-teal)", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 160 }}>
+                  {chartContext.tabLabel ? `${chartContext.patientName} · ${chartContext.tabLabel}` : chartContext.patientName}
+                </div>
+              ) : (
+                <div style={{ fontSize: 10, color: "var(--ehr-muted2)" }}>{onBack ? "Clinical Suite" : "MindShift"}</div>
+              )}
+            </div>
+          </button>
         </div>
 
         {/* Primary nav */}
@@ -311,6 +318,8 @@ export default function EHR({ onBack, onOpenDocs, initialView }) {
             onOpenChart={(id) => { setActiveChartId(id); setView("chart"); }}
             onNewChart={() => { setActiveChartId(null); setView("new-chart"); }}
             onNavigateView={setView}
+            onOpenTool={onOpenTool}
+            onOpenClinicalSuite={onBack}
           />
         )}
         {view === "intakes" && (
@@ -344,8 +353,18 @@ export default function EHR({ onBack, onOpenDocs, initialView }) {
             onFocusDateConsumed={() => setScheduleFocusDate(null)}
           />
         )}
-        {view === "tasks"     && <EHRTasks     clinician={clinician} />}
-        {view === "messages"  && <EHRPatientMessages clinician={clinician} />}
+        {view === "tasks" && (
+          <EHRTasks
+            clinician={clinician}
+            onOpenChart={(id) => { setActiveChartId(id); setView("chart"); }}
+          />
+        )}
+        {view === "messages" && (
+          <EHRPatientMessages
+            clinician={clinician}
+            onOpenChart={(id) => { setActiveChartId(id); setView("chart"); }}
+          />
+        )}
         {view === "staff-messages" && <EHRMessages clinician={clinician} />}
         {view === "reports"   && <EHRReports   clinician={clinician} />}
         {view === "crisis"    && <EHRCrisisAlerts />}

@@ -12,7 +12,7 @@ function chartDisplayName(c) {
   return c.full_name || c.patient?.raw_user_meta_data?.full_name || c.patient?.email || "Unknown Patient";
 }
 
-export default function EHRDashboard({ clinician, onOpenChart, onNewChart, onNavigateView }) {
+export default function EHRDashboard({ clinician, onOpenChart, onNewChart, onNavigateView, onOpenTool, onOpenClinicalSuite }) {
   const [charts, setCharts]   = useState([]);
   const [stats, setStats]     = useState(null);
   const [loading, setLoading] = useState(true);
@@ -146,13 +146,54 @@ export default function EHRDashboard({ clinician, onOpenChart, onNewChart, onNav
               {stats?.totalPatients ?? 0} patients · {upcomingAppts.length} upcoming today
             </p>
           </div>
-          <EhrBtn onClick={onNewChart} style={{ boxShadow:"0 6px 24px rgba(124,111,247,0.4)" }}>
-            <span style={{ fontSize:16 }}>+</span> New Patient Chart
+          <EhrBtn onClick={onNewChart} style={{ boxShadow: "0 6px 24px rgba(124,111,247,0.4)" }}>
+            <span style={{ fontSize: 16 }}>+</span> New Patient Chart
           </EhrBtn>
         </div>
       </div>
 
       <div style={{ padding:"1.8rem 2.5rem", maxWidth:1300, margin:"0 auto" }}>
+
+        {/* Quick tools */}
+        {onOpenTool && (
+          <div style={{ display: "flex", gap: 10, marginBottom: "1.25rem", flexWrap: "wrap" }}>
+            <button type="button" onClick={() => onOpenTool("ehr-schedule")} className="ehr-stat-card" style={{
+              flex: "1 1 180px", display: "flex", alignItems: "center", gap: 12,
+              background: "rgba(74,108,247,0.08)", border: "1px solid rgba(74,108,247,0.22)",
+              borderRadius: 16, padding: "1rem 1.2rem", cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+            }}>
+              <span style={{ fontSize: 22 }}>🔍</span>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ehr-text)" }}>Patient Lookup</div>
+                <div style={{ fontSize: 11, color: "var(--ehr-muted)", marginTop: 2 }}>Portal ID, notes, Rx, documents</div>
+              </div>
+            </button>
+            <button type="button" onClick={() => onOpenTool("ai-scribe")} className="ehr-stat-card" style={{
+              flex: "1 1 180px", display: "flex", alignItems: "center", gap: 12,
+              background: "rgba(14,165,160,0.08)", border: "1px solid rgba(14,165,160,0.22)",
+              borderRadius: 16, padding: "1rem 1.2rem", cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+            }}>
+              <span style={{ fontSize: 22 }}>🎙️</span>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ehr-text)" }}>MindShift Scribe</div>
+                <div style={{ fontSize: 11, color: "var(--ehr-muted)", marginTop: 2 }}>Record session → push note to EHR</div>
+              </div>
+            </button>
+            {onOpenClinicalSuite && (
+              <button type="button" onClick={onOpenClinicalSuite} className="ehr-stat-card" style={{
+                flex: "1 1 160px", display: "flex", alignItems: "center", gap: 12,
+                background: "rgba(124,111,247,0.06)", border: "1px solid rgba(124,111,247,0.18)",
+                borderRadius: 16, padding: "1rem 1.2rem", cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+              }}>
+                <span style={{ fontSize: 22 }}>⚕️</span>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ehr-text)" }}>Clinical Suite</div>
+                  <div style={{ fontSize: 11, color: "var(--ehr-muted)", marginTop: 2 }}>All clinic tools hub</div>
+                </div>
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Stats grid */}
         <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14, marginBottom:"2rem" }}>

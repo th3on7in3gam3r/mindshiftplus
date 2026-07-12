@@ -7,10 +7,11 @@ import {
   formatCents, parseDollars, filterCptCodes, computePatientBalance, validateFinancials,
   getChartNotesReadyForClaim, createClaimFromNote, getBillingSettings,
   getClaimsForChart,
-  PLACE_OF_SERVICE,
+  PLACE_OF_SERVICE, insurancePayerOptions,
 } from "../../lib/billingDb";
 import { getChart } from "../../lib/ehrDb";
 import SuperbillPrintView from "../billing/SuperbillPrintView";
+import InsurancePayerInput from "../billing/InsurancePayerInput";
 
 // ── Status badge colors ────────────────────────────────────────────────────────
 const STATUS_COLOR = {
@@ -167,6 +168,14 @@ function DollarInput({ label, valueCents, onChange }) {
 // ── ClaimForm ─────────────────────────────────────────────────────────────────
 function ClaimForm({ claim, chartId, patientId, chart, clinician, onSaved, onCancel }) {
   const isInsurance = (claim?.claim_type ?? "insurance_claim") === "insurance_claim";
+  const [payers, setPayers] = useState([]);
+
+  useEffect(() => {
+    getBillingSettings().then(({ data }) => {
+      setPayers(insurancePayerOptions(data?.insurance_payers));
+    });
+  }, []);
+
   const [form, setForm] = useState({
     id: claim?.id,
     claim_type: claim?.claim_type ?? "insurance_claim",
@@ -260,7 +269,12 @@ function ClaimForm({ claim, chartId, patientId, chart, clinician, onSaved, onCan
           <>
             <EhrSelect label="Place of Service" value={form.place_of_service} onChange={e => set("place_of_service")(e.target.value)} options={PLACE_OF_SERVICE.map(p => ({ value: p.code, label: p.label }))} />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-              <EhrInput label="Insurance" value={form.insurance_provider} onChange={setE("insurance_provider")} />
+              <InsurancePayerInput
+                label="Insurance Payer"
+                value={form.insurance_provider}
+                onChange={setE("insurance_provider")}
+                payers={payers}
+              />
               <EhrInput label="Member ID" value={form.insurance_member_id} onChange={setE("insurance_member_id")} />
               <EhrInput label="Group" value={form.insurance_group} onChange={setE("insurance_group")} />
             </div>

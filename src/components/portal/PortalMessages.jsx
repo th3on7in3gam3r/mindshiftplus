@@ -14,6 +14,8 @@ export default function PortalMessages({ userId, displayName, userEmail, P }) {
   const [sending, setSending] = useState(false);
   const [toast, setToast] = useState("");
   const [selected, setSelected] = useState(null);
+  const [threadReply, setThreadReply] = useState("");
+  const [replySending, setReplySending] = useState(false);
 
   const load = async () => {
     try { const data = await getMessages(userId); setMessages(Array.isArray(data)?data:[]); }
@@ -68,7 +70,24 @@ export default function PortalMessages({ userId, displayName, userEmail, P }) {
 
   const handleSelect = async (msg) => {
     setSelected(msg);
+    setThreadReply("");
     if(!msg.read&&msg.sender_role==="clinic"){ try{ await markMessageRead(msg.id); }catch{} load(); }
+  };
+
+  const handleThreadReply = async (e) => {
+    e.preventDefault();
+    if (!threadReply.trim() || !activeThreadId) return;
+    setReplySending(true);
+    try {
+      const subject = activeSubject.startsWith("Re:") ? activeSubject : `Re: ${activeSubject}`;
+      await sendMessage(userId, subject, threadReply.trim(), activeThreadId);
+      showToast("✓ Message sent to your care team.");
+      setThreadReply("");
+      await load();
+    } catch {
+      showToast("Failed to send. Please try again.");
+    }
+    setReplySending(false);
   };
 
   const fmt = (iso) => new Date(iso).toLocaleDateString("en-US",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
@@ -79,6 +98,12 @@ export default function PortalMessages({ userId, displayName, userEmail, P }) {
     latest:msgs.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0],
     hasUnread:msgs.some(m=>!m.read&&m.sender_role==="clinic"),
   })).sort((a,b)=>new Date(b.latest.created_at)-new Date(a.latest.created_at));
+
+  const activeThreadId = selected ? (selected.thread_id || selected.id) : null;
+  const activeThreadMessages = activeThreadId
+    ? (threads[activeThreadId] || [selected]).slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+    : [];
+  const activeSubject = activeThreadMessages.find((m) => m.subject)?.subject || selected?.subject || "Message";
 
   return (
     <div style={{ padding:"2rem", maxWidth:860, margin:"0 auto" }}>
@@ -119,12 +144,13 @@ export default function PortalMessages({ userId, displayName, userEmail, P }) {
       {/* Thread view */}
       {selected ? (
         <div>
-          <button onClick={()=>setSelected(null)} style={{ background:"transparent", border:"none", color:T.accent, fontSize:13, cursor:"pointer", marginBottom:"1rem", display:"flex", alignItems:"center", gap:6 }}>← Back to messages</button>
+          <button onClick={()=>{ setSelected(null); setThreadReply(""); }} style={{ background:"transparent", border:"none", color:T.accent, fontSize:13, cursor:"pointer", marginBottom:"1rem", display:"flex", alignItems:"center", gap:6 }}>← Back to messages</button>
           <Card>
-            <div style={{ fontWeight:700, fontSize:15, color:T.text, marginBottom:4 }}>{selected.subject||"Message"}</div>
+            <div style={{ fontWeight:700, fontSize:15, color:T.text, marginBottom:4 }}>{activeSubject}</div>
+            <div style={{ fontSize:12, color:T.muted, marginBottom:12 }}>Secure conversation with MindShift Wellness Clinic</div>
             <SectionDivider label="Conversation" color={T.teal}/>
-            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-              {(threads[selected.thread_id||selected.id]||[selected]).map(m=>(
+            <div style={{ display:"flex", flexDirection:"column", gap:12, marginBottom:"1rem" }}>
+              {activeThreadMessages.map(m=>(
                 <div key={m.id} style={{ display:"flex", justifyContent:m.sender_role==="patient"?"flex-end":"flex-start" }}>
                   <div style={{
                     maxWidth:"80%", padding:"10px 14px",
@@ -132,15 +158,31 @@ export default function PortalMessages({ userId, displayName, userEmail, P }) {
                     background:m.sender_role==="patient"?`linear-gradient(135deg,${T.accent},${T.teal})`:"#f3f4f6",
                     fontSize:13, lineHeight:1.65,
                     color:m.sender_role==="patient"?"#fff":T.text,
+                    border: m.sender_role==="clinic" ? `1px solid ${T.border}` : "none",
                   }}>
                     <div style={{ fontSize:10, color:m.sender_role==="patient"?"rgba(255,255,255,0.6)":T.muted2, marginBottom:4 }}>
                       {m.sender_role==="clinic"?<><img src="/logo.png" alt="" style={{width: 12, height: 12, verticalAlign: 'middle', display: 'inline-block'}} /> MindShift Clinic</>:"👤 You"} · {fmt(m.created_at)}
+                      {m.sender_role==="clinic" && !m.read && <span style={{ marginLeft: 6, color: T.accent, fontWeight: 700 }}>· New</span>}
                     </div>
                     {m.body}
                   </div>
                 </div>
               ))}
             </div>
+            <SectionDivider label="Your reply" color={T.accent}/>
+            <form onSubmit={handleThreadReply} style={{ display:"flex", flexDirection:"column", gap:10, marginTop:12 }}>
+              <textarea
+                value={threadReply}
+                onChange={(e) => setThreadReply(e.target.value)}
+                rows={3}
+                placeholder="Reply to your care team…"
+                required
+                style={{ width:"100%", padding:"12px 14px", borderRadius:12, border:`1.5px solid ${T.border}`, fontSize:14, fontFamily:"inherit", resize:"vertical", lineHeight:1.55 }}
+              />
+              <div style={{ display:"flex", justifyContent:"flex-end" }}>
+                <Btn type="submit" disabled={replySending || !threadReply.trim()}>{replySending ? "Sending…" : "Send Reply"}</Btn>
+              </div>
+            </form>
           </Card>
         </div>
       ) : (

@@ -132,9 +132,56 @@ export async function getPrescriptions(patient_id) {
 }
 
 export async function addPrescription(fields) {
-  const { data, error } = await supabase.from("prescriptions").insert(fields).select().single();
+  const { data, error } = await supabase.from("prescriptions").insert({ source: "clinic", ...fields }).select().single();
   if (error) throw new Error(error.message);
   return data;
+}
+
+export async function addPatientReportedMedication(patient_id, fields) {
+  const { data, error } = await supabase.from("prescriptions").insert({
+    patient_id,
+    medication: fields.medication,
+    dosage: fields.dosage || null,
+    frequency: fields.frequency || null,
+    prescribed_date: fields.prescribed_date || null,
+    prescriber: fields.prescriber || "Self-reported",
+    notes: fields.notes || null,
+    status: fields.status || "active",
+    refills_remaining: 0,
+    source: "patient_reported",
+  }).select().single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function updatePatientReportedMedication(id, patient_id, fields) {
+  const { data, error } = await supabase.from("prescriptions")
+    .update({
+      medication: fields.medication,
+      dosage: fields.dosage || null,
+      frequency: fields.frequency || null,
+      prescribed_date: fields.prescribed_date || null,
+      prescriber: fields.prescriber || "Self-reported",
+      notes: fields.notes || null,
+      status: fields.status || "active",
+    })
+    .eq("id", id)
+    .eq("patient_id", patient_id)
+    .eq("source", "patient_reported")
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function deletePatientReportedMedication(id, patient_id) {
+  const { error } = await supabase.from("prescriptions")
+    .delete()
+    .eq("id", id)
+    .eq("patient_id", patient_id)
+    .eq("source", "patient_reported");
+  if (error) throw new Error(error.message);
+  return { success: true };
 }
 
 export async function updatePrescriptionStatus(id, status) {

@@ -11,10 +11,19 @@ import PortalJournal from "./PortalJournal";
 import PortalIntake from "./PortalIntake";
 import PortalBilling from "./PortalBilling";
 import { getMyIntake } from "../../lib/intakeDb";
-import { consumePortalPageIntent } from "../../lib/patientMode";
+import { consumePortalPageIntent, consumePortalAuthAudience } from "../../lib/patientMode";
+import { isAdminEmail, getClinicianRole } from "../../lib/ehrDb";
+
+async function authorizeStaffUser(user) {
+  if (!user?.email) return false;
+  if (isAdminEmail(user.email)) return true;
+  const { data } = await getClinicianRole(user.id);
+  return !!data;
+}
 
 // ── Inline auth screen — stays on portal, no redirect ─────────────────────────
-function PortalAuthScreen({ onBack }) {
+function PortalAuthScreen({ onBack, onStaffSignIn }) {
+  const [audience, setAudience] = useState(() => consumePortalAuthAudience());
   const [mode, setMode] = useState("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,8 +42,24 @@ function PortalAuthScreen({ onBack }) {
 
   const handleSignIn = async (e) => {
     e.preventDefault(); setError(""); setLoading(true);
-    const { error: err } = await supabase.auth.signInWithPassword({ email, password });
-    if (err) setError(err.message.includes("Invalid") ? "Incorrect email or password." : err.message);
+    const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
+    if (err) {
+      setError(err.message.includes("Invalid") ? "Incorrect email or password." : err.message);
+      setLoading(false);
+      return;
+    }
+    if (audience === "staff") {
+      const ok = await authorizeStaffUser(data.user);
+      if (!ok) {
+        await supabase.auth.signOut({ scope: "local" });
+        setError("This account is not authorized for staff access. Use Patient sign-in or contact the clinic administrator.");
+        setLoading(false);
+        return;
+      }
+      onStaffSignIn?.();
+      setLoading(false);
+      return;
+    }
     setLoading(false);
   };
 
@@ -71,26 +96,40 @@ function PortalAuthScreen({ onBack }) {
             <img src="/logo.png" alt="MindShift Wellness Clinic" style={{ width:44, height:44, borderRadius:12, objectFit:"contain", background:"#fff", padding:3, flexShrink:0 }}/>
             <div>
               <div style={{ fontSize:15, fontWeight:700, color:"#fff", lineHeight:1.2 }}>MindShift Wellness Clinic</div>
-              <div style={{ fontSize:11, color:"rgba(255,255,255,0.45)", lineHeight:1.2 }}>Patient Portal</div>
+              <div style={{ fontSize:11, color:"rgba(255,255,255,0.45)", lineHeight:1.2 }}>
+                {audience === "staff" ? "Clinical Suite · Staff" : "Patient Portal"}
+              </div>
             </div>
           </div>
 
           <h2 style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"clamp(1.8rem,3vw,2.6rem)", fontWeight:300, color:"#fff", lineHeight:1.15, marginBottom:"1rem", letterSpacing:"-0.02em" }}>
-            Your care,<br/><em style={{ fontStyle:"italic", color:"rgba(107,138,249,0.95)" }}>at your fingertips.</em>
+            {audience === "staff" ? (
+              <>Clinical tools,<br/><em style={{ fontStyle:"italic", color:"rgba(107,138,249,0.95)" }}>one secure sign-in.</em></>
+            ) : (
+              <>Your care,<br/><em style={{ fontStyle:"italic", color:"rgba(107,138,249,0.95)" }}>at your fingertips.</em></>
+            )}
           </h2>
           <p style={{ fontSize:13, color:"rgba(255,255,255,0.5)", lineHeight:1.75, marginBottom:"2rem" }}>
-            Securely manage your health journey — appointments, messages, records, and more.
+            {audience === "staff"
+              ? "Sign in with your authorized clinic email to open EHR, Scribe, Admin Dashboard, and Staff Docs."
+              : "Securely manage your health journey — appointments, messages, records, and more."}
           </p>
 
           {/* Feature list */}
           <div style={{ display:"flex", flexDirection:"column", gap:14, marginBottom:"2rem" }}>
-            {[
+            {(audience === "staff" ? [
+              ["⚕","Clinical Suite","EHR, Scribe, Staff Docs hub"],
+              ["🏥","MindShift EHR","Charts, schedule, billing"],
+              ["🎙️","MindShift Scribe","AI session notes"],
+              ["🔍","Admin Dashboard","Patient lookup & telehealth tools"],
+              ["📖","Staff Docs & Milo","How-to guides for clinic staff"],
+            ] : [
               ["📅","Appointments","View, book & manage visits"],
               ["💬","Secure Messaging","Contact your care team directly"],
               ["📄","Documents & Forms","Access records & intake forms"],
               ["💊","Prescriptions","View medications & refill status"],
               ["📋","Visit Notes","Review notes from your clinician"],
-            ].map(([icon, title, sub]) => (
+            ]).map(([icon, title, sub]) => (
               <div key={title} style={{ display:"flex", alignItems:"center", gap:12 }}>
                 <div style={{ width:36, height:36, borderRadius:10, background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.1)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, flexShrink:0 }}>{icon}</div>
                 <div>
@@ -101,11 +140,13 @@ function PortalAuthScreen({ onBack }) {
             ))}
           </div>
 
-          {/* Accepting badge */}
+          {/* Accepting badge — patients only */}
+          {audience === "patient" && (
           <div style={{ display:"inline-flex", alignItems:"center", gap:6, background:"rgba(34,197,94,0.15)", border:"1px solid rgba(34,197,94,0.3)", borderRadius:20, padding:"5px 12px", marginBottom:"1.5rem" }}>
             <span style={{ width:7, height:7, borderRadius:"50%", background:"#22c55e", display:"inline-block" }}/>
             <span style={{ fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.7)", letterSpacing:"0.05em" }}>Now accepting new patients</span>
           </div>
+          )}
         </div>
 
         {/* Bottom contact */}
@@ -119,7 +160,28 @@ function PortalAuthScreen({ onBack }) {
       {/* Right form panel */}
       <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", padding:"3rem 2rem" }}>
         <div style={{ width:"100%", maxWidth:400 }}>
-          {onBack && <button onClick={onBack} style={{ background:"transparent", border:"none", color:"#6b7280", fontSize:13, cursor:"pointer", marginBottom:"2rem", padding:0, display:"flex", alignItems:"center", gap:5 }}>← Back to clinic site</button>}
+          {onBack && <button onClick={onBack} style={{ background:"transparent", border:"none", color:"#6b7280", fontSize:13, cursor:"pointer", marginBottom:"1.5rem", padding:0, display:"flex", alignItems:"center", gap:5 }}>← Back to clinic site</button>}
+
+          {/* Patient vs Staff */}
+          <div style={{ display:"flex", gap:4, marginBottom:"1.5rem", background:"#eef0f7", padding:4, borderRadius:12, border:"1px solid #e5e7eb" }}>
+            {[
+              { id: "patient", label: "Patient" },
+              { id: "staff", label: "Staff" },
+            ].map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => { setAudience(id); setError(""); setMode("signin"); setSent(false); }}
+                style={{
+                  flex:1, padding:"10px 12px", borderRadius:9, border:"none", fontSize:13, fontWeight:600, cursor:"pointer",
+                  background: audience === id ? "linear-gradient(135deg,#4a6cf7,#0ea5a0)" : "transparent",
+                  color: audience === id ? "#fff" : "#6b7280",
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
 
           {sent ? (
             <div style={{ textAlign:"center" }}>
@@ -130,11 +192,17 @@ function PortalAuthScreen({ onBack }) {
             </div>
           ) : mode === "signin" ? (
             <>
-              <h2 style={{ fontSize:"1.5rem", fontWeight:700, color:"#1a1f36", marginBottom:6 }}>Welcome back</h2>
-              <p style={{ fontSize:14, color:"#6b7280", marginBottom:"1.5rem" }}>Sign in to your patient portal</p>
+              <h2 style={{ fontSize:"1.5rem", fontWeight:700, color:"#1a1f36", marginBottom:6 }}>
+                {audience === "staff" ? "Staff sign in" : "Welcome back"}
+              </h2>
+              <p style={{ fontSize:14, color:"#6b7280", marginBottom:"1.5rem" }}>
+                {audience === "staff"
+                  ? "Authorized clinic staff only — opens Clinical Suite after sign-in"
+                  : "Sign in to your patient portal"}
+              </p>
               {error && <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:8, padding:"10px 14px", fontSize:13, color:"#dc2626", marginBottom:12 }}>{error}</div>}
               <form onSubmit={handleSignIn} style={{ display:"flex", flexDirection:"column", gap:14 }}>
-                <div><label style={{ fontSize:12, fontWeight:500, color:"#374151", display:"block", marginBottom:5 }}>Email</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" required style={inp} onFocus={focus} onBlur={blur}/></div>
+                <div><label style={{ fontSize:12, fontWeight:500, color:"#374151", display:"block", marginBottom:5 }}>Email</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder={audience === "staff" ? "you@mindshiftwellnessclinic.org" : "you@example.com"} required style={inp} onFocus={focus} onBlur={blur}/></div>
                 <div>
                   <div style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}>
                     <label style={{ fontSize:12, fontWeight:500, color:"#374151" }}>Password</label>
@@ -142,9 +210,18 @@ function PortalAuthScreen({ onBack }) {
                   </div>
                   <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••" required style={inp} onFocus={focus} onBlur={blur}/>
                 </div>
-                <button type="submit" disabled={loading} style={{ background:"linear-gradient(135deg,#4a6cf7,#0ea5a0)", border:"none", borderRadius:10, padding:"13px", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer", opacity:loading?0.7:1 }}>{loading?"Signing in…":"Sign In to Portal"}</button>
+                <button type="submit" disabled={loading} style={{ background: audience === "staff" ? "linear-gradient(135deg,#1e2a4a,#4a6cf7)" : "linear-gradient(135deg,#4a6cf7,#0ea5a0)", border:"none", borderRadius:10, padding:"13px", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer", opacity:loading?0.7:1 }}>
+                  {loading ? "Signing in…" : audience === "staff" ? "Sign In to Clinical Suite →" : "Sign In to Portal"}
+                </button>
               </form>
-              <p style={{ textAlign:"center", marginTop:"1.2rem", fontSize:13, color:"#6b7280" }}>New patient? <button onClick={()=>{ setError(""); setMode("signup"); }} style={{ background:"transparent", border:"none", color:"#4a6cf7", fontSize:13, cursor:"pointer", fontWeight:600 }}>Create account</button></p>
+              {audience === "patient" ? (
+                <p style={{ textAlign:"center", marginTop:"1.2rem", fontSize:13, color:"#6b7280" }}>New patient? <button onClick={()=>{ setError(""); setMode("signup"); }} style={{ background:"transparent", border:"none", color:"#4a6cf7", fontSize:13, cursor:"pointer", fontWeight:600 }}>Create account</button></p>
+              ) : (
+                <p style={{ textAlign:"center", marginTop:"1.2rem", fontSize:12, color:"#6b7280", lineHeight:1.6 }}>
+                  Staff accounts are created by the clinic administrator.<br />
+                  Are you a patient? <button type="button" onClick={()=>{ setAudience("patient"); setError(""); }} style={{ background:"transparent", border:"none", color:"#4a6cf7", fontSize:12, cursor:"pointer", fontWeight:600 }}>Switch to Patient sign-in</button>
+                </p>
+              )}
               {/* HIPAA Badge — Sign In */}
               <div style={{ marginTop:"1.2rem", textAlign:"center" }}>
                 <img src="/hipaa-compliance.png" alt="HIPAA Compliant" style={{ height:48, objectFit:"contain" }}/>
@@ -217,7 +294,7 @@ function Avatar({ name="P", size=36 }) {
   );
 }
 
-export default function Portal({ onExit }) {
+export default function Portal({ onExit, onStaffSignIn }) {
   const [session, setSession] = useState(undefined);
   const [page, setPage] = useState(() => consumePortalPageIntent() || "dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -258,7 +335,7 @@ export default function Portal({ onExit }) {
   );
 
   // Not logged in
-  if (!session) return <PortalAuthScreen onBack={onExit}/>;
+  if (!session) return <PortalAuthScreen onBack={onExit} onStaffSignIn={onStaffSignIn}/>;
 
   const user = session.user;
   const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Patient";

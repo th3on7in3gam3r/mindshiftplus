@@ -11,11 +11,16 @@ export const STAFF_DOC_META = {
 
 export const STAFF_DOC_QUICK_LINKS = [
   { label: "Meet Milo (staff AI)", anchor: "what-changed" },
+  { label: "July 2026 — what's new", anchor: "july-2026-updates" },
+  { label: "Superbill & billing types", anchor: "july-2026-updates" },
   { label: "What changed & why", anchor: "what-changed" },
   { label: "Day 1 setup checklist", anchor: "day-1-onboarding" },
   { label: "Open Clinical Suite", anchor: "getting-started" },
   { label: "Confirm an appointment", anchor: "ehr-schedule" },
   { label: "MRN vs Portal Patient ID", anchor: "patient-lookup" },
+  { label: "Patient Messages (reply)", anchor: "portal-messages" },
+  { label: "Patient Intakes", anchor: "ehr" },
+  { label: "Tasks & Reminders", anchor: "ehr" },
   { label: "Record & push a note", anchor: "scribe-workflow" },
   { label: "Bill insurance (superbill)", anchor: "insurance-billing" },
   { label: "Import notes from Heidi", anchor: "heidi-export-import" },
@@ -75,7 +80,7 @@ The public marketing page (\`mindshiftplus.html\`) still shows the wellness stor
 
 Milo greets you by name — e.g. *"Good morning, Dr. Kenneth"* or *"Good afternoon, Rachel"* — based on who is signed in.
 
-Milo answers **how-to questions** from Staff Docs — e.g. where to confirm appointments, MRN vs Portal Patient ID, Scribe → EHR push, superbills, telehealth (including expired links, EHR vs Admin confirm, and video vs Scribe recording).
+Milo answers **how-to questions** from Staff Docs — e.g. superbills & insurance payer types (Medicare, BCBS), patient messages, intakes, tasks, where to confirm appointments, MRN vs Portal Patient ID, Scribe → EHR push, telehealth (including expired links, EHR vs Admin confirm, and video vs Scribe recording).
 
 **Use Milo when:** You want step-by-step help with a clinic workflow — appointments, charts, billing, Scribe, or portal tools.
 
@@ -98,6 +103,227 @@ Everything in this section is in Staff Docs — browse the topics below or ask M
     ],
   },
   {
+    id: "july-2026-updates",
+    icon: "✨",
+    title: "July 2026 — New Features & Fixes (Ask Milo)",
+    items: [
+      {
+        q: "What's new in MindShift (July 2026) — summary for doctors?",
+        a: `This section covers recent clinic tools so **Dr. Kenneth and Rachel can ask Milo** instead of calling the site administrator for day-to-day questions.
+
+**Billing & insurance**
+• **Superbills** — MindShift builds and prints insurance billing documents from signed visit notes
+• **Billing Settings** — clinic info, **Insurance Payers** (Medicare, BCBS, etc.), and provider **NPI** numbers
+• **Insurance Claims** — create claims from notes, print superbill, track status (MindShift does **not** e-submit to insurance yet)
+
+**Patient communication**
+• **Patient Messages** — full inbox in EHR with **reply in thread** (no need to open portal)
+• Search, All/Unread filters, **New Message**, link to patient chart
+
+**Intakes & charts**
+• **Intakes** — portal paperwork queue (NOT patient signup); Pending → Reviewed → Create EHR Chart
+• **Manual charts** work without Portal Patient ID for notes & billing; Portal ID needed for portal messaging
+
+**Staff workflow**
+• **Tasks & Reminders** — internal clinic checklist (not patient-facing)
+• **Staff vs Patient login** on portal — clinicians use **Staff** tab or Clinical Suite
+• **EHR dashboard quick links** — Patient Lookup, MindShift Scribe, and Clinical Suite cards (no need to exit EHR)
+
+**Patient portal**
+• **Self-reported medications** — patients add meds from other doctors under **Medications → + Add Medication**
+
+**Where to ask:** **Staff Docs → Milo** or **Milo** button in the EHR toolbar. Milo reads this guide.`,
+      },
+      {
+        q: "What is Super Billing / a superbill?",
+        a: `**Superbill** (sometimes called "Super Billing") is the **insurance billing document** payers need to reimburse a visit. It is **not** a patient invoice.
+
+**What's on a superbill:**
+• Patient name, DOB, contact info
+• Insurance company, member ID, group number
+• Rendering provider name + **NPI** (10-digit national provider ID)
+• Date of service & place of service (office vs telehealth)
+• **ICD-10** diagnosis codes
+• **CPT** procedure codes and charges
+
+**What MindShift does (Phase 1):**
+MindShift **prepares and prints** superbills. It does **not** electronically submit claims to insurance yet — you submit the printed/PDF superbill via your clearinghouse, fax, or mail.
+
+**Quick workflow:**
+1. Sign visit note with CPT + diagnosis
+2. **Finance → Insurance Claims** → create claim from note
+3. Click **🖨 Superbill** → print or save PDF
+4. Submit to insurance outside MindShift
+
+**Not the same as Invoices:** Invoices = patient self-pay in the portal. Superbills = insurance reimbursement.`,
+      },
+      {
+        q: "Where is Billing Settings and what's on that page?",
+        a: `**Path:** **MindShift EHR → Finance** (top-right yellow button) → **Billing Settings**
+
+The page has **four sections** (scroll down — don't stop at Rendering Providers):
+
+| Section | What it stores |
+|---------|----------------|
+| **What is a Superbill?** | Help panel (dismiss with ×) |
+| **Clinic (Billing)** | Clinic name, billing address, phone, email, Tax ID (EIN) |
+| **Insurance Payers (Billing Types)** | Medicare, Medicaid, BCBS, Aetna, etc. — your master payer list |
+| **Rendering Providers** | Kenneth & Rachel — name, title, **NPI**, taxonomy |
+
+Click **Save Billing Settings** at the bottom after any changes.
+
+**Also under Finance:**
+• **Insurance Claims** — create claims, print superbills
+• **Patient Invoices** — self-pay balances to portal
+• **Reports** · **Gift Cards**`,
+      },
+      {
+        q: "How do I set Medicare, BCBS, and other insurance payer types?",
+        a: `**EHR → Finance → Billing Settings → Insurance Payers (Billing Types)**
+
+This is the clinic's master list of **who you bill** — not the patient's member ID (that goes on each chart).
+
+**For each payer, set:**
+• **Payer Name** — e.g. Medicare, Blue Cross Blue Shield of Massachusetts, Aetna
+• **Type** — Medicare · Medicaid · Commercial · TRICARE · Other
+
+**Pre-loaded defaults** include Medicare, MassHealth, BCBS MA, Harvard Pilgrim, Aetna, UHC, and others common in Massachusetts.
+
+**Actions:**
+• **+ Add Payer** — add a new plan
+• **Remove** — delete a payer from the list
+• **Save Billing Settings** — required to persist changes
+
+**Where staff use this list:**
+• **Patient chart → Edit Chart → Insurance → Payer** (dropdown suggestions)
+• **Insurance Claims** when editing a claim
+
+Staff can still **type a custom payer** if a patient has an unusual plan not on the list.`,
+      },
+      {
+        q: "How do Kenneth and Rachel sign in as staff (not as patients)?",
+        a: `Clinicians must use a **staff login**, not a patient portal account.
+
+**Option A — Clinical Suite (recommended)**
+1. Sign in to **MindShift+** with clinic email
+2. Open **Clinical Suite** (⚕ sidebar)
+3. Launch **MindShift EHR**, Scribe, or Admin
+
+**Option B — Portal Staff tab**
+On the patient portal login screen, switch **Patient | Staff** to **Staff**, then sign in with an authorized clinic email. Successful staff login routes to **Clinical Suite**.
+
+**Public site links:** **Staff Sign In** appears on the main website and patient portal pages.
+
+**Authorized staff:** Kenneth and Rachel's clinic emails (and designated admin accounts). Patient accounts cannot access EHR or billing.
+
+If you see "Access denied," you are signed in as a patient — sign out and use Staff login.`,
+      },
+      {
+        q: "How do I open Patient Lookup or MindShift Scribe without leaving the EHR?",
+        a: `On the **EHR → Patients** dashboard (home screen), use the **quick tool cards** below the greeting:
+
+| Card | Opens |
+|------|--------|
+| **🔍 Patient Lookup** | Admin **Patient Lookup & Tools** — Portal Patient ID, visit notes, Rx, documents |
+| **🎙️ MindShift Scribe** | **MindShift Scribe** — record session, generate note, push to EHR |
+| **⚕️ Clinical Suite** | Main hub with all clinic tools |
+
+You do **not** need the browser back button or to sign out. Click the **MindShift EHR logo** (top-left) anytime to return to **Clinical Suite**.
+
+**Tip:** Use **Patient Lookup** when you need a patient's **Portal Patient ID** to link messaging or portal features on their chart.`,
+      },
+      {
+        q: "How do Patient Messages work — can I reply from the EHR?",
+        a: `**Yes.** Staff can read and **reply directly in the EHR** — you do not need to open the patient portal.
+
+**Open messages:**
+• **EHR → Patient Messages** (top nav, 💬 badge = unread)
+• OR patient chart → **Messages** tab
+
+**Inbox features:**
+• Search by patient name or subject
+• **All / Unread** filters
+• **+ New Message** — pick a patient and start a thread
+• **Open chart** — jump to the patient's EHR chart from a conversation
+• **Reply box** at the bottom of each thread (sticky composer)
+
+**Where patients see replies:** **Patient Portal → Messages**. Replies you send from EHR appear there automatically.
+
+**Manual charts without Portal Patient ID:** The patient picker shows all EHR charts. Charts **without** a Portal Patient ID display a warning — link the Portal ID on the chart before messaging (patient must have a portal login).`,
+      },
+      {
+        q: "What are Patient Intakes — is that where patients sign up?",
+        a: `**No.** Intakes is **not** patient signup or account creation.
+
+**Intakes = portal paperwork** submitted after a patient is already signed in to the portal.
+
+**Patient path:**
+Portal login → **📋 Patient Intake** → complete forms & consents → **Submit**
+
+**Staff path — EHR → Intakes:**
+1. **Pending** — new submission waiting for review
+2. **Mark Reviewed** — you've read forms and checked consents
+3. **Create EHR Chart** — creates the official chart in **Patients**
+
+**Patients Kenneth adds manually** (EHR → + New Patient) **never appear in Intakes** — that is normal.
+
+**Coming soon:** Dr. Kenneth's full Comprehensive Psychiatric Evaluation and separate consent packages will appear in the same intake queue once digitized in the portal.`,
+      },
+      {
+        q: "What are Tasks & Reminders for?",
+        a: `**EHR → Tasks** is an **internal clinic to-do list** — for Kenneth, Rachel, and staff only. **Patients never see it.**
+
+**Use Tasks when something must happen after a visit:**
+• Sign a visit note or review Scribe output
+• Return a patient call
+• Prior authorization or insurance follow-up
+• Review labs
+• Send a portal message later
+
+**Features:**
+• Due date, priority (Low / Normal / High / Urgent)
+• Optional **patient link** — opens their chart
+• **Quick-add templates** for common workflows
+• **Overdue** tab for past-due items
+• Shared across authorized EHR users
+
+Check off tasks when complete. This replaces sticky notes and separate reminder apps for clinic operations.`,
+      },
+      {
+        q: "Insurance Claims vs Patient Invoices — which do I use?",
+        a: `| | **Insurance Claims** | **Patient Invoices** |
+|---|---|---|
+| **Purpose** | Bill **insurance companies** | Bill **patient self-pay** |
+| **Menu** | Finance → **Insurance Claims** | Finance → **Patient Invoices** |
+| **Output** | Draft claim + **🖨 Superbill** PDF | Invoice in **patient portal** |
+| **Patient sees it?** | ❌ No | ✅ Yes (portal billing) |
+| **Requires** | Signed note, CPT, NPI, insurance on chart | Amount owed, patient portal link |
+
+**Rule:** Use **Insurance Claims + Superbill** for Medicare, BCBS, and all insurance. Use **Invoices** only for copays, self-pay, or balances the patient pays directly.`,
+      },
+      {
+        q: "Day 1 billing setup — what should Kenneth configure?",
+        a: `Before billing real visits, complete **Finance → Billing Settings**:
+
+**1. Clinic (Billing)**
+Confirm MindShift Wellness Clinic name, address, phone, email. Add **Tax ID (EIN)** when available.
+
+**2. Insurance Payers (Billing Types)**
+Review the default list (Medicare, MassHealth, BCBS, etc.). Add or remove payers your clinic accepts. Save.
+
+**3. Rendering Providers**
+• **Kenneth Mutegyeki** — NPI **1487410999** (pre-filled)
+• **Rachel Nakkazi** — enter NPI when available (superbills warn until set)
+Taxonomy: \`363LP0808X\` (psychiatric NP)
+
+**4. Test workflow**
+Sign a test note → **Insurance Claims** → create claim → **Print Superbill** → verify NPI, payer, CPT, ICD-10.
+
+**Database (site administrator):** Run \`billing_phase1_insurance.sql\` and \`billing_insurance_payers.sql\` in Supabase if not already applied.`,
+      },
+    ],
+  },
+  {
     id: "day-1-onboarding",
     icon: "✅",
     title: "Day 1 Setup Checklist",
@@ -109,13 +335,16 @@ Everything in this section is in Staff Docs — browse the topics below or ask M
 **1. Run database migrations (admin / site owner)**
 In Supabase SQL Editor, run these files from the project repo in order (skip any already applied):
 • \`billing_phase1_insurance.sql\`
+• \`billing_insurance_payers.sql\`
+• \`patient_reported_medications.sql\`
 • \`billing_claims_patient_id_nullable.sql\`
 • \`ehr_charts_patient_id_nullable.sql\`
 • \`appointments_chart_id.sql\`
 
 **2. Billing setup**
-**MindShift EHR → Finance → Billing Setup**
-• Confirm clinic name, address, tax ID
+**MindShift EHR → Finance → Billing Settings**
+• Confirm clinic name, address, Tax ID
+• Review **Insurance Payers** (Medicare, BCBS, etc.)
 • Enter **Kenneth's NPI** (1487410999) and **Rachel's NPI** when available
 • Save settings
 
@@ -335,10 +564,11 @@ For patients who booked online, the appointment may include their portal account
         a: `After signing in to **MindShift EHR**:
 
 • **Patients** — search/filter charts; click a row to open the chart
+• **Quick tool cards** on the home screen — **Patient Lookup**, **MindShift Scribe**, **Clinical Suite** (switch tools without exiting)
 • **Intakes** — review new patient intake forms; create charts from approved intakes
 • **🚨 Crisis** — alerts when a patient triggers crisis language in the app
 • **Schedule / Finance (Insurance, Invoices, Reports)** — clinic operations
-• **Tasks** — follow-up items
+• **Tasks** — internal clinic to-do list (sign notes, callbacks, prior auth, lab review); shared with staff, not visible to patients
 • **Patient Messages** — secure portal messaging (badge = unread)
 
 **Tip:** Dashboard stat cards (Total Patients, Active, Upcoming Appts) are clickable—they scroll or jump to the relevant section.`,
@@ -358,10 +588,42 @@ After the chart exists, the patient appears in Scribe's patient dropdown and Pat
 After Scribe **Push to EHR**, a structured SOAP note also lands under **📝 Notes** ready for review and signing.`,
       },
       {
+        q: "What are Tasks & Reminders for?",
+        a: `**EHR → Tasks** is your **internal clinic checklist** — for you and staff only. Patients never see it.
+
+Use it when something must happen after a visit or between appointments:
+• Sign a visit note or review Scribe output
+• Call a patient back
+• Follow up on prior authorization or insurance
+• Review lab results
+• Send a secure portal message later
+
+Create a task with a **due date**, **priority**, and optional **patient link** (opens their chart). Check it off when done. Overdue items show in red.
+
+**Quick add** buttons cover common workflows. Tasks are shared across authorized EHR users so Rachel or Kenneth can see the same follow-up list.`,
+      },
+      {
+        q: "What are Patient Intakes for?",
+        a: `**EHR → Intakes** is where **portal intake paperwork** lands after a patient submits forms — not where they sign up for an account.
+
+**Patient path:** Portal sign-in → **📋 Patient Intake** → complete forms & consents → **Submit**
+
+**Staff path:**
+1. **Pending** — new submission awaiting review
+2. **Mark Reviewed** — you've read the forms and consents
+3. **Create EHR Chart** — official chart in Patients list
+
+Patients Kenneth adds manually (**Patients → New Patient**) skip Intakes entirely.
+
+**Coming soon:** Dr. Kenneth's full Comprehensive Psychiatric Evaluation and separate consent documents will appear in the same queue once deployed in the portal.`,
+      },
+      {
         q: "How do I message a patient?",
         a: `**EHR → Patient Messages** (inbox for all patients) OR open a patient chart → **Messages** tab.
 
-Messages sync with the patient portal. Replies from the portal appear here.`,
+Use the **reply box** at the bottom of a thread to respond — no need to open the patient portal. **+ New Message** starts a new conversation.
+
+Messages sync with the patient portal. See **July 2026 — New Features** in Staff Docs for full inbox guide (search, unread filter, Portal Patient ID warnings).`,
       },
     ],
   },
@@ -513,6 +775,20 @@ For technical issues, contact the site administrator with patient name, visit da
     title: "Insurance Billing (Phase 1)",
     items: [
       {
+        q: "What is a superbill?",
+        a: `A **superbill** is the itemized billing document insurance companies use to pay for a visit. It includes:
+
+• Patient demographics & insurance (member ID, group #)
+• Rendering provider **NPI** and taxonomy
+• Date of service & place of service
+• **ICD-10** diagnosis codes
+• **CPT** procedure codes and charges
+
+MindShift **generates and prints** superbills from signed visit notes — it does **not** electronically submit to insurance yet (you submit via clearinghouse, fax, or mail).
+
+**Billing Settings** stores clinic address, Tax ID, and provider NPIs. **Insurance Claims** is where you create claims and click **🖨 Superbill** to print.`,
+      },
+      {
         q: "How do we bill insurance companies in MindShift?",
         a: `MindShift **prepares** insurance claims and **prints superbills** — it does **not** electronically submit to payers yet (that requires a clearinghouse in a future phase).
 
@@ -527,11 +803,34 @@ For technical issues, contact the site administrator with patient name, visit da
       },
       {
         q: "Where do I add Kenneth and Rachel's NPI numbers?",
-        a: `**EHR → Billing** (top nav) → **Billing Settings**
+        a: `**EHR → Finance → Billing Settings** (not "Billing Setup" — same page)
+
+Scroll past **Clinic** and **Insurance Payers** to **Rendering Providers**.
 
 Enter each provider's **10-digit NPI** when available. Superbills will show a warning until NPI is set.
 
 Taxonomy is pre-filled for psychiatric NP (\`363LP0808X\`).`,
+      },
+      {
+        q: "I don't see Insurance Payers on Billing Settings — why?",
+        a: `The **Insurance Payers (Billing Types)** section sits **between Clinic (Billing) and Rendering Providers** on **Finance → Billing Settings**.
+
+If you only see Clinic + Rendering Providers + Save:
+1. **Scroll down** — the payer list may be below the fold
+2. **Hard refresh** the browser (Cmd+Shift+R / Ctrl+Shift+R)
+3. Confirm the latest site version is deployed — older builds did not include this section
+
+After deploy, you should also see the **"What is a Superbill?"** help panel at the top.
+
+**Site administrator:** ensure \`billing_insurance_payers.sql\` migration ran in Supabase.`,
+      },
+      {
+        q: "Where do I set Medicare, BCBS, and other insurance payers?",
+        a: `**EHR → Finance → Billing Settings** → **Insurance Payers (Billing Types)**
+
+Add every plan your clinic bills: **Medicare**, **MassHealth (Medicaid)**, **Blue Cross Blue Shield**, Aetna, etc. Each payer has a **type** (Medicare, Medicaid, Commercial, TRICARE, Other).
+
+That list appears when staff enter insurance on **patient charts** and **insurance claims**. You can still type a custom payer name if a patient has an unusual plan.`,
       },
       {
         q: "What's the difference between Insurance Claims and Invoices?",
@@ -807,9 +1106,23 @@ A: Claim **Place of Service** = **02** or **10**.`,
     items: [
       {
         q: "How do portal messages work?",
-        a: `Patients message the clinic from their **Patient Portal**. Staff read and reply from **MindShift EHR → Patient Messages** or from the patient's chart Messages tab.
+        a: `Patients message the clinic from their **Patient Portal → Messages**. Staff read and reply from **MindShift EHR → Patient Messages** or the patient's chart **Messages** tab.
 
-Messages are HIPAA-protected and tied to the patient's account.`,
+**Staff can reply directly in the EHR** — sticky reply box at the bottom of each thread. Patients see your reply in their portal automatically.
+
+Messages are HIPAA-protected and tied to the patient's portal account. Charts without a **Portal Patient ID** cannot receive portal messages until the ID is linked on the chart.`,
+      },
+      {
+        q: "How do I send a new message to a patient from the EHR?",
+        a: `**EHR → Patient Messages → + New Message**
+
+1. Pick the patient from the dropdown (all EHR charts appear)
+2. Enter subject and message body
+3. Send — thread opens in the inbox
+
+If the patient chart shows **no Portal Patient ID**, messaging may fail — open their chart → **Edit Chart** → add Portal Patient ID from **Admin → Patient Lookup**.
+
+Patients reply from **Portal → Messages**; your inbox updates with unread badge.`,
       },
       {
         q: "Who can archive or delete old portal messages?",
@@ -849,6 +1162,16 @@ The portal is separate from the staff Clinical Suite—patients never see EHR or
       {
         q: "How do patients book appointments?",
         a: `Portal **Appointments** or the public **Book Appointment** page. They only see open days: Mon/Thu evenings, Fri/Sat daytime. Sun/Tue/Wed are unavailable.`,
+      },
+      {
+        q: "Can patients add their own medications in the portal?",
+        a: `**Yes.** **Portal → Medications → + Add Medication**
+
+Patients can list meds they take from **other doctors** or forgot to mention at intake — name, dosage, frequency, prescribing doctor, and notes.
+
+These appear under **Medications You Added** (separate from prescriptions Kenneth/Rachel enter in the clinic). Staff see the same data when viewing the patient in **MindShift Admin → Prescriptions** or the EHR chart **Medications** tab after sync.
+
+Patients can **edit or remove** only what they added — not clinic prescriptions.`,
       },
     ],
   },

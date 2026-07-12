@@ -3,6 +3,27 @@ import { getAppointments, getMessages } from "./clinicApi";
 
 const MODE_KEY = "ms_home_mode";
 const PORTAL_PAGE_KEY = "ms_portal_page";
+const PORTAL_AUDIENCE_KEY = "ms_portal_audience";
+
+export function setPortalNavigateIntent(audience = "patient") {
+  try {
+    sessionStorage.setItem("ms_intent", "portal");
+    sessionStorage.setItem(PORTAL_AUDIENCE_KEY, audience === "staff" ? "staff" : "patient");
+  } catch { /* ignore */ }
+}
+
+export function consumePortalAuthAudience() {
+  try {
+    const stored = sessionStorage.getItem(PORTAL_AUDIENCE_KEY);
+    if (stored) sessionStorage.removeItem(PORTAL_AUDIENCE_KEY);
+    if (stored === "staff" || stored === "patient") return stored;
+  } catch { /* ignore */ }
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("portal") === "staff" || params.get("staff") === "1") return "staff";
+  } catch { /* ignore */ }
+  return "patient";
+}
 
 export function getHomeModePreference() {
   try {

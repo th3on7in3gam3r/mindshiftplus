@@ -39,10 +39,6 @@ h1 em{font-style:italic;color:var(--violet)}
 
 .sub{font-size:.95rem;color:var(--muted);line-height:1.75;margin-bottom:2rem}
 
-.coming-soon{display:inline-flex;align-items:center;gap:.5rem;background:rgba(42,157,143,.08);border:1px solid rgba(42,157,143,.2);border-radius:2rem;padding:.5rem 1.2rem;font-size:.82rem;font-weight:600;color:var(--teal);margin-bottom:2rem}
-.coming-soon::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--teal);animation:pulse 2s ease-in-out infinite}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
-
 .divider{height:1px;background:rgba(107,95,207,.1);margin:1.5rem 0}
 
 .info-row{display:flex;flex-direction:column;gap:.75rem;text-align:left;margin-bottom:2rem}
@@ -55,6 +51,10 @@ h1 em{font-style:italic;color:var(--violet)}
 .btn:hover{background:var(--violet);transform:translateY(-1px)}
 .btn-ghost{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;background:transparent;color:var(--ink);padding:.85rem 2rem;border-radius:3rem;font-weight:500;font-size:.9rem;text-decoration:none;border:1.5px solid rgba(26,28,46,.15);transition:all .25s;width:100%}
 .btn-ghost:hover{border-color:rgba(26,28,46,.35);background:rgba(26,28,46,.03)}
+.btn-staff{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;background:linear-gradient(135deg,#1e2a4a,#4a6cf7);color:#fff;padding:.85rem 2rem;border-radius:3rem;font-weight:600;font-size:.9rem;text-decoration:none;transition:all .25s;width:100%;margin-bottom:.75rem}
+.btn-staff:hover{opacity:.92;transform:translateY(-1px)}
+
+.staff-note{font-size:.78rem;color:var(--muted2);line-height:1.6;margin-top:.25rem}
 
 footer{padding:1.5rem 5%;text-align:center;border-top:1px solid rgba(107,95,207,.08)}
 footer p{font-size:.78rem;color:var(--muted2)}
@@ -83,10 +83,19 @@ footer p{font-size:.78rem;color:var(--muted2)}
     <h1>Patient <em>Portal</em></h1>
     <p class="sub">Securely access your appointments, records, and care team — all in one place.</p>
 
-    <a href="/" onclick="try{sessionStorage.setItem('ms_intent','portal')}catch(e){}return true;" class="btn" style="margin-top:1.5rem">
+    <a href="/" onclick="try{sessionStorage.setItem('ms_intent','portal');sessionStorage.setItem('ms_portal_audience','patient')}catch(e){}return true;" class="btn" style="margin-top:1.5rem">
       Sign In to Patient Portal →
     </a>
-    <a href="site-main.html" class="btn-ghost">Return to Clinic Site</a>
+
+    <div class="divider"></div>
+
+    <p class="staff-note">Authorized clinic staff</p>
+    <a href="/" onclick="try{sessionStorage.setItem('ms_intent','portal');sessionStorage.setItem('ms_portal_audience','staff')}catch(e){}return true;" class="btn-staff">
+      ⚕ Staff Sign In to Clinical Suite →
+    </a>
+    <p class="staff-note">EHR, Scribe, Admin Dashboard, and Staff Docs — clinic email required.</p>
+
+    <a href="site-main.html" class="btn-ghost" style="margin-top:.5rem">Return to Clinic Site</a>
   </div>
 </main>
 

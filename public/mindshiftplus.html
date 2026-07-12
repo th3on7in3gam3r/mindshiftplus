@@ -227,7 +227,8 @@ footer{background:var(--bg2);border-top:1px solid rgba(107,95,207,.1);padding:2.
           Start for Free
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
-        <a href="patient-portal.html" class="btn-ghost-light" onclick="try{sessionStorage.setItem('ms_intent','portal')}catch(e){}">Patient Login</a>
+        <a href="patient-portal.html" class="btn-ghost-light" onclick="try{sessionStorage.setItem('ms_intent','portal');sessionStorage.setItem('ms_portal_audience','patient')}catch(e){}">Patient Login</a>
+        <a href="#" class="btn-ghost-light" style="opacity:.75;font-size:.85rem;padding:.75rem 1.25rem" onclick="return openPortalStaff()">Staff Sign In</a>
       </div>
       <p style="font-size:.8rem;color:var(--muted2)">A tool offered by MindShift Wellness Clinic · Not a replacement for clinical care</p>
     </div>
@@ -503,6 +504,19 @@ function openAuthModal(){
   }
   // Otherwise navigate to the React app root — it will open auth modal
   try{ sessionStorage.setItem('ms_intent','auth'); }catch{}
+  window.location.href = '/';
+  return false;
+}
+
+function openPortalStaff(){
+  if(window.parent && window.parent !== window){
+    window.parent.postMessage({type:'mindshift-plus:navigate', page:'portal', portalAudience:'staff'},'*');
+    return false;
+  }
+  try{
+    sessionStorage.setItem('ms_intent','portal');
+    sessionStorage.setItem('ms_portal_audience','staff');
+  }catch(e){}
   window.location.href = '/';
   return false;
 }

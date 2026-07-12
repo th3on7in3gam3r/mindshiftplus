@@ -15,6 +15,8 @@ import EHRClinicalAI from "./EHRClinicalAI";
 import EHRBilling, { CptPicker } from "./EHRBilling";
 import EHRClinicalIntake from "./EHRClinicalIntake";
 import EHRScribeNotes from "./EHRScribeNotes";
+import { getBillingSettings, insurancePayerOptions } from "../../lib/billingDb";
+import InsurancePayerInput from "../billing/InsurancePayerInput";
 
 const TABS = [
   { id: "overview",     label: "Overview",     icon: "🏠" },
@@ -234,6 +236,14 @@ export default function EHRPatientChart({ chartId, clinician, onBack, onCreated,
 
 // ── Chart Edit Form ────────────────────────────────────────────────────────────
 function ChartEditForm({ chart, clinician, saving, saveError, onSave, onCancel }) {
+  const [payers, setPayers] = useState([]);
+
+  useEffect(() => {
+    getBillingSettings().then(({ data }) => {
+      setPayers(insurancePayerOptions(data?.insurance_payers));
+    });
+  }, []);
+
   const [form, setForm] = useState({
     id: chart?.id, patient_id: chart?.patient_id,
     mrn: chart?.mrn ?? "", full_name: chart?.full_name ?? "",
@@ -306,7 +316,12 @@ function ChartEditForm({ chart, clinician, saving, saveError, onSave, onCancel }
         <EhrCard>
           <h3 style={{ fontSize: 13, fontWeight: 700, color: "var(--ehr-accent)", marginBottom: "1rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>Insurance</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <EhrInput label="Provider" value={form.insurance_provider} onChange={set("insurance_provider")} />
+            <InsurancePayerInput
+              label="Payer"
+              value={form.insurance_provider}
+              onChange={set("insurance_provider")}
+              payers={payers}
+            />
             <EhrInput label="Member ID" value={form.insurance_member_id} onChange={set("insurance_member_id")} />
             <EhrInput label="Group #" value={form.insurance_group} onChange={set("insurance_group")} />
           </div>

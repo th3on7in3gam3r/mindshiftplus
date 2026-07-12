@@ -396,6 +396,7 @@ footer::before{content:'';position:absolute;top:0;left:5%;right:5%;height:1px;ba
     <li><a href="mindshiftplus.html">MindShift+</a></li>
     <li><a href="#faq">FAQ</a></li>
     <li><a href="#" onclick="return openPortal()">Patient Portal</a></li>
+    <li><a href="#" onclick="return openPortalStaff()" style="opacity:.85">Staff Sign In</a></li>
     <li><a href="tel:5083061128" class="nav-cta">Call Us</a></li>
   </ul>
   <button class="nav-toggle" id="navToggle" aria-label="Menu">
@@ -959,6 +960,7 @@ footer::before{content:'';position:absolute;top:0;left:5%;right:5%;height:1px;ba
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
         <a href="patient-portal.html" style="display:inline-flex;align-items:center;gap:.5rem;background:transparent;color:rgba(245,240,238,.8);padding:.85rem 2rem;border-radius:3rem;font-weight:500;font-size:.9rem;text-decoration:none;border:1.5px solid rgba(245,240,238,.25);transition:all .25s">Patient Login</a>
+        <a href="#" onclick="return openPortalStaff()" style="display:inline-flex;align-items:center;gap:.5rem;background:transparent;color:rgba(245,240,238,.55);padding:.85rem 1.5rem;border-radius:3rem;font-weight:500;font-size:.85rem;text-decoration:none;border:1.5px solid rgba(245,240,238,.12);transition:all .25s">Staff Sign In</a>
       </div>
       <p style="font-size:.75rem;color:rgba(245,240,238,.25);margin-top:1rem">MindShift+ is a wellness support tool, not a replacement for clinical care.</p>
     </div>
@@ -1105,6 +1107,9 @@ footer::before{content:'';position:absolute;top:0;left:5%;right:5%;height:1px;ba
       <ul class="footer-links">
         <li><a href="#">Help Center</a></li>
         <li><a href="#">About</a></li>
+        <li><a href="#" onclick="return openPortal()">Patient Portal</a></li>
+        <li><a href="#" onclick="return openPortalStaff()">Staff Sign In</a></li>
+        <li><a href="mindshiftplus.html">MindShift+</a></li>
         <li><a href="privacy.html">Privacy</a></li>
         <li><a href="terms.html">Terms</a></li>
         <li><a href="#">Contact</a></li>
@@ -1167,10 +1172,28 @@ function openApp(page){
 function openPortal(){
   try{
     if(window.parent && window.parent !== window){
-      window.parent.postMessage({type:'mindshift-plus:navigate', page:'portal'},'*');
+      window.parent.postMessage({type:'mindshift-plus:navigate', page:'portal', portalAudience:'patient'},'*');
       return false;
     }
-    try{ sessionStorage.setItem('ms_intent','portal'); }catch{}
+    try{
+      sessionStorage.setItem('ms_intent','portal');
+      sessionStorage.setItem('ms_portal_audience','patient');
+    }catch{}
+    window.location.href = '/';
+    return false;
+  }catch(e){ return false; }
+}
+
+function openPortalStaff(){
+  try{
+    if(window.parent && window.parent !== window){
+      window.parent.postMessage({type:'mindshift-plus:navigate', page:'portal', portalAudience:'staff'},'*');
+      return false;
+    }
+    try{
+      sessionStorage.setItem('ms_intent','portal');
+      sessionStorage.setItem('ms_portal_audience','staff');
+    }catch{}
     window.location.href = '/';
     return false;
   }catch(e){ return false; }

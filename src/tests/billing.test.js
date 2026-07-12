@@ -17,6 +17,9 @@ import {
   deleteClaim,
   updateClaim,
   DEFAULT_BILLING_SETTINGS,
+  normalizeInsurancePayers,
+  payerCategoryLabel,
+  insurancePayerOptions,
 } from "../lib/billingDb.js";
 
 // ── UNIT TESTS ─────────────────────────────────────────────────────────────────
@@ -423,6 +426,26 @@ describe("buildClaimPayloadFromNote", () => {
 describe("superbillNumber", () => {
   it("formats superbill id", () => {
     expect(superbillNumber({ id: "abcdef12-3456-7890-abcd-ef1234567890" })).toBe("SB-ABCDEF12");
+  });
+});
+
+describe("normalizeInsurancePayers", () => {
+  it("returns defaults when empty", () => {
+    expect(normalizeInsurancePayers([]).some((p) => p.name === "Medicare")).toBe(true);
+  });
+
+  it("trims names and keeps valid categories", () => {
+    const result = normalizeInsurancePayers([{ name: "  BCBS MA  ", category: "commercial" }]);
+    expect(result).toEqual([{ name: "BCBS MA", category: "commercial" }]);
+  });
+
+  it("sorts payers by category for pickers", () => {
+    const opts = insurancePayerOptions([
+      { name: "Aetna", category: "commercial" },
+      { name: "Medicare", category: "medicare" },
+    ]);
+    expect(opts[0].name).toBe("Medicare");
+    expect(payerCategoryLabel("medicaid")).toBe("Medicaid");
   });
 });
 

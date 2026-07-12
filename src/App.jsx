@@ -3299,7 +3299,12 @@ export default function App(){
       if(data.type==="mindshift-plus:openAuth") setShowAuth(true);
       if(data.type==="mindshift-plus:navigate") {
         if(data.page==="portal"){
-          setPage("portal"); // no auth required — just shows placeholder
+          try {
+            if (data.portalAudience === "staff") {
+              sessionStorage.setItem("ms_portal_audience", "staff");
+            }
+          } catch { /* ignore */ }
+          setPage("portal");
         } else if(data.page==="schedule"){
           setPage("schedule");
         } else {
@@ -3338,7 +3343,7 @@ export default function App(){
     return(
       <>
         <GlobalStyles/>
-        <Portal onExit={()=>setPage("landing")}/>
+        <Portal onExit={()=>setPage("landing")} onStaffSignIn={()=>setPage("clinical")}/>
       </>
     );
   }
@@ -3372,7 +3377,7 @@ export default function App(){
     return(
       <>
         <GlobalStyles/>
-        <EHR onBack={()=>setPage("clinical")} onOpenDocs={()=>setPage("staff-docs")}/>
+        <EHR onBack={()=>setPage("clinical")} onOpenDocs={()=>setPage("staff-docs")} onOpenTool={(id)=>setPage(id)}/>
       </>
     );
   }
