@@ -781,23 +781,71 @@ function AdminRxTab({ adminUser }) {
   );
 }
 
-// ── Clinician view of a patient's portal care journal ─────────────────────────
-function PortalJournalClinicianPanel({ patientId, patientName, onClose }) {
-  const [entries, setEntries] = useState([]);
+// ── Clinician view: portal care journal + MindShift+ wellness journal (Mia) ─────
+function JournalEntryCards({ entries, expanded, setExpanded, fmt, emptyMessage }) {
+  if (!entries.length) {
+    return (
+      <div style={{ textAlign: "center", padding: "1.5rem", color: P.muted, fontSize: 13 }}>{emptyMessage}</div>
+    );
+  }
+  return entries.map(e => (
+    <Card key={e.id} style={{ marginBottom: "0.75rem", padding: "1rem" }}>
+      <div
+        style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", cursor: "pointer" }}
+        onClick={() => setExpanded(expanded === e.id ? null : e.id)}
+      >
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+            <span style={{ fontSize: 18 }}>{e.mood || "🙂"}</span>
+            <div style={{ fontWeight: 600, fontSize: 14, color: P.text }}>{e.title || "Journal Entry"}</div>
+          </div>
+          <div style={{ fontSize: 11, color: P.muted2 }}>{fmt(e.created_at)}</div>
+          {e.tags?.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
+              {e.tags.map(t => (
+                <span key={t} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20, background: "rgba(14,165,160,0.1)", color: P.teal }}>{t}</span>
+              ))}
+            </div>
+          )}
+        </div>
+        <span style={{ color: P.accent, fontSize: 14, flexShrink: 0 }}>{expanded === e.id ? "▲" : "▼"}</span>
+      </div>
+      {expanded === e.id && (
+        <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: `1px solid ${P.border}` }}>
+          <p style={{ fontSize: 13, color: P.text, lineHeight: 1.8, whiteSpace: "pre-wrap", margin: 0 }}>{e.body}</p>
+        </div>
+      )}
+    </Card>
+  ));
+}
+
+function PatientJournalsClinicianPanel({ patientId, patientName, onClose }) {
+  const [journalTab, setJournalTab] = useState("portal");
+  const [portalEntries, setPortalEntries] = useState([]);
+  const [wellnessEntries, setWellnessEntries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [wellnessError, setWellnessError] = useState("");
   const [expanded, setExpanded] = useState(null);
 
   useEffect(() => {
     if (!patientId) return;
     let cancelled = false;
     setLoading(true);
-    import("../../lib/clinicApi").then(({ getPatientJournalForReview }) =>
-      getPatientJournalForReview(patientId)
-        .then((data) => {
-          if (!cancelled) setEntries(Array.isArray(data) ? data : []);
-        })
-        .catch(() => { if (!cancelled) setEntries([]); })
-        .finally(() => { if (!cancelled) setLoading(false); })
+    setWellnessError("");
+    setExpanded(null);
+    import("../../lib/clinicApi").then(({ getPatientJournalForReview, getWellnessJournalForReview }) =>
+      Promise.all([
+        getPatientJournalForReview(patientId).catch(() => []),
+        getWellnessJournalForReview(patientId).catch((err) => {
+          if (!cancelled) setWellnessError(err.message || "Could not load MindShift+ journal.");
+          return [];
+        }),
+      ]).then(([portal, wellness]) => {
+        if (cancelled) return;
+        setPortalEntries(Array.isArray(portal) ? portal : []);
+        setWellnessEntries(Array.isArray(wellness) ? wellness : []);
+        setLoading(false);
+      })
     );
     return () => { cancelled = true; };
   }, [patientId]);
@@ -806,11 +854,25 @@ function PortalJournalClinicianPanel({ patientId, patientName, onClose }) {
     weekday: "short", month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit",
   });
 
+  const tabBtn = (id, label, count) => (
+    <button
+      type="button"
+      onClick={() => { setJournalTab(id); setExpanded(null); }}
+      style={{
+        padding: "8px 14px", borderRadius: 9, border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer",
+        background: journalTab === id ? P.accent : "transparent",
+        color: journalTab === id ? "#fff" : P.muted,
+      }}
+    >
+      {label}{count != null ? ` (${count})` : ""}
+    </button>
+  );
+
   return (
     <Card style={{ marginTop: "1rem", marginBottom: "1rem", border: `2px solid ${P.teal}40` }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: "1rem", flexWrap: "wrap" }}>
         <div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: P.text }}>📓 Portal Care Journal</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: P.text }}>📓 Patient Journals</div>
           <div style={{ fontSize: 12, color: P.muted, marginTop: 4 }}>{patientName || "Patient"} · review during scheduled care only</div>
         </div>
         {onClose && (
@@ -819,37 +881,49 @@ function PortalJournalClinicianPanel({ patientId, patientName, onClose }) {
           </button>
         )}
       </div>
-      <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 10, padding: "8px 12px", marginBottom: "1rem", fontSize: 11, color: "#92400e", lineHeight: 1.55 }}>
-        Private entries from <strong>Patient Portal → Care Journal</strong>. Not the same as MindShift+ wellness journal (Mia).
+
+      <div style={{ display: "flex", gap: 4, marginBottom: "1rem", background: P.bg, padding: 4, borderRadius: 10, border: `1px solid ${P.border}`, flexWrap: "wrap" }}>
+        {tabBtn("portal", "Portal Care Journal", portalEntries.length)}
+        {tabBtn("wellness", "MindShift+ Journal (Mia)", wellnessEntries.length)}
       </div>
+
+      {journalTab === "portal" && (
+        <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 10, padding: "8px 12px", marginBottom: "1rem", fontSize: 11, color: "#92400e", lineHeight: 1.55 }}>
+          From <strong>Patient Portal → Care Journal</strong> — between-visit reflections linked to clinic care.
+        </div>
+      )}
+      {journalTab === "wellness" && (
+        <div style={{ background: "#f5f3ff", border: "1px solid #ddd6fe", borderRadius: 10, padding: "8px 12px", marginBottom: "1rem", fontSize: 11, color: "#5b21b6", lineHeight: 1.55 }}>
+          From <strong>MindShift+ → Journal</strong> (wellness app with Mia). Separate from the portal care journal. Crisis keywords here also appear in <strong>EHR → Crisis</strong>.
+        </div>
+      )}
+
       {loading ? (
-        <div style={{ color: P.muted, fontSize: 13 }}>Loading journal…</div>
-      ) : entries.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "1.5rem", color: P.muted, fontSize: 13 }}>No portal journal entries for this patient.</div>
-      ) : entries.map(e => (
-        <Card key={e.id} style={{ marginBottom: "0.75rem", padding: "1rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", cursor: "pointer" }} onClick={() => setExpanded(expanded === e.id ? null : e.id)}>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
-                <span style={{ fontSize: 18 }}>{e.mood || "🙂"}</span>
-                <div style={{ fontWeight: 600, fontSize: 14, color: P.text }}>{e.title || "Journal Entry"}</div>
-              </div>
-              <div style={{ fontSize: 11, color: P.muted2 }}>{fmt(e.created_at)}</div>
-              {e.tags?.length > 0 && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
-                  {e.tags.map(t => <span key={t} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20, background: "rgba(14,165,160,0.1)", color: P.teal }}>{t}</span>)}
-                </div>
-              )}
-            </div>
-            <span style={{ color: P.accent, fontSize: 14, flexShrink: 0 }}>{expanded === e.id ? "▲" : "▼"}</span>
-          </div>
-          {expanded === e.id && (
-            <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: `1px solid ${P.border}` }}>
-              <p style={{ fontSize: 13, color: P.text, lineHeight: 1.8, whiteSpace: "pre-wrap", margin: 0 }}>{e.body}</p>
+        <div style={{ color: P.muted, fontSize: 13 }}>Loading journals…</div>
+      ) : journalTab === "portal" ? (
+        <JournalEntryCards
+          entries={portalEntries}
+          expanded={expanded}
+          setExpanded={setExpanded}
+          fmt={fmt}
+          emptyMessage="No portal care journal entries for this patient."
+        />
+      ) : (
+        <>
+          {wellnessError && (
+            <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "8px 12px", marginBottom: "1rem", fontSize: 11, color: "#991b1b", lineHeight: 1.55 }}>
+              {wellnessError} If this persists, run <code style={{ fontSize: 10 }}>journal_entries_clinician_read.sql</code> in Supabase.
             </div>
           )}
-        </Card>
-      ))}
+          <JournalEntryCards
+            entries={wellnessEntries}
+            expanded={expanded}
+            setExpanded={setExpanded}
+            fmt={fmt}
+            emptyMessage="No MindShift+ wellness journal entries for this patient."
+          />
+        </>
+      )}
     </Card>
   );
 }
@@ -907,7 +981,7 @@ function AppointmentReviewTab({ initialPatientId, initialPatientName, onGoToPati
     <div style={{ maxWidth:760 }}>
       <p style={{ fontSize:13, color:P.muted, marginBottom:"1.2rem", lineHeight:1.6 }}>
         Review a patient&apos;s <strong>appointment history</strong> before a session.
-        For journal entries, use <strong>Patient Lookup</strong> → search by name → <strong>View Portal Journal</strong>.
+        For journal entries, use <strong>Patient Lookup</strong> → search by name → <strong>View Journals</strong> (Portal Care + MindShift+ / Mia).
       </p>
 
       {onGoToPatientLookup && (
@@ -966,7 +1040,7 @@ function AppointmentReviewTab({ initialPatientId, initialPatientName, onGoToPati
           ))}
 
           {patientId.trim() && (
-            <PortalJournalClinicianPanel
+            <PatientJournalsClinicianPanel
               patientId={patientId.trim()}
               patientName={patientName || "Patient"}
             />
@@ -1041,7 +1115,7 @@ function PatientLookupTab({ onOpenPreVisitReview }) {
 
       <p style={{ fontSize:13, color:P.muted, marginBottom:"1.2rem", lineHeight:1.6 }}>
         Search by patient name, MRN, email, or Supabase patient ID.
-        Click <strong>View Portal Journal</strong> to read a patient&apos;s care journal — no UUID typing needed.
+        Click <strong>View Journals</strong> to read portal care journal and MindShift+ (Mia) wellness journal.
       </p>
 
       <Card style={{ marginBottom:"1.5rem" }}>
@@ -1113,7 +1187,7 @@ function PatientLookupTab({ onOpenPreVisitReview }) {
                       fontSize:12, fontWeight:600, cursor:"pointer",
                     }}
                   >
-                    {journalPatient?.id === p.id ? "📓 Viewing Journal" : "📓 View Portal Journal"}
+                    {journalPatient?.id === p.id ? "📓 Viewing Journals" : "📓 View Journals"}
                   </button>
                   <button
                     type="button"
@@ -1162,7 +1236,7 @@ function PatientLookupTab({ onOpenPreVisitReview }) {
       ))}
 
       {journalPatient?.id && (
-        <PortalJournalClinicianPanel
+        <PatientJournalsClinicianPanel
           patientId={journalPatient.id}
           patientName={journalPatient.name}
           onClose={() => setJournalPatient(null)}
@@ -1171,7 +1245,7 @@ function PatientLookupTab({ onOpenPreVisitReview }) {
 
       <Card style={{ background:"#eff6ff", border:"1px solid #bfdbfe", marginTop:"1rem" }}>
         <div style={{ fontSize:12, color:"#1e40af", lineHeight:1.7 }}>
-          💡 <strong>Portal Care Journal:</strong> Search by name → <strong>View Portal Journal</strong>.
+          💡 <strong>Patient journals:</strong> Search by name → <strong>View Journals</strong> (Portal Care + MindShift+ / Mia).
           Copy Patient ID for Visit Notes, Rx, and Documents. Manually added EHR charts without a portal link show MRN only — link Portal Patient ID in EHR to enable journal access.
         </div>
       </Card>

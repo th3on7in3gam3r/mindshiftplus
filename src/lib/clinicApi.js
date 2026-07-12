@@ -170,10 +170,18 @@ export async function deletePatientJournalEntry(id) {
   return { success: true };
 }
 
-// Clinician: get a specific patient's journal for appointment review
+// Clinician: get a specific patient's portal care journal for appointment review
 export async function getPatientJournalForReview(patient_id) {
   const { data, error } = await supabase.from("patient_journal_entries")
     .select("*").eq("patient_id", patient_id).order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+/** Clinician: MindShift+ wellness journal (Mia / sidebar Journal — journal_entries table). */
+export async function getWellnessJournalForReview(user_id) {
+  const { data, error } = await supabase.from("journal_entries")
+    .select("*").eq("user_id", user_id).order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return data || [];
 }
