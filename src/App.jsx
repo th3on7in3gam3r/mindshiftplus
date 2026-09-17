@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "./lib/AuthContext";
 import AuthModal from "./components/AuthModal";
+import { AuthConfirm, AuthResetPassword } from "./components/AuthRecovery";
 import Portal from "./components/portal/Portal";
 import PublicBooking from "./components/scheduling/PublicBooking";
 import AdminSchedule from "./components/scheduling/AdminSchedule";
@@ -3253,7 +3254,7 @@ function About(){
 
 // ── APP SHELL ──────────────────────────────────────────────────────────────────
 export default function App(){
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, signOut, passwordRecovery, clearPasswordRecovery } = useAuth();
   const [page, setPageState] = useState(() => getInitialAppRoute().page);
   const setPage = useCallback((nextPage, { ehrView, ehrChartId, replace = false } = {}) => {
     setPageState(nextPage);
@@ -3276,14 +3277,22 @@ export default function App(){
     return installAppRouteListener(({ page: routePage }) => setPageState(routePage));
   }, []);
 
+  // Password-reset email landed with a recovery session — always show the set-password screen
+  useEffect(() => {
+    if (passwordRecovery && page !== "auth-reset" && page !== "auth-confirm") {
+      setPage("auth-reset", { replace: true });
+    }
+  }, [passwordRecovery, page, setPage]);
+
   // Check disclaimer acceptance when user logs in
   useEffect(()=>{
     if (!user) { setDisclaimerChecked(false); return; }
+    if (passwordRecovery || page === "auth-reset" || page === "auth-confirm") return;
     hasAcceptedDisclaimer(user.id).then(accepted => {
       if (!accepted) setShowDisclaimer(true);
       else setDisclaimerChecked(true);
     });
-  },[user?.id]);
+  },[user?.id, passwordRecovery, page]);
 
   // Derive display name from Supabase user metadata
   const appUser = user ? {
@@ -3294,6 +3303,7 @@ export default function App(){
   // Once signed in go to dashboard; respect URL route on refresh (e.g. /clinical/ehr)
   useEffect(()=>{
     if(loading) return; // wait — don't act until session is resolved
+    if (passwordRecovery || page === "auth-reset" || page === "auth-confirm") return;
     if(user && (page==="landing" || page==="onboarding")){
       const fromUrl = parseAppRoute();
       if (fromUrl.page && !["landing", "onboarding"].includes(fromUrl.page)) {
@@ -3308,10 +3318,10 @@ export default function App(){
       }catch{}
       setPage("dashboard");
       setShowAuth(false);
-    }    if(!user && !["landing","portal","schedule","clinical","ehr","ehr-schedule","ai-scribe","staff-docs"].includes(page)){
+    }    if(!user && !["landing","portal","schedule","clinical","ehr","ehr-schedule","ai-scribe","staff-docs","auth-confirm","auth-reset"].includes(page)){
       setPage("landing");
     }
-  },[user, loading, page, setPage]);
+  },[user, loading, page, setPage, passwordRecovery]);
 
   // Listen for iframe navigation messages + sessionStorage intent from mindshiftplus.html
   useEffect(()=>{
@@ -3358,7 +3368,30 @@ export default function App(){
     </div>
   );
 
-  const needsSidebar = user && !["landing","onboarding"].includes(page);
+  const needsSidebar = user && !["landing","onboarding","auth-confirm","auth-reset"].includes(page);
+
+  // Auth email confirm / password reset (public)
+  if (page === "auth-confirm") {
+    return (
+      <>
+        <GlobalStyles />
+        <AuthConfirm onDone={(next) => setPage(next || "auth-reset", { replace: true })} />
+      </>
+    );
+  }
+  if (page === "auth-reset") {
+    return (
+      <>
+        <GlobalStyles />
+        <AuthResetPassword
+          onDone={(next) => {
+            clearPasswordRecovery?.();
+            setPage(next || "portal", { replace: true });
+          }}
+        />
+      </>
+    );
+  }
 
   // Portal — placeholder, no auth required
   if(page==="portal"){

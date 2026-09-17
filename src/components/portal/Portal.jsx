@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
+import { getPasswordResetRedirectTo } from "../AuthRecovery";
 import PortalDashboard from "./PortalDashboard";
 import PortalAppointments from "./PortalAppointments";
 import PortalMessages from "./PortalMessages";
@@ -74,7 +75,9 @@ function PortalAuthScreen({ onBack, onStaffSignIn }) {
 
   const handleForgot = async (e) => {
     e.preventDefault(); setError(""); setLoading(true);
-    const { error: err } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+    const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: getPasswordResetRedirectTo(),
+    });
     if (err) setError(err.message);
     else setSent(true);
     setLoading(false);

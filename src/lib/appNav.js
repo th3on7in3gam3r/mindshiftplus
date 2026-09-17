@@ -28,6 +28,8 @@ const PAGE_PATHS = {
   portal: "/portal",
   schedule: "/book",
   onboarding: "/onboarding",
+  "auth-confirm": "/auth/confirm",
+  "auth-reset": "/auth/reset-password",
   mia: "/wellness/mia",
   journal: "/wellness/journal",
   breathe: "/wellness/breathe",

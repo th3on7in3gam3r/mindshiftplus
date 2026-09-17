@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { CLINICIAN_EMAILS } from "../../lib/ehrDb";
+import { getPasswordResetRedirectTo } from "../AuthRecovery";
 
 export default function EHRLogin({ onBack }) {
   const [email, setEmail]       = useState("");
@@ -43,7 +44,7 @@ export default function EHRLogin({ onBack }) {
     e.preventDefault(); setError(""); setLoading(true);
     const { error: err } = await supabase.auth.resetPasswordForEmail(
       email.trim().toLowerCase(),
-      { redirectTo: `${window.location.origin}/?page=ehr` }
+      { redirectTo: getPasswordResetRedirectTo() }
     );
     if (err) setError(err.message);
     else setSent(true);

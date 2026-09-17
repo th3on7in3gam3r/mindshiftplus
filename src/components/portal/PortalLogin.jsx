@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../../lib/supabase";
+import { getPasswordResetRedirectTo } from "../AuthRecovery";
 
 const P = {
   bg:     "#f7f8fc",
@@ -87,7 +88,9 @@ export default function PortalLogin({ onBack }) {
 
   const handleForgot = async (e) => {
     e.preventDefault(); clear(); setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: getPasswordResetRedirectTo(),
+    });
     if (error) setError(error.message);
     else setMode("sent");
     setLoading(false);

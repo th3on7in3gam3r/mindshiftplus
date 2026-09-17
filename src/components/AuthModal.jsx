@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
+import { getPasswordResetRedirectTo } from "./AuthRecovery";
 
 export default function AuthModal({ onClose }) {
   const [mode, setMode] = useState("signin"); // "signin" | "signup" | "forgot" | "check-email"
@@ -50,7 +51,7 @@ export default function AuthModal({ onClose }) {
     reset();
     setLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin,
+      redirectTo: getPasswordResetRedirectTo(),
     });
     if (error) setError(error.message);
     else setMode("check-email");
